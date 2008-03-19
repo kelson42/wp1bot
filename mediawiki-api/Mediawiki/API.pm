@@ -1,8 +1,5 @@
 package Mediawiki::API;
 
-# Carl Beckhorn, 2008
-# Copyright: GPL 2.0
-
 use strict;
 use Data::Dumper;
 use LWP::UserAgent;
@@ -26,7 +23,7 @@ Mediawiki::API -
 Provides methods to access the Mediawiki API via an object oriented interface. 
 Attempts be less stupid about errors.
 
-Version: $Revision: 1.26 $
+Version: $Revision: 1.28 $
 
 =head1 Synopsis
 
@@ -73,7 +70,12 @@ sub new {
 
   $self->{'debugXML'} = 0;
 
+  $self->{'cmsort'} = 'sortkey';
+
   $self->{'botlimit'} = 5000;
+
+  $self->{'decodeprint'} = 1;
+
   bless($self);
   return $self;
 }
@@ -177,8 +179,6 @@ sub debug_xml  {
   return $self->{'debugXML'};
 }
 
-
-
 ##################
 
 =item $level = $api->debug_level($newlevel);
@@ -200,8 +200,6 @@ sub debug_level {
  }
  return $self->{'debugLevel'};
 }
-
-
 
 #####################################################3
 
@@ -225,6 +223,33 @@ sub maxlag {
   return $self->{'maxlag'};
 }
 
+####################################
+
+=item $level = $api->cmsort($order)
+
+=item $level = $api->cmsort();
+
+Set the way that category member lists are sorted.
+The $order parmater must be 'timestamp' or 'sortkey'.
+
+=cut
+
+sub cmsort  {
+  my $self = shift;
+  my $order = shift;
+
+  if ( defined $order)  {
+
+    if ( ! ( $order eq 'sortkey' || $order eq 'timestamp') ) { 
+      die "cmsort parameter must be 'timestamp' or 'sortkey', not '$order'.\n";
+    }
+
+    $self->{'cmsort'} = $order;
+    $self->print(1, "A Set category sort order to: $order");
+  }
+
+  return $self->{'cmsort'};
+}
 
 #############################################################3
 
@@ -420,7 +445,7 @@ sub pages_in_category {
 =item $articles = $api->fetch_backlinks_compat($pageTitle)
 
 Return a list of pages that link to a given page.
-Return $articles as an arrayreference.
+Return $articles as an array reference.
 
 =cut
 
@@ -459,8 +484,9 @@ sub backlinks {
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'backlinks', 
                            'bllimit' => '500',
+#                           'titles' => $pageTitle,
                            'bltitle' => $pageTitle,
-                           'format' => 'xml' );
+                           'format' => 'xml');
 
   if ( $self->is_bot) { 
     $queryParameters{'bllimit'} = $self->{'botlimit'};
@@ -475,7 +501,6 @@ sub backlinks {
 
   return $results;
 }
-
 
 ################################################################
 
@@ -508,7 +533,7 @@ sub pages_in_category_detailed {
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'categorymembers', 
                            'cmlimit' => '500',
-                           'cmsort' => 'sortkey',
+                           'cmsort' => $self->{'cmsort'},
                            'cmprop' => 'ids|title|sortkey|timestamp',
                            'cmtitle' => $categoryTitle,
                            'format' => 'xml' );
@@ -759,7 +784,11 @@ sub fetchWithContinuation {
   my $xml = $self->makeXMLrequest([ %{$queryParameters}], [$dataName]);
   my @results = @{$self->child_data_if_defined($xml, $dataPath, [])};
 
+#  $self->print(6, Dumper($xml));
+
   while ( defined $xml->{'query-continue'} ) { 
+    $self->print(6, "CONTINUE: " . $xml->{'query-continue'});
+
     $queryParameters->{$continuationName} =     
             $self->child_data( $xml, $continuationPath,
                                      "Error in categorymembers xml");
@@ -998,7 +1027,7 @@ sub makeXMLrequest {
   while (1) { 
     $res = $self->makeHTMLrequest($args);
   
-    $self->print(6, "Got result\n$res\n---\n");
+    $self->print(7, "Got result\n$res\n---\n");
 
     if ( length $res == 0) { 
       my $edelay = 10;
@@ -1176,6 +1205,11 @@ sub print {
   my $self = shift;
   my $limit = shift;
   my $message = shift;
+
+  if ( $self->{'decodeprint'} == 1) { 
+    $message = decode("utf8", $message);
+  }
+
   if ( $limit <= $self->{'debugLevel'} ) {
     print $message;
     if ( $self->{'htmlMode'} > 0) { 
@@ -1247,8 +1281,6 @@ sub decode_recursive {
 
   die "Bad value $data\n";
 }
-
-
 
 #######################################################
 
