@@ -1,6 +1,5 @@
 package Mediawiki::Edit;
 # $Revision: 1.1 $
-
 # Carl Beckhorn, 2008
 # Copyright: GPL 2.0
 
@@ -9,7 +8,7 @@ use Data::Dumper;
 use LWP::UserAgent;
 use HTTP::Cookies;
 use HTML::TokeParser;
-
+use Encode;
 
 #   # Usage:
 #
@@ -43,6 +42,8 @@ sub new {
   $self->{'debugLevel'} = 1;
   $self->{'maxlag'} = 5;
   $self->{'requestCount'} = 0;
+  $self->{'htmlMode'} = 0;
+  $self->{'decodeprint'} = 1;
 
   bless($self);
   return $self;
@@ -75,6 +76,23 @@ sub debug_level {
   }
 
   return $self->{'debugLevel'};
+}
+
+########################################################
+
+sub html_mode  {
+  my $self = shift;
+  my $mode = shift;
+  if ( defined $mode)  {
+    $self->{'htmlMode'} = $mode;
+    if ( $self->{'htmlMode'} > 0 ) { 
+      $self->print(1, "A Enable HTML mode");
+    } else {
+      $self->print(1, "A Disable HTML mode");
+    }
+  }
+
+  return $self->{'htmlMode'};
 }
 
 
@@ -439,8 +457,17 @@ sub print {
   my $limit = shift;
   my $message = shift;
 
+  if ( $self->{'decodeprint'} == 1) { 
+    $message = decode("utf8", $message);
+  }
+
   if ( $limit <= $self->{'debugLevel'} ) {
-    print $message . ".\n";
+    print $message;
+    if ( $self->{'htmlMode'} > 0) { 
+      print " <br/>\n";
+    } else { 
+      print "\n";
+    }
   }
 }
 
