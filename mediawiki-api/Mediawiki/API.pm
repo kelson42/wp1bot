@@ -790,8 +790,9 @@ sub fetchWithContinuation {
     $self->print(6, "CONTINUE: " . $xml->{'query-continue'});
 
     $queryParameters->{$continuationName} =     
-            $self->child_data( $xml, $continuationPath,
-                                     "Error in categorymembers xml");
+       encode("utf8",$self->child_data( $xml, $continuationPath,
+                                     "Error in categorymembers xml"));
+
     $xml =$self->makeXMLrequest([ %{$queryParameters}], [$dataName]);
     @results = (@results, 
                 @{$self->child_data_if_defined($xml, $dataPath, [])} );
