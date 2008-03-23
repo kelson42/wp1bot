@@ -283,7 +283,12 @@ sub makeHTMLrequest {
     $self->print(1, "I Editor: sleeping for " . $delay . " seconds");
 
     sleep $delay;
-    $delay = $delay * 2;
+
+    if ( $delay < 30) { 
+      $delay = $delay * 2;
+    } else { 
+      $delay = 60;
+    }
      
     if ( $retryCount > $self->{'maxRetryCount'}) { 
       my $errorString = 
@@ -371,7 +376,7 @@ sub edit {
   }
 
   my $try = 0;
-  my $maxtries = 3;
+  my $maxtries = $self->{'maxRetryCount'};
 
   while (1) { 
     $try++;
@@ -394,7 +399,8 @@ sub edit {
     } elsif ( $res->code() == 200) { 
       $self->print(1, "Editor: Edit unsuccessful ($try/$maxtries)");
       print Dumper($res);
-      if ( $try == $maxtries) { 
+      sleep 60;
+      if ( $try >= $maxtries) { 
         $self->print(1, "E Editor: Too many tries, giving up");
         last;
       }
@@ -418,7 +424,7 @@ sub append {
   $self->print(1, "E Editor: Commit $page (msg: $summary)");
 
   my $try = 0;
-  my $maxtries = 3;
+  my $maxtries = $self->{'maxRetryCount'};
 
   while (1) { 
     $try++;
@@ -442,6 +448,7 @@ sub append {
     } elsif ( $res->code() == 200) { 
       $self->print(1, "I Editor: Edit unsuccessful ($try/$maxtries)");
       print Dumper($res);
+      sleep 60;
       if ( $try == $maxtries) { 
         $self->print(1, "I Editor: Too many tries, giving up");
         last;
