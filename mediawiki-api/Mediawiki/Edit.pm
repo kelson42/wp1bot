@@ -376,11 +376,6 @@ sub edit {
 
   $self->print(1, "A Editor: Commit $page (edit summary: '$summary')");
 
-  if ( $edittext eq $text) { 
-    $self->print(2,"I Editor: text on server matches text to upload. Not making an edit");
-    return;
-  }
-
   my $try = 0;
   my $maxtries = $self->{'maxRetryCount'};
   my $getToken = 1;
@@ -392,6 +387,11 @@ sub edit {
       ($edittoken, $edittime, $starttime, $edittext) =  
                             $self->get_edit_token($page);
       $getToken = 0;
+
+      if ( $edittext eq $text) { 
+        $self->print(2,"I Editor: server text matches text to upload. Not making an edit");
+        return;
+      }	
     }
 
     my $res = $self->makeHTMLrequest('post',
