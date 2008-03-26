@@ -45,6 +45,10 @@ sub new {
   $self->{'htmlMode'} = 0;
   $self->{'decodeprint'} = 1;
 
+  $self->{'dbLockedMessage'} = 'Database locked';
+
+  $self->{'editFailedDelay'} = 5;
+
   bless($self);
   return $self;
 }
@@ -265,17 +269,19 @@ sub makeHTMLrequest {
     $self->print(1, "I Editor: HTTP response code: " . $res->code() ) ;
 
     if (defined $res->header('x-squid-error')) { 
-      $self->print(1,"I Editor:\tSquid error: " . $res->header('x-squid-error'));
+      $self->print(1,"I Editor:\tSquid error: " 
+                               . $res->header('x-squid-error'));
     }
 
     $retryCount++;
 
-#    $self->print(1, Dumper($res->headers));
+#   $self->print(1, Dumper($res->headers));
 
     if ( defined $res->header('retry-after')) { 
       $delay = $res->header('x-database-lag');
       $self->print(2,"I Editor: Maximum server lag exceeded");
-      $self->print(3,"I Editor: Current lag $delay, limit " . $self->{'maxlag'});
+      $self->print(3,"I Editor: Current lag $delay, limit " 
+                                             . $self->{'maxlag'});
 
 #      print Dumper($res);
     }
@@ -366,7 +372,7 @@ sub edit {
   my $is_minor = shift || '';
   my $is_watched = shift || '';
 
-  my ($edittoken, $edittime, $starttime, $edittext) =  $self->get_edit_token($page);
+  my ($edittoken, $edittime, $starttime, $edittext);
 
   $self->print(1, "A Editor: Commit $page (edit summary: '$summary')");
 
@@ -377,9 +383,16 @@ sub edit {
 
   my $try = 0;
   my $maxtries = $self->{'maxRetryCount'};
+  my $getToken = 1;
 
   while (1) { 
     $try++;
+
+    if ( $getToken == 1) { 
+      ($edittoken, $edittime, $starttime, $edittext) =  
+                            $self->get_edit_token($page);
+      $getToken = 0;
+    }
 
     my $res = $self->makeHTMLrequest('post',
           [ "action" => "submit",
@@ -398,8 +411,17 @@ sub edit {
       last;
     } elsif ( $res->code() == 200) { 
       $self->print(1, "Editor: Edit unsuccessful ($try/$maxtries)");
-      print Dumper($res);
-      sleep 60;
+     
+      if ( $res->header('title') =~ /^\Q$self->{'dbLockedMessage'}\E/ ) {
+        $self->print(2, "I  Databased locked, retrying\n");
+        $try--;
+        $getToken = 1;
+      } else {    
+        print Dumper($res);
+      }
+
+      sleep $self->{'editFailedDelay'};
+
       if ( $try >= $maxtries) { 
         $self->print(1, "E Editor: Too many tries, giving up");
         last;
@@ -419,15 +441,23 @@ sub append {
   my $is_minor = shift || '';
   my $is_watched = shift || '';
 
-  my ($edittoken, $edittime, $starttime) =  $self->get_edit_token($page);
+  my ($edittoken, $edittime, $starttime);
 
   $self->print(1, "E Editor: Commit $page (msg: $summary)");
 
   my $try = 0;
   my $maxtries = $self->{'maxRetryCount'};
 
+  my $getToken = 1;
+
   while (1) { 
     $try++;
+
+    if ( $getToken == 1) { 
+      ($edittoken, $edittime, $starttime) =  
+                            $self->get_edit_token($page);
+      $getToken = 0;
+    }
 
     my $res = $self->makeHTMLrequest('post',
           [ "action" => "submit",
@@ -447,8 +477,16 @@ sub append {
       last;
     } elsif ( $res->code() == 200) { 
       $self->print(1, "I Editor: Edit unsuccessful ($try/$maxtries)");
-      print Dumper($res);
-      sleep 60;
+
+      if ( $res->header('title') =~ /^\Q$self->{'dbLockedMessage'}\E/ ) {
+        $self->print(2, "I  Databased locked, retrying\n");
+        $try--;  
+        $getToken = 1;  
+      } else {    
+        print Dumper($res);
+      }
+      sleep $self->{'editFailedDelay'};
+
       if ( $try == $maxtries) { 
         $self->print(1, "I Editor: Too many tries, giving up");
         last;
