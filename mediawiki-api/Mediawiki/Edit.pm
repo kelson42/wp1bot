@@ -394,17 +394,26 @@ sub edit {
       }	
     }
 
-    my $res = $self->makeHTMLrequest('post',
-          [ "action" => "submit",
-            "title" => $page,
-            "wpTextbox1"    => $text,
-            "wpSummary"     => $summary, 
-            "wpSave"        => 'Save Page',
-            "wpEdittime"    => $edittime,
-            "wpStarttime" => $starttime,
-            "wpEditToken"   => $edittoken,
-            "wpWatchthis"   => $is_watched,
-            "wpMinoredit"   => $is_minor,   ] );
+
+    my $queryParameters =   [ "action" => "submit",
+                              "title" => $page,
+                              "wpTextbox1"    => $text,
+                              "wpSummary"     => $summary, 
+                              "wpSave"        => 'Save Page',
+                              "wpEdittime"    => $edittime,
+                              "wpStarttime" => $starttime,
+                              "wpEditToken"   => $edittoken ];
+
+   if ( $is_watched == 1) { 
+      $queryParameters->{"wpWatchthis"} = $is_watched;
+   }
+
+   if ( $is_minor == 1) { 
+        $queryParameters->{"wpMinoredit"} =  $is_minor;
+   }
+
+    my $res = $self->makeHTMLrequest('post',$queryParameters);
+
 
     if ( $res->code() == 302 ) { 
       $self->print(2, "Editor: Edit successful");
@@ -459,18 +468,25 @@ sub append {
       $getToken = 0;
     }
 
-    my $res = $self->makeHTMLrequest('post',
-          [ "action" => "submit",
-            "title" => $page,
-            "wpSection" => 'new',
-            "wpTextbox1"    => $text,
-            "wpSummary"     => $summary, 
-            "wpSave"        => 'Save Page',
-            "wpEdittime"    => $edittime,
-            "wpStarttime" => $starttime,
-            "wpEditToken"   => $edittoken,
-            "wpWatchthis"   => $is_watched,
-            "wpMinoredit"   => $is_minor,   ] );
+    my $queryParameters = [ "action" => "submit",
+                            "title" => $page,
+                            "wpSection" => 'new',
+                            "wpTextbox1"    => $text,
+                            "wpSummary"     => $summary, 
+                            "wpSave"        => 'Save Page',
+                            "wpEdittime"    => $edittime,
+                            "wpStarttime" => $starttime,
+                            "wpEditToken"   => $edittoken ];
+
+    if ( $is_watched == 1) { 
+      $queryParameters->{"wpWatchthis"} = $is_watched;
+    }
+
+    if ( $is_minor == 1) { 
+      $queryParameters->{"wpMinoredit"} =  $is_minor;
+    }
+
+    my $res = $self->makeHTMLrequest('post', $queryParameters);
 
     if ( $res->code() == 302 ) { 
       $self->print(2, "I Editor: Edit successful");
