@@ -386,7 +386,13 @@ sub edit {
     if ( $getToken == 1) { 
       ($edittoken, $edittime, $starttime, $edittext) =  
                             $self->get_edit_token($page);
-      $getToken = 0;
+
+      if ( defined $edittoken) { 
+        $getToken = 0; 
+      } else {
+        $self->print(2,"E Error fetching edit token");
+        next;  
+      }
 
       if ( $edittext eq $text) { 
         $self->print(2,"I Editor: server text matches text to upload. Not making an edit");
@@ -465,7 +471,13 @@ sub append {
     if ( $getToken == 1) { 
       ($edittoken, $edittime, $starttime) =  
                             $self->get_edit_token($page);
-      $getToken = 0;
+
+      if ( defined $edittoken) { 
+        $getToken = 0; 
+      } else {
+        $self->print(2,"E Error fetching edit token");
+        next;  
+      }
     }
 
     my $queryParameters = [ "action" => "submit",
