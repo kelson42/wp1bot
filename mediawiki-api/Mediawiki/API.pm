@@ -23,7 +23,7 @@ Mediawiki::API -
 Provides methods to access the Mediawiki API via an object oriented interface. 
 Attempts be less stupid about errors.
 
-Version: $Revision: 1.28 $
+Version: $Revision: 1.32 $
 
 =head1 Synopsis
 
@@ -44,9 +44,7 @@ Version: $Revision: 1.28 $
 
 =item $api = Mediawiki::API->new();
 
-
-Create a new API 
-object
+Create a new API object
 
 =back
 
@@ -75,6 +73,9 @@ sub new {
   $self->{'botlimit'} = 5000;
 
   $self->{'decodeprint'} = 1;
+
+  $self->{'xmlretrydelay'} = 10;
+  $self->{'xmlretrylimit'} = 10;
 
   bless($self);
   return $self;
@@ -132,18 +133,15 @@ sub max_retries  {
 
 ########################################################
 
-
 =item $level = $api->html_mode($new_level)
 
 =item $level = $api->html_mode();
-
 
 HTML mode - for when the output is passed to a browser. If the level is 
 1, output will be in HTML. If the level is 0 (the default), the output 
 is in plain text.
 
 =cut
-
 
 sub html_mode  {
   my $self = shift;
@@ -162,7 +160,7 @@ sub html_mode  {
 
 ###########################################################
 
-### Internal function, current has no effect
+### Internal function, may have no effect depending on debugging code
 
 sub debug_xml  {
   my $self = shift;
@@ -200,6 +198,8 @@ sub debug_level {
  }
  return $self->{'debugLevel'};
 }
+
+
 
 #####################################################3
 
@@ -250,6 +250,8 @@ sub cmsort  {
 
   return $self->{'cmsort'};
 }
+
+
 
 #############################################################3
 
@@ -787,12 +789,11 @@ sub fetchWithContinuation {
 #  $self->print(6, Dumper($xml));
 
   while ( defined $xml->{'query-continue'} ) { 
-    $self->print(6, "CONTINUE: " . $xml->{'query-continue'});
+    $self->print(5, "CONTINUE: " . Dumper($xml->{'query-continue'}));
 
     $queryParameters->{$continuationName} =     
-       encode("utf8",$self->child_data( $xml, $continuationPath,
+	encode("utf8",$self->child_data( $xml, $continuationPath,
                                      "Error in categorymembers xml"));
-
     $xml =$self->makeXMLrequest([ %{$queryParameters}], [$dataName]);
     @results = (@results, 
                 @{$self->child_data_if_defined($xml, $dataPath, [])} );
@@ -1022,28 +1023,44 @@ sub makeXMLrequest {
 
   my $retryCount = 0;
 
+  my $edelay = $self->{'xmlretrydelay'};
+
   my $res;
   my $xml;
 
   while (1) { 
+    $retryCount++;
+    if ( $retryCount > $self->{'xmlretrylimit'} ) {
+      die "Aborting: too many retries in getXMLrequest\n";
+    }
+   
+
     $res = $self->makeHTMLrequest($args);
   
     $self->print(7, "Got result\n$res\n---\n");
 
     if ( length $res == 0) { 
-      my $edelay = 10;
       $self->print(1,"E Error: empty XML response");
       $self->print(2,"I Query params: \n" . Dumper($args));
       $self->print(2,"I ... sleeping $edelay seconds");
       sleep $edelay;
       next;
     }
- 
-    if ( defined $arrayNames ) { 
-      $xml = $self->parse_xml($res, 'ForceArray', $arrayNames);
-    } else { 
-      $xml = $self->parse_xml($res);
-    } 
+
+    eval {  
+      if ( defined $arrayNames ) { 
+        $xml = $self->parse_xml($res, 'ForceArray', $arrayNames);
+      } else { 
+        $xml = $self->parse_xml($res);
+      } 
+    };
+
+    if ( $@ ) { 
+      $self->print(3, "Error parsing XML - truncated response?");
+      $self->print(3, Dumper($@));
+      sleep $edelay;
+      next;
+    }
 
     $self->print(6, "XML dump:");
     $self->print(6, Dumper($xml));
@@ -1058,16 +1075,18 @@ sub makeXMLrequest {
         $self->print(3,"I Current lag $lag, limit " . $self->{'maxlag'});
       }
       sleep $lag + 1;
+      $retryCount--; # this is not an error
       next;
     }
 
     $self->print(2,"E APR response indicates error");
     $self->print(3, "Err: " . $xml->{'error'} ->{'code'});
     $self->print(4, "Info: " . $xml->{'error'} ->{'info'});
-    sleep 5;
+    sleep $edelay;
   }
 
-  return decode_recursive($xml);
+#  return decode_recursive($xml);
+return $xml;
 }
 
 ######################################
@@ -1103,7 +1122,7 @@ sub makeHTMLrequest {
       $self->print(5, "I  Base URL: " . $self->{'baseurl'});
       my $k = 0;
       while ( $k < scalar @{$args}) { 
-        $self->print(5, "I\t" . ${$args}[$k] . " => " . ${$args}[$k+1]);
+        $self->print(5, "I\t" . ${$args}[$k] . " => " . Dumper(${$args}[$k+1]));
         $k += 2;
       }
 
@@ -1260,11 +1279,13 @@ sub decode_recursive {
   my $i;
 
   if ( ref($data) eq "" ) { 
-    return decode_entities($data);
+#    return decode_entities($data);
+     return undo_htmlspecialchars($data);
   } 
 
   if ( ref($data) eq "SCALAR") { 
-    $newdata = decode_entities($$data);
+#    $newdata = decode_entities($$data);
+    $newdata = undo_htmlspecialchars($$data);
     return \$newdata;
   } elsif ( ref($data) eq "ARRAY" ) { 
     $newdata = [];
@@ -1282,6 +1303,8 @@ sub decode_recursive {
 
   die "Bad value $data\n";
 }
+
+
 
 #######################################################
 
@@ -1330,6 +1353,20 @@ sub parse_xml {
     print "DEBUG_XML Finish parsing at " . time() . "\n";
   }
   return $xml;
+}
+
+sub undo_htmlspecialchars  {
+  my $text = shift;
+  my %trans = ( '&amp;' => '&', 
+                '&quot;' => '"', 
+                '&#039;' => '\'', 
+                '&lt;' => '<', 
+                '&gt;' => '>' );
+  my $tran;
+  foreach $tran ( keys %trans ) { 
+    $text =~ s/\Q$tran\E/$trans{$tran}/g;
+  } 
+  return $text;
 }
 
 ###############################3
