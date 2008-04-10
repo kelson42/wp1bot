@@ -11,7 +11,7 @@ use Encode;
 
 
 ##########################################################
-## Enable  a native code XML parser
+## Enable a native code XML parser - makes a huge difference
 $XML::Simple::PREFERRED_PARSER = "XML::Parser";
 # $XML::Simple::PREFERRED_PARSER = "XML::LibXML::SAX";
 
@@ -19,11 +19,10 @@ $XML::Simple::PREFERRED_PARSER = "XML::Parser";
 
 =pod
 
-Mediawiki::API -
-Provides methods to access the Mediawiki API via an object oriented interface. 
-Attempts be less stupid about errors.
+Mediawiki::API -Provides methods to access the Mediawiki API via an object 
+oriented interface. Attempts be less stupid about errors.
 
-Version: $Revision: 1.32 $
+$Revision: 1.32 $
 
 =head1 Synopsis
 
@@ -60,22 +59,19 @@ sub new {
 
   $self->{'baseurl'} = 'http://192.168.1.71/~mw/wiki/api.php';
   $self->{'loggedin'} = 'false';
-  $self->{'maxRetryCount'} = 3;
-  $self->{'debugLevel'} = 1;
-  $self->{'maxlag'} = 5;
-  $self->{'requestCount'} = 0;
-  $self->{'htmlMode'} = 0;
 
-  $self->{'debugXML'} = 0;
-
-  $self->{'cmsort'} = 'sortkey';
-
-  $self->{'botlimit'} = 5000;
-
-  $self->{'decodeprint'} = 1;
-
-  $self->{'xmlretrydelay'} = 10;
-  $self->{'xmlretrylimit'} = 10;
+  ## Configuration parameters
+  $self->{'maxlag'} = 5;           # server-side load balancing param 
+  $self->{'maxRetryCount'} = 3;    # retries at the HTTP level
+  $self->{'debugLevel'} = 1;       # level of verbosity for debug output 
+  $self->{'requestCount'} = 0;     # count total HTTP requests
+  $self->{'htmlMode'} = 0;         # escape output for CGI output  
+  $self->{'debugXML'} = 0;         # print extra debugging for XML parsing
+  $self->{'cmsort'} = 'sortkey';   # request this sort order from API
+  $self->{'botlimit'} = 5000;      # number of results to request per query
+  $self->{'decodeprint'} = 1;      # don't UTF-8 output
+  $self->{'xmlretrydelay'} = 10;   # pause after XML level failure 
+  $self->{'xmlretrylimit'} = 10;   # retries at XML level
 
   bless($self);
   return $self;
@@ -177,7 +173,7 @@ sub debug_xml  {
   return $self->{'debugXML'};
 }
 
-##################
+#######################################################
 
 =item $level = $api->debug_level($newlevel);
 
@@ -201,7 +197,7 @@ sub debug_level {
 
 
 
-#####################################################3
+######################################################
 
 =item $lag = $api->maxlag($newlag)
 
@@ -229,8 +225,9 @@ sub maxlag {
 
 =item $level = $api->cmsort();
 
-Set the way that category member lists are sorted.
-The $order parmater must be 'timestamp' or 'sortkey'.
+Set the way that category member lists are sorted when they 
+arrive from the server. The $order parmater must be 'timestamp' 
+or 'sortkey'.
 
 =cut
 
@@ -253,7 +250,7 @@ sub cmsort  {
 
 
 
-#############################################################3
+#############################################################
 
 =head2 Log in
 
@@ -297,12 +294,11 @@ sub login {
   $self->print(1,"R Login successful");
 
   foreach $_ ( 'lgusername', 'lgtoken', 'lguserid' ) { 
-   $self->print(5, "I\t" . $_ . " => " . $xml->{'login'}->{$_} );
-   $self->{$_} = $xml->{'login'}->{$_};
+    $self->print(5, "I\t" . $_ . " => " . $xml->{'login'}->{$_} );
+    $self->{$_} = $xml->{'login'}->{$_};
   }
 
   $self->{'loggedin'} = 'true';
-
 
   if ( $self->is_bot() ) { 
     $self->print (1,"R Logged in user has bot rights");
@@ -367,16 +363,16 @@ the editing features of the API are not implemented in Mediawiki.
 =cut
 
 sub overwrite_page { 
- my $self = shift;
- my $pageTitle = shift;
- my $pageContent = shift;
- my $editSummary = shift;
+  my $self = shift;
+  my $pageTitle = shift;
+  my $pageContent = shift;
+  my $editSummary = shift;
 
- $self->print(1,"A Overwriting $pageTitle");
+  $self->print(1,"A Overwriting $pageTitle");
 
- $pageContent = $pageContent . " " . strftime('%Y-%m-%dT%H:%M:00Z', gmtime(time()));
+  $pageContent = $pageContent . " " . strftime('%Y-%m-%dT%H:%M:00Z', gmtime(time()));
 
- my $xml  = $self->makeXMLrequest(
+  my $xml  = $self->makeXMLrequest(
                   [ 'action' => 'query', 
                     'prop' => 'info',
                     'titles' => $pageTitle,
@@ -419,8 +415,8 @@ sub overwrite_page {
 =item $articles = 
     $api->pages_in_category($categoryTitle [ , $namespace])
 
-Return the list of page titles in a category. Optional parameter
-to filter by namespace. Return $articles, an array ref.
+Fetch the list of page titles in a category. Optional numeric
+parameter to filter by namespace. Return $articles, an array ref.
 
 =cut
 
@@ -446,8 +442,8 @@ sub pages_in_category {
 
 =item $articles = $api->fetch_backlinks_compat($pageTitle)
 
-Return a list of pages that link to a given page.
-Return $articles as an array reference.
+Fetch list of pages that link to a given page.
+Returns $articles as an array reference.
 
 =cut
 
@@ -472,8 +468,8 @@ sub fetch_backlinks_compat {
 
 =item $pages = $api->backlinks($pageTitle);
 
-Return the pages that link to a particular page title.
-Return a reference to an array.
+Fetch the pages that link to a particular page title.
+Returns a reference to an array.
 
 =cut
 
@@ -510,8 +506,8 @@ sub backlinks {
 
 $api->pages_in_category_detailed($categoryTitle [, $namespace])
 
-Return the contents of a category. Optional parameter to select a  
-specific namespace. Return a reference to an array of hash 
+Fetch the contents of a category. Optional parameter to select a  
+specific namespace. Returns a reference to an array of hash 
 references.
 
 =cut
@@ -598,7 +594,7 @@ sub where_embedded {
 =item $list = $api->log_events($pageName);
 
 Fetch a list of log entries for the page.
-Return a reference to an array of hashes.
+Returns a reference to an array of hashes.
 
 =cut
 
@@ -634,7 +630,7 @@ sub log_events {
 
 Fetch the list of pages that display the image $imageName.
 The value of $imageName should NOT start with "Image:".
-Returna reference to an array of hash references.
+Returns a reference to an array of hash references.
 
 =cut
 
@@ -689,7 +685,6 @@ sub content {
   if ( scalar @$titles == 1) { 
      return $self->content_single(${$titles}[0]);
   }
-
 
   $self->print(1,"A Fetching content of " . scalar @$titles . " pages");
  
@@ -806,12 +801,12 @@ sub fetchWithContinuation {
 # Internal function
 
 sub add_maxlag_param {
- my $self = shift;
- my $hash = shift;
+  my $self = shift;
+  my $hash = shift;
 
- if ( defined $self->{'maxlag'} && $self->{'maxlag'} >= 0 ) { 
-   $hash->{'maxlag'} = $self->{'maxlag'}
- }
+  if ( defined $self->{'maxlag'} && $self->{'maxlag'} >= 0 ) { 
+    $hash->{'maxlag'} = $self->{'maxlag'}
+  }
 }
 
 #############################################################3
@@ -876,27 +871,42 @@ sub user_contribs {
 
 =over
 
-=item $api->watchlist();
+=item $api->watchlist($limit, $window);
 
-(INCOMPLETE) List the pages on the user's watchlist that have been 
-recently edited. 
+Fetch list of pages on the user's watchlist that have been 
+recently edited.   Numeric parameters: $limit is maximum number
+of pages to return, $window is number of hours of history to fetch. 
 
 =cut
 
 sub watchlist { 
  my $self = shift;
 
- $self->print(1,"A Fetching watchlist");
+ $self->print(1,"A Fetching watchlist entries");
 
  my $timeStamp; 
- my $delay = 20;
- $delay = $delay * 60 * 60; # delay is in hours
+
+ my $limit = shift;
+ my $window = shift;
+
+ if ( ! defined $limit) { 
+   $limit = 100;
+ } 
+
+ if ( ! defined $window) { 
+   $window = 24;
+ }
+
+ $self->print(2,"I Maximum result count: $limit\n");
+ $self->print(2,"I Time window for entries: $window\n");
+
+ my $delay = $window * 60 * 60; # window is in hours
  $timeStamp = strftime('%Y-%m-%dT%H:%M:00Z', gmtime(time() - $delay));
 
  my $xml  = $self->makeXMLrequest(
                   [ 'action' => 'query', 
                     'list' => 'watchlist', 
-                    'wllimit' => '5',
+                    'wllimit' => $limit,
                     'wlprop' =>  'ids|title|timestamp|user|comment|flags',
                     'wlend' => $timeStamp,      
                     'format' => 'xml'  ]);
@@ -907,7 +917,8 @@ sub watchlist {
      $self->handleXMLerror($xml);
   }
 
-  return  $xml->{'query'}->{'watchlist'}->{'item'};
+#  return $xml->{'query'}->{'watchlist'}->{'item'};
+   return $self->child_data($xml, ['query','watchlist','item']);
 }
 
 #############################################################3
@@ -940,7 +951,7 @@ sub user_properties {
 
 =item $info = $api->site_info();
 
-Return the properties about the Mediawiki site (namespaces,
+Fetch information about the MediaWiki site (namespaces,
 main page, etc.)
 
 =cut
@@ -966,7 +977,7 @@ sub site_info {
 
 =item $rights = $api->user_rights();
 
-Return the rights (flags) the server reports for the logged 
+Fetch the rights (flags) the server reports for the logged 
 in user.  Returns a reference to an array of rights.
 
 =cut
@@ -1245,8 +1256,8 @@ sub print {
 # Internal method
 
 sub dump { 
- my $self = shift;
- return Dumper($self);
+  my $self = shift;
+  return Dumper($self);
 }
 
 
@@ -1255,19 +1266,19 @@ sub dump {
 # Internal function
 
 sub handleXMLerror { 
- my $self = shift;
- my $xml = shift;
- my $text =  shift;
+  my $self = shift;
+  my $xml = shift;
+  my $text =  shift;
 
- my $error = "XML error";
+  my $error = "XML error";
 
- if ( defined $text) { 
-   $error = $error . ": " . $text;
- }
+  if ( defined $text) { 
+    $error = $error . ": " . $text;
+  }
 
- print Dumper($xml);
+  print Dumper($xml);
 
- die "$error\n";
+  die "$error\n";
 }
 ######################################3
 
@@ -1324,13 +1335,16 @@ sub is_bot {
   return ( $self->{'isbot'} eq 'true');
 }
 
+
+#############################################################3
+# Internal function
+
 sub parse_xml {
   my $self = shift;
   if ( $self->debug_xml() > 0) { 
     print "DEBUG_XML Parsing at " . time() . "\n";
   }
   my $xml;
-
 
   #  The API may return XML that is not valid UTF-8
   my $t = decode("utf8", $_[0]);
@@ -1341,19 +1355,21 @@ sub parse_xml {
   };
   if ( $@ ) { 
     print "XML PARSING ERROR 1\n";
-
 #    print "Code: $! \n";
-#not well-formed (invalid token)
-
+# not well-formed (invalid token)
     print Dumper(@_);
-
     die;
   }
+
   if ( $self->debug_xml() > 0) { 
     print "DEBUG_XML Finish parsing at " . time() . "\n";
   }
+
   return $xml;
 }
+
+##############################################
+# internal function
 
 sub undo_htmlspecialchars  {
   my $text = shift;
