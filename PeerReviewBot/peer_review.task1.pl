@@ -196,7 +196,7 @@ foreach $page ( @$archivablePages ) {
     $edit->edit(encode("utf8", $page), 
                 encode("utf8", $prContent), 
                 $editsummary);
-    $edit->edit(encode("utf8", $currentPeerReviewTalks), 
+    $edit->edit(encode("utf8", $currentPeerReviewTalks->{$page}), 
                 encode("utf8", $talkContent), 
                 $editsummary);
   } else { 
