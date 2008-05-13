@@ -79,12 +79,10 @@ my $currentFLC = make_hash($api->pages_in_category(
 
 foreach $page ( $currentPeerReviews ) {
   if ( defined $currentFAC->{$currentPeerReviewTalks->{$page}} ) { 
-     print "$page is on FAC\n"; 
      push @$archivablePages, $page;
      $currentPeerReviewDetails->{$page}->{'fac'} = 1;
   }
   if ( defined $currentFLC->{$currentPeerReviewTalks->{$page}} ) { 
-     print "$page is on FLC\n"; 
      push @$archivablePages, $page;
      $currentPeerReviewDetails->{$page}->{'flc'} = 1;
   }
@@ -118,6 +116,8 @@ foreach $page ( @$currentPeerReviews )  {
   }
 }
 
+print "Want to archive " . (scalar @$archivablePages) . " pages\n";
+
 ###########################################################################
 #### Go through archivable pages, archive the ones that pass a sanity check
 
@@ -135,33 +135,44 @@ my $editsummary = "Archiving peer review";
 
 my $s;
 
+my $log = [];
+my $logErrors = [];
+my $reason;
+
 foreach $page ( @$archivablePages ) {
-  print "\n\nWould like to archive $page: ";
+  print "go $page\n";
+  $reason = start_reason($page);
 
   if ( defined $currentPeerReviewDetails->{$page}->{'fac'} ) { 
-    print "on FAC";
+    $reason .= "article is on [[WP:FAC]]";
   }
   if ( defined $currentPeerReviewDetails->{$page}->{'flc'} ) { 
-    print "on FLC";
+    $reason .= "article is on [[WP:FLC]]";
   }
   if ( defined $currentPeerReviewDetails->{$page}->{'expired'} ) { 
-    print "not recently edited";
-  }
-  if ( defined $currentPeerReviewDetails->{$page}->{'old'} ) { 
-    print ", over 30 days old";
+    $reason .= "no recent comments";
+    if ( defined $currentPeerReviewDetails->{$page}->{'old'} ) { 
+      $reason .= ", and over 30 days old";
+    }
   }
 
-  print ".\n";
+  push @$log, $reason;
+
+#  print "LOG: \n";
+#  print Dumper($log);
+#  print "\n";
 
   $prContent   = $api->content(encode("utf8", $page));
   $talkContent = $api->content(encode("utf8", 
                                       $currentPeerReviewTalks->{$page}));
  
+  
+
   if ( $prContent =~ m!({{PR/header[^{}]*}})! ) { 
     $prTag = $1;
   } else { 
     push @$badPRPages, $page;
-    print "\tSanity check failed: bad PR tag\n";
+    print "\tSanity check failed for $page: bad PR tag\n";
     print "------------------  PR page:\n" . substr($prContent,0, 1000);
     next;
   }
@@ -169,7 +180,7 @@ foreach $page ( @$archivablePages ) {
   if ( $page =~ m!archive(\d+)$! ) { 
     $archive = $1;
   } else { 
-    print "Unexpected error: misnamed PR page has no archive number\n";
+    print "Unexpected error: misnamed PR page $page has no archive number\n";
     push @$badPRPages, $page;
     next;
   }
@@ -177,13 +188,13 @@ foreach $page ( @$archivablePages ) {
   if ( $talkContent =~ m!({{[Pp]eer ?review[^{}]*}})! ) { 
     $talkTag = $1;
   } else { 
-    print "\tSanity check failed: bad talk page tag\n";
+    print "\tSanity check failed for $page: bad talk page tag\n";
     print "------------------  Talk page:\n" . substr($talkContent,0, 1000);
     push @$badTalkPages, $currentPeerReviewTalks->{$page};
     next;
   }
 
-  print "\tSanity check OK: archive # $archive\n\t$prTag\n\t$talkTag\n";
+#  print "\tSanity check OK: archive # $archive\n\t$prTag\n\t$talkTag\n";
   
   # Now replace templates with archive versions and commit
 
@@ -196,33 +207,48 @@ foreach $page ( @$archivablePages ) {
     $edit->edit(encode("utf8", $page), 
                 encode("utf8", $prContent), 
                 $editsummary);
-    $edit->edit(encode("utf8", $currentPeerReviewTalks->{$page}), 
+    $edit->edit(encode("utf8", $currentPeerReviewTalks), 
                 encode("utf8", $talkContent), 
                 $editsummary);
   } else { 
-    print "----------------  New PR page:\n" . substr($prContent,0, 1000);
-    print "\n\n";
-    print "----------------  New talk page:\n" . substr($talkContent,0, 1000);
-    print "\n\n";
+    open OUT, ">DryRun";
+    print OUT "-- $page\n";
+    print OUT "----------------  New PR page:\n" 
+               . substr($prContent,0, 1000);
+    print OUT "\n\n";
+    print OUT "----------------  New talk page:\n" 
+               . substr($talkContent,0, 1000);
+    print OUT "\n\n";
   }
-
-  print "\n";
 }
 
+my $badPageReport = [];
+my $reason;
+
 foreach $page ( @$badTalkPages ) { 
-  print "Bad talk page: $page\n";
+  $reason = start_reason($page);
+  $reason .= "Missing or unrecognizable peerreview template on talk page";
+  push @$logErrors, $reason;
 }
 
 foreach $page ( @$badPRPages ) { 
-  print "Bad PR page: $page\n";
+  $reason = start_reason($page);
+  $reason .= "Missing or unrecognizable PR/header template on PR page";
+  push @$logErrors, $reason;
 }
 
-exit;  # End of main routine
+print "Commit log entry\n";
+
+commit_log_entry($edit, $log, $logErrors);
+
+print "Done.\n";
+
+exit;
 
 ##########################################################################
+
 ##########################################################################
 ## Make a hash whose keys are from a given array reference
-
 sub make_hash {
   my $list = shift;
   my $hash = {};
@@ -233,7 +259,7 @@ sub make_hash {
   return $hash;
 }
 
-##########################################################################
+#########################################################################
 ## Get info on the most recent revision for a list of pages
 
 sub get_revisions { 
@@ -313,5 +339,82 @@ sub make_talks {
   return $targets;
 }
 
+
+#######################################################################3
+## Log today's changes
+
+sub commit_log_entry {
+  my $editor = shift;
+  my $log = shift;
+  my $logError = shift;
+
+  my $message = "";
+
+  open LOG, ">>Log";
+  binmode LOG, ":utf8";
+
+  my $dateLong = `/bin/date`;
+  chomp $dateLong;
+
+  my $date = `/bin/date +'%b %d'`;
+  chomp $date;
+  
+  my $count = scalar @$log;
+  my $line;
+
+
+  my $header = "Peer review archiving log for $date";
+
+  $message .= "Script executed $dateLong.\n\nResult: ";
+
+  if ( $count == 0) { 
+    $message .= "no peer review pages archived today.\n";
+  } else {
+    $message .= "$count peer review pages ready to archive.\n";
+    foreach $line ( @$log) { 
+    $message .= "* $line\n";
+    }
+
+    $count = scalar @$logErrors; 
+
+    if ( $count == 0 ) { 
+      $message .= "No errors encountered.\n";
+    } else { 
+      $message .= "===Errors on $date===\n";
+      $message .= "$count errors encountered:\n";
+      foreach $line ( @$logErrors) { 
+        $message .= "* $line\n";
+      }
+    }
+  }    
+  $message .= "\n";
+
+  open LOG, ">>Log";
+  binmode LOG, ":utf8";
+  print LOG "== $header ==\n";
+  print LOG $message;
+  close LOG;
+
+
+  my $logpage = "User:PeerReviewBot/Logs/Archive";
+  if ( $dryrun == 0) {
+    $editor->append($logpage, $message, $header);
+  }
+
+}
+
+#######################################################################3
+## Format links to pr page and article talk page
+
+sub start_reason { 
+  my $page = shift;
+
+  my $title = $page;
+  $title =~ s!^Wikipedia:Peer review/!!;
+  $title =~ s!/archive\d+$!!;
+  return sprintf "[[%s]] ([[%s|peer review]] - [[%s|article talk]]): ",
+          $title, $page, $currentPeerReviewTalks->{$page} ;
+
+}
 
 __END__
