@@ -31,6 +31,10 @@ use Encode;
 sub new { 
   my $self = {};
 
+  my $class = shift;
+
+  my $name = shift || 'Editor name';
+
   $self->{'agent'} = new LWP::UserAgent;
   $self->{'agent'}->cookie_jar(HTTP::Cookies->new());
 
@@ -44,10 +48,10 @@ sub new {
   $self->{'requestCount'} = 0;
   $self->{'htmlMode'} = 0;
   $self->{'decodeprint'} = 1;
-
   $self->{'dbLockedMessage'} = 'Database locked';
-
   $self->{'editFailedDelay'} = 5;
+
+  $self->{'name'} = $name;
 
   bless($self);
   return $self;
@@ -63,7 +67,7 @@ sub base_url () {
     $self->{'baseurl'} = $newurl;
     $self->{'indexurl'} = $newurl . "/index.php";
     $self->{'apiurl'} = $newurl . "/api.php";
-    $self->print(1, "A Editor: Set base URL to: $newurl");
+    $self->print(1, "A Set base URL to: $newurl");
   }
   return $self->{'baseurl'};
 }
@@ -76,7 +80,7 @@ sub debug_level {
 
   if ( defined $level) { 
     $self->{'debugLevel'} = $level;
-    $self->print(1,"A Editor: Set debug level to: $level");
+    $self->print(1,"A Set debug level to: $level");
   }
 
   return $self->{'debugLevel'};
@@ -108,7 +112,7 @@ sub maxlag {
 
   if ( defined $maxlag) { 
     $self->{'maxlag'} = $maxlag;
-    $self->print(1,"A Editor: Maxlag set to " . $self->{'maxlag'});
+    $self->print(1,"A Maxlag set to " . $self->{'maxlag'});
   }
 
   return $self->{'maxlag'};
@@ -117,12 +121,25 @@ sub maxlag {
 
 #############################################################3
 
+sub name {
+  my $self = shift;
+  my $newname = shift;
+
+  if ( defined $newname ) { 
+    $self->{'name'} = $newname;
+    $self->print(1,"A name set to " . $self->{'name'});
+  }
+  return $self->{'name'};
+}
+
+#############################################################3
+
 sub login { 
   my $self = shift;
   my $userName = shift;
   my $userPassword = shift;
 
-  $self->print(1,"A Editor: Logging in");
+  $self->print(1,"A Logging in");
 
   my $res = $self->makeHTMLrequest('post',
            [ 'title' =>  'Special:Userlogin',
@@ -138,7 +155,7 @@ sub login {
   my $content = $res->content();
 
   if ( $content =~ m/var wgUserName = "$userName"/ ) {
-    $self->print(1,"R Editor: Login successful");
+    $self->print(1,"R Login successful");
     $self->{'loggedin'} = 'true';
   } else {
     if ( $content =~ m/There is no user by the name/ ) {
@@ -148,7 +165,7 @@ sub login {
     } elsif ( $content =~ m/Password entered was blank/ ) {
        $self->{errstr} = qq/Login failed: Blank password/;
     }
-    $self->print(1,  "E Editor: Login error.");
+    $self->print(1,  "E Login error.");
     exit;
   }
 }
@@ -226,21 +243,21 @@ sub makeHTMLrequest {
 
   my $url = $self->{'indexurl'};
 
-  $self->print(2, "A Editor: Making HTML request (" . $self->{'requestCount'} . ")");
+  $self->print(2, "A Making HTML request (" . $self->{'requestCount'} . ")");
 
   if ( $type eq 'post' ) {
     $self->add_maxlag_param($args);
-    $self->print(5, "I Editor: URL: " . $url);
+    $self->print(5, "I URL: " . $url);
 
     my $k = 0;
     while ( $k < scalar @{$args}) { 
-      $self->print(5, "I Editor:\t" . ${$args}[$k] . " => " . ${$args}[$k+1]);
+      $self->print(5, "I \t" . ${$args}[$k] . " => " . ${$args}[$k+1]);
       $k += 2;
     }
   } else { 
     $url = ${$args}[0];
     $url = $self->add_maxlag_url($url);
-    $self->print(5, "I Editor: URL: " . $url);
+    $self->print(5, "I URL: " . $url);
   }
 
   my $retryCount = 0;
@@ -254,7 +271,7 @@ sub makeHTMLrequest {
     if ( $retryCount == 0) { 
 
     } else { 
-      $self->print(1,"A Editor: Repeating request ($retryCount)");
+      $self->print(1,"A Repeating request ($retryCount)");
     }
 
     if ( $type eq 'post') { 
@@ -266,10 +283,10 @@ sub makeHTMLrequest {
     last if $res->is_success();
     last if $res->is_redirect();
 
-    $self->print(1, "I Editor: HTTP response code: " . $res->code() ) ;
+    $self->print(1, "I HTTP response code: " . $res->code() ) ;
 
     if (defined $res->header('x-squid-error')) { 
-      $self->print(1,"I Editor:\tSquid error: " 
+      $self->print(1,"I \tSquid error: " 
                                . $res->header('x-squid-error'));
     }
 
@@ -279,14 +296,14 @@ sub makeHTMLrequest {
 
     if ( defined $res->header('retry-after')) { 
       $delay = $res->header('x-database-lag');
-      $self->print(2,"I Editor: Maximum server lag exceeded");
-      $self->print(3,"I Editor: Current lag $delay, limit " 
+      $self->print(2,"I Maximum server lag exceeded");
+      $self->print(3,"I Current lag $delay, limit " 
                                              . $self->{'maxlag'});
 
 #      print Dumper($res);
     }
 
-    $self->print(1, "I Editor: sleeping for " . $delay . " seconds");
+    $self->print(1, "I sleeping for " . $delay . " seconds");
 
     sleep $delay;
 
@@ -327,7 +344,7 @@ sub get_edit_token {
   my $self = shift;
   my $page = shift;
 
-  $self->print(1, "I Editor: Get token for $page");
+  $self->print(1, "I Get token for $page");
 
   my $res = $self->makeHTMLrequest('get', 
              [ $self->{'indexurl'} . "?title=$page" . "&action=edit"]);
@@ -369,12 +386,16 @@ sub edit {
   my $page = shift;
   my $text     = shift;
   my $summary  = shift;
-  my $is_minor = shift || '';
-  my $is_watched = shift || '';
+  my $is_minor = shift || '0';
+  my $is_watched = shift || '0';
 
   my ($edittoken, $edittime, $starttime, $edittext);
 
-  $self->print(1, "A Editor: Commit $page (edit summary: '$summary')");
+  if ( $self->{'loggedin'} eq 'false' ) { 
+    die "Attempted to edit while not logged in, aborting.\n";
+  }
+
+  $self->print(1, "A Commit $page (edit summary: '$summary')");
 
   my $try = 0;
   my $maxtries = $self->{'maxRetryCount'};
@@ -390,12 +411,11 @@ sub edit {
       if ( defined $edittoken) { 
         $getToken = 0; 
       } else {
-        $self->print(2,"E Error fetching edit token");
         next;  
       }
 
       if ( $edittext eq $text) { 
-        $self->print(2,"I Editor: server text matches text to upload. Not making an edit");
+        $self->print(2,"I server text matches text to upload. Not making an edit");
         return;
       }	
     }
@@ -410,11 +430,11 @@ sub edit {
                               "wpStarttime" => $starttime,
                               "wpEditToken"   => $edittoken ];
 
-   if ( $is_watched == 1) { 
+   if ( defined ($is_watched) && $is_watched == 1) { 
       $queryParameters->{"wpWatchthis"} = $is_watched;
    }
 
-   if ( $is_minor == 1) { 
+   if ( defined($is_minor) && $is_minor == 1) { 
         $queryParameters->{"wpMinoredit"} =  $is_minor;
    }
 
@@ -422,10 +442,10 @@ sub edit {
 
 
     if ( $res->code() == 302 ) { 
-      $self->print(2, "Editor: Edit successful");
+      $self->print(2, "I Edit successful");
       last;
     } elsif ( $res->code() == 200) { 
-      $self->print(1, "Editor: Edit unsuccessful ($try/$maxtries)");
+      $self->print(1, "E Edit unsuccessful ($try/$maxtries)");
      
       if ( $res->header('title') =~ /^\Q$self->{'dbLockedMessage'}\E/ ) {
         $self->print(2, "I  Databased locked, retrying\n");
@@ -438,7 +458,7 @@ sub edit {
       sleep $self->{'editFailedDelay'};
 
       if ( $try >= $maxtries) { 
-        $self->print(1, "E Editor: Too many tries, giving up");
+        $self->print(1, "E Too many tries, giving up");
         last;
       }
     }
@@ -453,12 +473,12 @@ sub append {
   my $page = shift;
   my $text     = shift;
   my $summary  = shift;
-  my $is_minor = shift || '';
-  my $is_watched = shift || '';
+  my $is_minor = shift || 0;
+  my $is_watched = shift || 0;
 
   my ($edittoken, $edittime, $starttime);
 
-  $self->print(1, "E Editor: Commit $page (msg: $summary)");
+  $self->print(1, "E Commit $page (msg: $summary)");
 
   my $try = 0;
   my $maxtries = $self->{'maxRetryCount'};
@@ -475,7 +495,6 @@ sub append {
       if ( defined $edittoken) { 
         $getToken = 0; 
       } else {
-        $self->print(2,"E Error fetching edit token");
         next;  
       }
     }
@@ -490,21 +509,21 @@ sub append {
                             "wpStarttime" => $starttime,
                             "wpEditToken"   => $edittoken ];
 
-    if ( $is_watched == 1) { 
-      $queryParameters->{"wpWatchthis"} = $is_watched;
+    if ( defined ($is_watched) && $is_watched == 1) { 
+       $queryParameters->{"wpWatchthis"} = $is_watched;
     }
 
-    if ( $is_minor == 1) { 
-      $queryParameters->{"wpMinoredit"} =  $is_minor;
+    if ( defined($is_minor) && $is_minor == 1) { 
+         $queryParameters->{"wpMinoredit"} =  $is_minor;
     }
 
     my $res = $self->makeHTMLrequest('post', $queryParameters);
 
     if ( $res->code() == 302 ) { 
-      $self->print(2, "I Editor: Edit successful");
+      $self->print(2, "I Edit successful");
       last;
     } elsif ( $res->code() == 200) { 
-      $self->print(1, "I Editor: Edit unsuccessful ($try/$maxtries)");
+      $self->print(1, "E Edit unsuccessful ($try/$maxtries)");
 
       if ( $res->header('title') =~ /^\Q$self->{'dbLockedMessage'}\E/ ) {
         $self->print(2, "I  Databased locked, retrying\n");
@@ -516,7 +535,7 @@ sub append {
       sleep $self->{'editFailedDelay'};
 
       if ( $try == $maxtries) { 
-        $self->print(1, "I Editor: Too many tries, giving up");
+        $self->print(1, "E Too many tries, giving up");
         last;
       }
     }
@@ -529,6 +548,10 @@ sub print {
   my $self = shift;
   my $limit = shift;
   my $message = shift;
+
+  if ( defined $self->{'name'} ) { 
+    $message = $self->{'name'} . ": " . $message;
+  }
 
   if ( $self->{'decodeprint'} == 1) { 
     $message = decode("utf8", $message);
