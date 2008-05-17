@@ -6,7 +6,8 @@
 # Carl Beckhorn, 2008
 # Copyright: GNU Public License (GPL) 2.0
 
-my $dryrun = 1;  # Won't edit anything if this is nonzero
+#my $dryrun = 1;  # Won't edit anything if this is nonzero
+my $dryrun = ($ENV{'DRYRUN'} || 0);
 
 use strict vars;
 
@@ -53,7 +54,7 @@ my $cprdRaw = $api->pages_in_category_detailed(
 
 foreach $page ( @$cprdRaw ) {
   push @$currentPeerReviews, $page->{'title'};
-  if ( str2time($page->{'timestamp'}) <= $expiry ) { 
+  if ( str2time($page->{'timestamp'}) <= $expiry   ) { 
     $page->{'old'} = 1;
   }
 
@@ -65,7 +66,6 @@ $currentPeerReviews = [ sort @$currentPeerReviews ];
 my $currentPeerReviewTalks = make_talks($currentPeerReviews);
 
 print "Read " . (scalar @$currentPeerReviews) . " current peer reviews.\n";
-
 
 #########################################################################
 ###################### Fetch FAC and FLC lists
@@ -164,11 +164,9 @@ foreach $page ( @$archivablePages ) {
 
   $prContent   = $api->content(encode("utf8", $page));
   $talkContent = $api->content(encode("utf8", 
-                                      $currentPeerReviewTalks->{$page}));
- 
-  
+                                      $currentPeerReviewTalks->{$page}));  
 
-  if ( $prContent =~ m!({{PR/header[^{}]*}})! ) { 
+  if ( $prContent =~ m!({{[Pp]eer review page[^{}]*}})! ) { 
     $prTag = $1;
   } else { 
     push @$badPRPages, $page;
@@ -198,7 +196,7 @@ foreach $page ( @$archivablePages ) {
   
   # Now replace templates with archive versions and commit
 
-  $prContent =~ s!{{PR/header[^{}]*}}!{{subst:PR/archive}}!;
+  $prContent =~ s!{{[Pp]eer review page[^{}]*}}!{{subst:PR/archive}}!;
 
   $s = "{{oldpeerreview|archive=$archive}}";
   $talkContent =~ s!{{[Pp]eer ?review[^{}]*}}!$s!e;
@@ -207,11 +205,12 @@ foreach $page ( @$archivablePages ) {
     $edit->edit(encode("utf8", $page), 
                 encode("utf8", $prContent), 
                 $editsummary);
-    $edit->edit(encode("utf8", $currentPeerReviewTalks), 
+    $edit->edit(encode("utf8", $currentPeerReviewTalks->{$page}), 
                 encode("utf8", $talkContent), 
                 $editsummary);
   } else { 
-    open OUT, ">DryRun";
+    open OUT, ">>DryRun";
+    binmode OUT, ":utf8";
     print OUT "-- $page\n";
     print OUT "----------------  New PR page:\n" 
                . substr($prContent,0, 1000);
@@ -222,7 +221,6 @@ foreach $page ( @$archivablePages ) {
   }
 }
 
-my $badPageReport = [];
 my $reason;
 
 foreach $page ( @$badTalkPages ) { 
@@ -241,10 +239,11 @@ print "Commit log entry\n";
 
 commit_log_entry($edit, $log, $logErrors);
 
-print "Done.\n";
+print "Done\n";
 
 exit;
 
+##########################################################################
 ##########################################################################
 
 ##########################################################################
@@ -362,9 +361,7 @@ sub commit_log_entry {
   my $count = scalar @$log;
   my $line;
 
-
   my $header = "Peer review archiving log for $date";
-
   $message .= "Script executed $dateLong.\n\nResult: ";
 
   if ( $count == 0) { 
@@ -372,11 +369,10 @@ sub commit_log_entry {
   } else {
     $message .= "$count peer review pages ready to archive.\n";
     foreach $line ( @$log) { 
-    $message .= "* $line\n";
+      $message .= "* $line\n";
     }
 
     $count = scalar @$logErrors; 
-
     if ( $count == 0 ) { 
       $message .= "No errors encountered.\n";
     } else { 
@@ -395,10 +391,9 @@ sub commit_log_entry {
   print LOG $message;
   close LOG;
 
-
   my $logpage = "User:PeerReviewBot/Logs/Archive";
   if ( $dryrun == 0) {
-    $editor->append($logpage, $message, $header);
+    $editor->append($logpage, encode("utf8",$message), $header);
   }
 
 }
