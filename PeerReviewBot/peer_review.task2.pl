@@ -103,6 +103,8 @@ my $logEntry;
 
 my $re = '<!--semi-automated peer review placeholder -- please do not edit or delete this comment-->';
 
+my $editsummary = "Linking to semi-automated peer review\n";
+
 foreach $page ( @$currentPeerReviews ) { 
   next if ( defined $currentPeerReviewDetails->{$page}->{'has-sa-link'} );
 
@@ -129,7 +131,18 @@ foreach $page ( @$currentPeerReviews ) {
     next;
   }
 
-  print substr($content, 0, 1000) . "\n\n";
+  if ( $dryrun == 0) { 
+    $edit->edit(encode("utf8", $page), 
+                encode("utf8", $content), 
+                $editsummary);
+  } else { 
+    open OUT, ">>DryRun.2";
+    binmode OUT, ":utf8";
+    print OUT "-- $page\n";
+    print OUT "----------------  New PR page:\n" 
+               . substr($content,0, 1000);
+    close OUT;
+  }
 }
 
 commit_log_entry($edit, $log, $errorLog);
@@ -146,7 +159,8 @@ sub make_log_line {
   my $prPage = shift;
   my $month = shift;
 
-  my $pat = "* [[%s]] ([[%s|peer review page]] - [[Wikipedia:Peer review/Automated/%s#%s|semi-auto peer review]])";
+  my $pat = "* [[%s]] ([[%s|peer review page]] - " . 
+            "[[Wikipedia:Peer review/Automated/%s#%s|semi-auto peer review]])";
 
   return sprintf $pat, $title, $prPage, $month, $title;
 }
