@@ -9,6 +9,7 @@ use LWP::UserAgent;
 use HTTP::Cookies;
 use HTML::TokeParser;
 use Encode;
+use URI::Escape;
 
 #   # Usage:
 #
@@ -347,7 +348,7 @@ sub get_edit_token {
   $self->print(1, "I Get token for $page");
 
   my $res = $self->makeHTMLrequest('get', 
-             [ $self->{'indexurl'} . "?title=$page" . "&action=edit"]);
+             [ $self->{'indexurl'} . "?title=" . uri_escape($page) . "&action=edit"]);
 
   my $content = $res->content();
 
@@ -430,12 +431,12 @@ sub edit {
                               "wpStarttime" => $starttime,
                               "wpEditToken"   => $edittoken ];
 
-   if ( defined ($is_watched) && $is_watched == 1) { 
-      $queryParameters->{"wpWatchthis"} = $is_watched;
+  if ( defined ($is_watched) && $is_watched == 1) { 
+      $queryParameters = [@$queryParameters, ["wpWatchthis" => 1]];
    }
 
    if ( defined($is_minor) && $is_minor == 1) { 
-        $queryParameters->{"wpMinoredit"} =  $is_minor;
+      $queryParameters = [@$queryParameters, ["wpMinoredit" => 1]];
    }
 
     my $res = $self->makeHTMLrequest('post',$queryParameters);
@@ -509,13 +510,16 @@ sub append {
                             "wpStarttime" => $starttime,
                             "wpEditToken"   => $edittoken ];
 
-    if ( defined ($is_watched) && $is_watched == 1) { 
-       $queryParameters->{"wpWatchthis"} = $is_watched;
-    }
 
-    if ( defined($is_minor) && $is_minor == 1) { 
-         $queryParameters->{"wpMinoredit"} =  $is_minor;
-    }
+
+   if ( defined ($is_watched) && $is_watched == 1) { 
+      $queryParameters = [@$queryParameters, ["wpWatchthis" => 1]];
+   }
+
+   if ( defined($is_minor) && $is_minor == 1) { 
+      $queryParameters = [@$queryParameters, ["wpMinoredit" => 1]];
+   }
+
 
     my $res = $self->makeHTMLrequest('post', $queryParameters);
 
