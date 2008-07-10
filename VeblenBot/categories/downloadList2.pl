@@ -18,9 +18,11 @@ my $api;
 $api = new Mediawiki::API;
 $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
-$api->login_from_file("/home/veblen/api.credentials");
-$api->maxlag(10);
+$api->maxlag(`/home/veblen/maxlag.sh`);
 
+$api->login_from_file("/home/veblen/api.credentials");
+
+$api->cmsort('timestamp');
 
 ###### Some categories are listed in reverse order
 
@@ -30,11 +32,11 @@ my $line;
 open IN, "<ReverseList";
 while ( $line = <IN> ) { 
  chomp $line;
+ print "Read '$line'\n";
  $Reverse{$line} = 1;
 }
 
 close IN;
-
 
 ######### Main routine 
 ######### Read list of categories to fetch and do it
@@ -75,7 +77,7 @@ sub download_cat_list {
 
   my $param = "CF/$cat";  # Template name on the wiki
 
-  print "\nFetch $cat $ns\n";
+  print "\nFetch '$cat' $ns\n";
   my $pages = $api->pages_in_category_detailed($cat, $ns);
   print "... " . scalar @$pages . " pages\n";
 

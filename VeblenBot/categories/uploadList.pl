@@ -14,6 +14,8 @@ MAIN: {
 
   my $client = Mediawiki::Edit->new();
   $client->base_url('http://en.wikipedia.org/w');
+  $client->maxlag(`/home/veblen/maxlag.sh`);
+
   $client->login_from_file('/home/veblen/api.credentials');
 
   $client->debug_level(3);
