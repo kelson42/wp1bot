@@ -19,7 +19,7 @@ use Data::Dumper;    # for debugging
 use lib '/home/veblen/VeblenBot';
 use Mediawiki::API;
 my $api = new Mediawiki::API;  # global object 
-$api->maxlag(12);
+$api->maxlag(`/home/veblen/maxlag.sh`);
 my $startTime = time();
 
 $api->base_url('http://en.wikipedia.org/w/api.php');
@@ -137,6 +137,7 @@ my %FieldDesc =
        'Mathematicians' =>'[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Mathematicians|Mathematicians]]',
        'Number theory' => '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Number theory|Number theory]]',
        'Probability and statistics'=> '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Probability and statistics|Probability and statistics]]',
+       'Frequently viewed' => '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Frequently viewed|Frequently viewed]]',
        'Theorems and conjectures' => '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Theorems and conjectures|Theorems and conjectures]]',
        'Vital' => '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/Vital articles|Vital articles]]',
        'History'=> '[[Wikipedia:WikiProject_Mathematics/Wikipedia_1.0/History|History]]',
@@ -168,6 +169,7 @@ my %TableRowFormat = (
     'Number theory' => 'field',
     'Probability and statistics' => 'field',
     'Theorems and conjectures' => 'field2',
+    'Frequently viewed' => 'field2',
     'Topology'         => 'field',   
     'UnassessedField'         => 'field',   
     'Vital' => 'field2',
@@ -203,6 +205,7 @@ my %FieldWikiPageName = (
     'Number theory' => 'Number theory',
     'Probability and statistics' => 'Probability and statistics',
     'Theorems and conjectures' => 'Theorems and conjectures',
+    'Frequently viewed' => 'Frequently viewed',
     'Topology'         => 'Topology',   
     'UnassessedField'         => 'Unassessed-field',   
     'Vital' => 'Vital articles',
@@ -258,6 +261,7 @@ sub blacklisted {
   my $art = shift;
 
   return 1 if ( $art =~ /^List of/);
+  return 1 if ( $art =~ /^Table of/);
   return 1 if ( $art =~ /\/Data$/);
   return 0;
 }
@@ -395,6 +399,23 @@ foreach $cat (("Category:Mathematical theorems",
   $tmp_arts = $api->pages_in_category($cat);
   print "Count: " . (scalar @$tmp_arts) . "\n";
   foreach $art ( @$tmp_arts) { 
+    $fields->{$art}->{$field} =1;
+  }
+}
+
+##################### Fetch articles tagged as frequently viewed
+
+print "\nFetching for frequently viewed articles\n";
+
+$field = 'Frequently viewed';  
+push @FieldList, $field;    
+
+foreach $cat (("Category:Frequently viewed mathematics articles")) { 
+  $tmp_arts = $api->pages_in_category($cat);
+  print "Count: " . (scalar @$tmp_arts) . "\n";
+  foreach $art ( @$tmp_arts) { 
+    $art =~ s/^Talk://;
+    print "TC $art\n";
     $fields->{$art}->{$field} =1;
   }
 }
@@ -727,6 +748,7 @@ HERE
     }
    
     my $art;
+    my $artenc;
     foreach $art ( sort { $_ = $QualityOrder{$data->{$a}->{QUALITY}}
                                <=>$QualityOrder{$data->{$b}->{QUALITY}};
                           if ( $_ != 0) { return $_; }
@@ -736,22 +758,25 @@ HERE
                         }
                      @articlesTemp) {
 
+        $artenc = $art;
+        $artenc =~ s/=/%3D/g;
+
         if ( $TableRowFormat{$field} eq 'field') {
             print OUT "{{Wikipedia:WikiProject Mathematics/Wikipedia 1.0/Table row format";
-            print OUT "|" . $art;
+            print OUT "|" . $artenc;
             print OUT "|" . $data->{$art}->{PRIORITY};
             print OUT "|" . $data->{$art}->{QUALITY};
             print OUT "}}\n";
         } elsif ( $TableRowFormat{$field} eq 'field2') {
             print OUT "{{Wikipedia:WikiProject Mathematics/Wikipedia 1.0/Table row format long";
-            print OUT "|" . $art;
+            print OUT "|" . $artenc;
             print OUT "|" . $data->{$art}->{PRIORITY};
             print OUT "|" . $data->{$art}->{QUALITY};
             print OUT "|" . $FieldDesc{$data->{$art}->{MAINFIELD}};
             print OUT "}}\n";
         } elsif ( $TableRowFormat{$field} eq 'quality') {
             print OUT "{{Wikipedia:WikiProject Mathematics/Wikipedia 1.0/Class table row format";
-            print OUT "|" . $art;
+            print OUT "|" . $artenc;
             print OUT "|" . $data->{$art}->{PRIORITY};
             print OUT "|" . $FieldDesc{$data->{$art}->{MAINFIELD}};
             print OUT "}}\n";
