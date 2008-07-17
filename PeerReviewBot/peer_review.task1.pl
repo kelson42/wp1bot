@@ -19,6 +19,8 @@ use Encode;
 use Data::Dumper;
 $Data::Dumper::Indent = 2; 
 
+use POSIX;
+
 #########################################################################
 ############ Load and initialize API and Edit libraries
 
@@ -31,11 +33,13 @@ $api = new Mediawiki::API;
 
 $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
+$api->maxlag(`/home/veblen/maxlag.sh`);
 $api->login_from_file("/home/veblen/api.credentials.pr");
 
 my $edit;
 $edit = new Mediawiki::Edit;
 $edit->base_url('http://en.wikipedia.org/w');
+$edit->maxlag(`/home/veblen/maxlag.sh`);
 $edit->debug_level(3);
 $edit->login_from_file("/home/veblen/api.credentials.pr");
 
@@ -54,6 +58,9 @@ my $cprdRaw = $api->pages_in_category_detailed(
 
 foreach $page ( @$cprdRaw ) {
   push @$currentPeerReviews, $page->{'title'};
+
+  print "D " . $page->{'title'} . " " . $page->{'timestamp'} . "\n";
+
   if ( str2time($page->{'timestamp'}) <= $expiry   ) { 
     $page->{'old'} = 1;
   }
@@ -93,6 +100,8 @@ foreach $page ( $currentPeerReviews ) {
 
 my $revisions = get_revisions($api, $currentPeerReviews);
 
+#print Dumper($revisions);
+
 my $timestamp;
 my $timestampe;
 
@@ -109,6 +118,11 @@ foreach $page ( @$currentPeerReviews )  {
   } else { 
     $expiry = $expiryYoung;
   }
+
+  print 
+    floor(($now - $timestampe) / (24*60*60) )
+    . " " . $page . "\n    " . $timestamp . " " 
+    . ceil(($timestampe - $expiry)/(24*60*60)) . "\n";
 
   if ( $timestampe < $expiry ) { 
     push @$archivablePages, $page;
@@ -131,7 +145,7 @@ my $badPRPages = [];
 my $badTalkPages = [];
 my $archive;
 
-my $editsummary = "Archiving peer review";
+my $editsummary = "Archiving peer review (bot task 1)";
 
 my $s;
 
@@ -166,6 +180,18 @@ foreach $page ( @$archivablePages ) {
   $talkContent = $api->content(encode("utf8", 
                                       $currentPeerReviewTalks->{$page}));  
 
+  print "TC: '$talkContent'\n";
+
+  if ( $talkContent =~ m!#[Rr][Ee][Dd][Ii][Rr][Ee][Cc][Tt]\s*\[\[([^]]*)]]!) { 
+    $currentPeerReviewTalks->{$page} = $1;
+    
+    print "Bypassing talk page redirect to :'" . $currentPeerReviewTalks->{$page} . "'\n";
+    $talkContent = $api->content(encode("utf8", 
+                                 $currentPeerReviewTalks->{$page}));  
+
+  }
+
+
   if ( $prContent =~ m!({{[Pp]eer review page[^{}]*}})! ) { 
     $prTag = $1;
   } else { 
@@ -175,6 +201,8 @@ foreach $page ( @$archivablePages ) {
     next;
   }
 
+#exit;
+
   if ( $page =~ m!archive(\d+)$! ) { 
     $archive = $1;
   } else { 
@@ -183,12 +211,32 @@ foreach $page ( @$archivablePages ) {
     next;
   }
 
+  # There are several "correct" ways for templates to be on the article
+  # talk page. Only one of them requires an edit on archiving: the
+  # {{Peer review}} template is replaced by {{Oldppeerreview}}. 
+  # If the oldpeerreview template is already on the talk page,
+  # we can just leave it.
+
+  # Also, the Articlehistory template can be used. This is more difficult
+  # to detect with regular expressions, but I think we can get 99% 
+  # right by looking for the articlehistory template and the link to the
+  # peer review page. It's still somewhat hackish. 
+
+  my $skipTalkReplace = 0;
+
   if ( $talkContent =~ m!({{[Pp]eer ?review[^{}]*}})! ) { 
     $talkTag = $1;
+  } elsif ( $talkContent =~ m!{{[Oo]ldpeerreview\s*|\s*archive=\Q$archive\E\s*}}! ) { 
+    $skipTalkReplace = 1;
+    print "Talk page already has oldpeerreview template\n";
+  } elsif ( $talkContent =~ m!{{[Aa]rticleHistory!  
+            && $talkContent =~ m!action\d+link\s*=\s*\Q$page\E! ) { 
+    $skipTalkReplace = 1;
+    print "Talk page has articlehistory template!\n";
   } else { 
     print "\tSanity check failed for $page: bad talk page tag\n";
     print "------------------  Talk page:\n" . substr($talkContent,0, 1000);
-    push @$badTalkPages, $currentPeerReviewTalks->{$page};
+    push @$badTalkPages, $page;
     next;
   }
 
@@ -205,10 +253,14 @@ foreach $page ( @$archivablePages ) {
     $edit->edit(encode("utf8", $page), 
                 encode("utf8", $prContent), 
                 $editsummary);
-    $edit->edit(encode("utf8", $currentPeerReviewTalks->{$page}), 
-                encode("utf8", $talkContent), 
-                $editsummary);
+
+    if ( $skipTalkReplace == 0) { 
+      $edit->edit(encode("utf8", $currentPeerReviewTalks->{$page}), 
+                  encode("utf8", $talkContent), 
+                  $editsummary);
+    }
   } else { 
+    print "Dryrun, but $page looks OK\n";
     open OUT, ">>DryRun";
     binmode OUT, ":utf8";
     print OUT "-- $page\n";
@@ -279,12 +331,13 @@ sub get_revisions {
     if ( scalar @$titles >= $limit ) { 
       $title =join "|", @$titles;
       print "Fetching revisions for " . (scalar @$titles) . " titles\n";
-      $result = $api->makeXMLrequest([ 'action' => 'query', 
-                                       'prop'   => 'revisions', 
-                                       'format' => 'xml',
-                                       'titles' => encode("utf8", $title),
-                                       'rvprop' => 'timestamp|user|comment' ], 
-                                     [ 'page' ]);
+      $result = $api->makeXMLrequest([ 
+                                 'action' => 'query', 
+                                 'prop'   => 'revisions', 
+                                 'format' => 'xml',
+                                 'titles' => encode("utf8", $title),
+                                 'rvprop' => 'timestamp|user|comment|flags' ], 
+                                  [ 'page' ]);
   
       $result = $result->{'query'}->{'pages'}->{'page'};
       $results = [ @$results , @$result ];
@@ -295,12 +348,13 @@ sub get_revisions {
   if ( scalar @$titles > 0 ) { 
     $title = join "|", @$titles;
     print "Fetching revisions for " . (scalar @$titles) . " titles\n";
-    $result = $api->makeXMLrequest([ 'action' => 'query', 
-                                     'prop'   => 'revisions', 
-                                     'format' => 'xml',
-                                     'titles' => encode("utf8", $title),
-                                     'rvprop' => 'timestamp|user|comment' ], 
-                                   [ 'page' ]);
+    $result = $api->makeXMLrequest([ 
+         'action' => 'query', 
+         'prop'   => 'revisions', 
+         'format' => 'xml',
+         'titles' => encode("utf8", $title),
+         'rvprop' => 'timestamp|user|comment|flags' ], 
+               [ 'page' ]);
     $result = $result->{'query'}->{'pages'}->{'page'};
     $results = [ @$results,  @$result ];
   }
