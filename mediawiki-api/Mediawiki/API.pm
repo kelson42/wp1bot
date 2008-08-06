@@ -68,7 +68,8 @@ sub new {
   $self->{'htmlMode'} = 0;         # escape output for CGI output  
   $self->{'debugXML'} = 0;         # print extra debugging for XML parsing
   $self->{'cmsort'} = 'sortkey';   # request this sort order from API
-  $self->{'botlimit'} = 5000;      # number of results to request per query
+  $self->{'querylimit'} = 500;     # number of results to request per query
+  $self->{'botlimit'} = 5000;      # number of results to request if bot
   $self->{'decodeprint'} = 1;      # don't UTF-8 output
   $self->{'xmlretrydelay'} = 10;   # pause after XML level failure 
   $self->{'xmlretrylimit'} = 10;   # retries at XML level
@@ -481,7 +482,7 @@ sub backlinks {
  
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'backlinks', 
-                           'bllimit' => '500',
+                           'bllimit' => $self->{'querylimit'}, 
 #                           'titles' => $pageTitle,
                            'bltitle' => $pageTitle,
                            'format' => 'xml');
@@ -530,7 +531,7 @@ sub pages_in_category_detailed {
 
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'categorymembers', 
-                           'cmlimit' => '500',
+                           'cmlimit' => $self->{'querylimit'},
                            'cmsort' => $self->{'cmsort'},
                            'cmprop' => 'ids|title|sortkey|timestamp',
                            'cmtitle' => $categoryTitle,
@@ -571,7 +572,7 @@ sub where_embedded {
  
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'embeddedin', 
-                           'eilimit' => '500',
+                           'eilimit' => $self->{'querylimit'}, 
                            'eititle' => $templateTitle,
                            'format' => 'xml' );
 
@@ -606,7 +607,7 @@ sub log_events {
  
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'logevents', 
-                           'lelimit' => '500',
+                           'lelimit' => $self->{'querylimit'},
                            'letitle' => $pageTitle,
                            'format' => 'xml' );
 
@@ -642,7 +643,7 @@ sub image_embedded {
  
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'imageusage', 
-                           'iulimit' => '500',
+                           'iulimit' => $self->{'querylimit'},
                            'iutitle' => $imageTitle,
                            'format' => 'xml' );
 
@@ -734,6 +735,61 @@ sub content_single {
   return $self->child_data_if_defined($results, 
                        ['query', 'pages', 'page', 'revisions', 'rev'], '');
 }
+#########################################################
+
+
+sub content_section { 
+
+  my $self = shift;
+  my $pageTitle = shift;
+  my $section = shift;
+
+  if ( ! ( $section =~ /^\d+$/ ) ) { 
+    die "Bad section: '$section'. Must be a nonnegative integer.\n";
+  }
+
+  $self->print(1,"A Fetching content of $pageTitle");
+ 
+  my %queryParameters =  ( 'action' => 'query', 
+                           'prop' => 'revisions', 
+                           'titles' => $pageTitle,
+                           'rvprop' => 'content',
+                           'rvsection' => $section,
+                           'format' => 'xml' );
+  my $results 
+    = $self->makeXMLrequest([%queryParameters]);
+
+  return $self->child_data_if_defined($results, 
+                       ['query', 'pages', 'page', 'revisions', 'rev'], '');
+}
+
+
+###################################################
+
+
+sub revisions {
+  my $self = shift;
+  my $title = shift;
+
+  my $count = shift;
+  if ( ! defined $count ) { 
+    $count = $self->{'querylimit'};
+  }
+
+  my $what = "ids|flags|timestamp|size|comment|user";
+ 
+  my $data = $self->makeXMLrequest([ 'format' => 'xml',
+                                       'action' => 'query',
+                                       'prop' => 'revisions',
+                                       'rvprop' => $what,
+                                       'rvlimit' => $count,
+                                       'titles' => encode("utf8", $title)  ], 
+                                     [ 'page' ]);
+
+  my $t = $self->child_data_if_defined($data, ['query','pages','page']);
+  return $self->child_data_if_defined(${$t}[0], ['revisions', 'rev']);
+}
+
 
 
 ################################################################
@@ -749,9 +805,12 @@ sub page_info {
   my $pageTitle = shift;
 
   $self->print(1,"A Fetching info for $pageTitle");
- 
+
+  my $what = 'protection|talkid|subjectid'; 
+
   my %queryParameters =  ( 'action' => 'query', 
                            'prop' => 'info',
+                           'inprop' => $what,
                            'titles' => $pageTitle,
                            'format' => 'xml' );
 
@@ -826,7 +885,7 @@ sub user_contribs {
 
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'usercontribs', 
-                           'uclimit' => '500',
+                           'uclimit' => $self->{'querylimit'},
                            'ucdirection' => 'older',
                            'ucuser' => $userName,
                            'format' => 'xml' ); 
@@ -862,6 +921,21 @@ sub user_contribs {
 
   return \@results;
 }
+
+######################3
+
+sub parse { 
+  my $self = shift;
+  my $content = shift;
+
+  my $r = $self->makeXMLrequest(['action'=>'parse',
+                                 'text'=>encode('utf8', $content),
+                                 'format' => 'xml']);
+
+  return $self->child_data($r, ['parse']);
+}                                  
+
+
 
 #############################################################3
 
@@ -1122,7 +1196,7 @@ sub makeHTMLrequest {
 
   my $retryCount = 0;
   my $delay = 4;
- 
+
   my $res;
 
   while (1) { 
@@ -1232,20 +1306,20 @@ sub child_data_if_defined {
 
 # Internal function
 
-sub print { 
+sub print {
   my $self = shift;
   my $limit = shift;
   my $message = shift;
 
-  if ( $self->{'decodeprint'} == 1) { 
+  if ( $self->{'decodeprint'} == 1) {
     $message = decode("utf8", $message);
   }
 
   if ( $limit <= $self->{'debugLevel'} ) {
     print $message;
-    if ( $self->{'htmlMode'} > 0) { 
+    if ( $self->{'htmlMode'} > 0) {
       print " <br/>\n";
-    } else { 
+    } else {
       print "\n";
     }
   }
