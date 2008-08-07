@@ -202,7 +202,8 @@ sub db_cleanup_project {
   # This will always happen if the article has a quality rating that the 
   # bot doesn't recognize. Change the NULL to 'Unassessed-Class'.
 
-  $sth = $dbh->prepare("update ratings set r_quality = 'Unassessed-Class' "
+  $sth = $dbh->prepare("update ratings set r_quality = 'Unassessed-Class', " 
+                     . "r_quality_timestamp = r_importance_timestamp "
                      . "where isnull(r_quality) and r_project = ?");
   $count = $sth->execute($proj);
   print "Null quality rows: $count\n";
