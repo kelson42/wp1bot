@@ -5,7 +5,7 @@ create table projects (
     p_project         varchar(63) not null,
         -- project name
 
-    p_timestamp       binary(20) not null,
+    p_timestamp       binary(14) not null,
         -- last time project data was updated
 
     p_wikipage        varchar(255),
@@ -15,7 +15,8 @@ create table projects (
         -- parent project (for task forces)
 
     primary key (p_project)
-) default character set 'utf8';
+) default character set 'utf8' 
+  engine = InnoDB;
 
 
 -- The ratings table stores the ratings data. Each article will
@@ -43,7 +44,9 @@ create table ratings (
         -- time when importance rating was assigned
 
     primary key (r_project, r_article)
-) default character set 'utf8';
+) default character set 'utf8'
+  engine = InnoDB;
+
 
 
 -- The categories table stores a list of all ratings 
@@ -67,7 +70,9 @@ create table categories (
         -- sortkey, used when creating tables 
 
     primary key (c_project, c_type, c_rating)
-) default character set 'utf8';
+) default character set 'utf8'
+  engine = InnoDB;
+
 
 
 -- The logging table has one log entry for each change of an article. 
@@ -99,5 +104,7 @@ create table logging (
     l_revision_timestamp  binary(20)  not null,
        -- timestamp when page was edited
 
-    primary key (l_project, l_article, l_action, l_timestamp)
-) default charset = 'utf8';
+    key (l_project, l_article, l_action, l_timestamp)
+) default charset = 'utf8'
+  engine = InnoDB;
+

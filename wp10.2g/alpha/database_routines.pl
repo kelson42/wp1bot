@@ -5,8 +5,9 @@ $Data::Dumper::Sortkeys = 1;
 
 use DBI;
 my $pw = `/home/veblen/pw-db.sh`;
-my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw)
-                or die "Couldn't connect to database: " . DBI->errstr;
+my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw,
+                       {'RaiseError' => 1, 'AutoCommit' => 0})
+               or die "Couldn't connect to database: " . DBI->errstr;
 
 #######################################################################
 
@@ -27,8 +28,7 @@ sub update_article_data {
   $value = encode("utf8", $value);
   $oldvalue = encode("utf8", $oldvalue);
 
-  print "\nU:" 
-      . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
+  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
 
   my $sth_insert_logging = $dbh->prepare("INSERT INTO logging " . 
                                          "values (?,?,?,?,?,?,?)");
@@ -54,8 +54,6 @@ sub update_category_data {
   $type = encode("utf8", $type);
   $category = encode("utf8", $category);
 
-#  print "CAT $category SORTKEY $ranking \n";
-
   my $sth = $dbh->prepare (
        "UPDATE categories SET c_category = ?, c_ranking = ? " .
        "WHERE c_project = ? and c_rating= ? and c_type = ? "
@@ -75,22 +73,15 @@ sub update_category_data {
 ## reassessed
 
 sub update_article_rating_data { 
- 
   my $project = shift;
   my $article = shift;
   my $type = shift;
   my $rating = shift;
   my $rating_timestamp = shift;
 
-  if ( ! ( $type eq 'importance' || $type eq 'quality' ) ) { 
+  if ( !( $type eq 'importance' || $type eq 'quality' ) ) { 
     die "Bad ratings type:  $type\n";
   }
-
-#  $project = encode("utf8", $project);
-#  $article = encode("utf8", $article);
-#  $rating = encode("utf8", $rating);
-
-  if ( $rating eq 'undef' ) { undef $rating; }
 
   my $sth = $dbh->prepare ("UPDATE ratings SET r_$type = ?, " 
                          . "r_" . $type . "_timestamp = ?  " 
@@ -122,9 +113,9 @@ sub update_project {
   my $wikipage = shift;
   my $parent = shift;
 
-  my $sth = $dbh->prepare ( "UPDATE projects SET p_timestamp  = ?, "
-                          . "p_wikipage = ?, p_parent = ? " .
-                            "WHERE p_project = ?" );
+  my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
+                         . "p_wikipage = ?, p_parent = ? " 
+                         . "WHERE p_project = ?" );
 
   my $count = $sth->execute($timestamp, $wikipage, $parent, $project);
 
@@ -134,12 +125,10 @@ sub update_project {
   }
 }
 
-
 ############################################################
 ## Query project table for a particular project
 
 sub project_exists {
-
   my $project = shift;
   $project = encode("utf8", $project);
 
@@ -180,7 +169,46 @@ sub get_project_ratings {
 
 ############################################################
 
+sub db_commit { 
+  print "Commit database\n";
+  $dbh->commit();
+  return 0;
+}
+
 ############################################################
+
+sub db_rollback { 
+  print "Rollback database\n";
+  $dbh->rollback();
+  return 0;
+}
+
+############################################################
+
+sub db_cleanup_project {
+  my $proj = shift;
+  print "Cleanup $proj\n";
+
+  # If both quality and importance are NULL, that means the article
+  # was once rated but isn't any more, so we delete the row
+
+  my $sth = $dbh->prepare("delete from ratings where isnull(r_quality) " 
+                        . "and isnull(r_importance) and r_project = ?");
+  my $count = $sth->execute($proj);
+  print "Deleted articles: $count\n";
+
+  # It's possible for the quality to be NULL if the article has a 
+  # rated importance but no rated quality (not even Unassessed-Class).
+  # This will always happen if the article has a quality rating that the 
+  # bot doesn't recognize. Change the NULL to 'Unassessed-Class'.
+
+  $sth = $dbh->prepare("update ratings set r_quality = 'Unassessed-Class' "
+                     . "where isnull(r_quality) and r_project = ?");
+  $count = $sth->execute($proj);
+  print "Null quality rows: $count\n";
+
+  return 0;
+}
 
 ############################################################
 

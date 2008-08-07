@@ -37,13 +37,11 @@ $api->login_from_file("/home/veblen/api.credentials");
 
 my $project;
 
-
-if ( defined $ARGV[0]) { 
-  if (project_exists($ARGV[0]) ) { 
+if ( defined $ARGV[0] ) { 
+  if ( project_exists($ARGV[0]) ) { 
     download_project($ARGV[0]);
     print "-- main driver done\n";
     exit;
-
   } else { 
     print "Looking for '$ARGV[0]' on wiki\n";
   }
