@@ -4,19 +4,23 @@
 # CGI to display table of ratings information
 # 
 
-use lib '/home/veblen/VeblenBot';
+use lib '/home/cbm/perl/share/perl/5.10.0/';
+use lib '/home/cbm/veblen/VeblenBot';
 
 use strict;
 use Data::Dumper;
+use URI::Escape;
 
 use POSIX;
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
+my $script_url = 'http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/list.pl?';
+
 ########################
 
 use Cache::File;
-my $cache = Cache::File->new( cache_root => '/home/veblen/wp10cache');
+my $cache = Cache::File->new( cache_root => '/home/cbm/wp10cache');
 my $cache_sep = "<hr/><!-- cache separator -->\n";
 
 ########################
@@ -32,9 +36,8 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 my $proj = $param{'project'} || $ARGV[0];
 
 use DBI;
-
-my $pw = `/home/veblen/pw-db.sh`;
-my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw)
+my $dbh = DBI->connect('DBI:mysql:database=u_cbm:host=sql' . 
+             ":mysql_read_default_file=/home/cbm/.my.cnf.www","","")
                 or die "Couldn't connect to database: " . DBI->errstr;
 
 html_header();
@@ -219,7 +222,17 @@ sub ratings_table {
   foreach $qual ( @QualityRatings ) {
     next if ( $qual eq 'Assessed' );  # nothing in $data for this
     foreach $prio ( @PriorityRatings ) { 
-      $table->data($qual, $prio, $data->{$qual}->{$prio});    
+
+      if ( $data->{$qual}->{$prio} > 0 ) { 
+         $table->data($qual, $prio, 
+                   '[' . $script_url . "project=" . uri_escape($proj) 
+                    . "&importance=" . uri_escape($prio) 
+                    . "&quality=" . uri_escape($qual)  . ' ' 
+                    . $data->{$qual}->{$prio} . "]");
+      } else { 
+         $table->data($qual, $prio, "");
+      }
+
       $qualcounts->{$qual} += $data->{$qual}->{$prio};    
       $priocounts->{$prio} += $data->{$qual}->{$prio};    
       $total += $data->{$qual}->{$prio};    
@@ -232,16 +245,35 @@ sub ratings_table {
   }
 
   foreach $qual ( @QualityRatings ) {
-    $table->data($qual, "Total", "'''" . $qualcounts->{$qual} . "'''") ;
+    $table->data($qual, "Total", "'''[" 
+                   . $script_url . "project=" . uri_escape($proj) 
+#                    . "&importance=" . uri_escape($prio) 
+                    . "&quality=" . uri_escape($qual)  . ' ' 
+                    . $qualcounts->{$qual} . "]'''");
   }
 
   foreach $prio ( @PriorityRatings ) { 
-    $table->data("Total", $prio, "'''" . $priocounts->{$prio} . "'''");
-    $table->data("Assessed", $prio, $totalAssessed->{$prio});
+    $table->data("Total", $prio, 
+                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                    . "&importance=" . uri_escape($prio) 
+#                    . "&quality=" . uri_escape($qual)  
+                   . ' ' . $priocounts->{$prio} . "]'''");
+
+    $table->data("Assessed", $prio, 
+                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                    . "&importance=" . uri_escape($prio) 
+                    . "&quality=Assessed" 
+                   . ' ' . $totalAssessed->{$prio} . "]'''" );
   }
 
-  $table->data("Total", "Total", "'''$total'''");
-  $table->data("Assessed", "Total", "'''" . $totalAssessed->{'Total'} . "'''");
+  $table->data("Total", "Total", "'''[" 
+                   . $script_url . "project=" . uri_escape($proj) 
+                   . ' ' . $total . "]'''");
+
+  $table->data("Assessed", "Total", 
+                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                    . "&quality=Assessed" 
+                   . ' ' . $totalAssessed->{'Total'} . "]'''" );
 
   use Mediawiki::API;
   my $api = new Mediawiki::API;
@@ -272,8 +304,7 @@ sub get_categories {
 
 
   my $sth = $dbh->prepare(
-    "SELECT c_type, c_rating, c_ranking, c_category FROM categories 
-" . 
+    "SELECT c_type, c_rating, c_ranking, c_category FROM categories " . 
     "WHERE c_project = ?" );
 
   $sth->execute($project);
@@ -378,3 +409,8 @@ print << "HERE";
 </html>
 HERE
 }
+
+
+#################3
+
+

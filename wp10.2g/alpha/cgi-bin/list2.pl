@@ -22,7 +22,9 @@ my $proj = $param{'project'} || $ARGV[0];
 
 my $pw = `/home/veblen/pw-db.sh`;
 
-my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw)
+my $dbh =
+DBI->connect('DBI:mysql:database=u_cbm:host=sql' .
+             ":mysql_read_default_file=/home/cbm/.my.cnf.www","","")
                 or die "Couldn't connect to database: " . DBI->errstr;
 
 html_header();

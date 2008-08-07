@@ -16,13 +16,20 @@ use CGI::Carp qw(fatalsToBrowser);
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
+if ( $param{'limit'} > 500) { 
+  $param{'limit'} = 500;
+}
+
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
 my $proj = $param{'project'} || $ARGV[0];
 
 my $pw = `/home/veblen/pw-db.sh`;
 
-my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw)
+
+my $dbh =
+DBI->connect('DBI:mysql:database=u_cbm:host=sql' .
+             ":mysql_read_default_file=/home/cbm/.my.cnf.www","","")
                 or die "Couldn't connect to database: " . DBI->errstr;
 
 html_header();
@@ -46,8 +53,7 @@ sub ratings_table {
     return;
   }
 
-  my $limit = $params->{'limit'} || 10;
-  if ( $limit > 50 ) { $limit = 50;}
+  my $limit = $params->{'limit'} || 20;
 
   my $offset = $params->{'offset'} || 0;
 
@@ -61,10 +67,15 @@ sub ratings_table {
   my $quality = $params->{'quality'};
 
   if ( defined $quality && $quality =~ /\w|\d/) {
-    $query .= " AND r_quality = ?";
-    $queryc .= " AND r_quality = ?";
-    push @qparam, $quality;
-    push @qparamc, $quality;
+    if ( $quality eq 'Assessed' ) { 
+      $query .= " AND NOT r_quality = 'Unassessed-Class'";
+      $queryc .= " AND NOT r_quality = 'Unassessed-Class'";
+    } else { 
+      $query .= " AND r_quality = ?";
+      $queryc .= " AND r_quality = ?";
+      push @qparam, $quality;
+      push @qparamc, $quality;
+    }
   }
 
 
@@ -91,7 +102,7 @@ sub ratings_table {
   my @row = $sthcount->fetchrow_array()	;
 
   print "<p><b>Total results: " . $row[0] 
-        . "</b>.<br/> Displaying $limit results beginning with #" 
+        . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p><hr/>\n";
 
 
@@ -136,7 +147,11 @@ sub query_form {
 
   my $p;
   foreach $p ( sort { $a cmp $b} keys %$projects) { 
-   print "<option value=\"" . $p . "\">" . $p ."</option>\n";
+   print "<option value=\"" . $p . "\"";
+   if ( $p eq $params->{'project'} ) { 
+     print " selected ";
+   }
+   print ">" . $p ."</option>\n";
   }
 
 
