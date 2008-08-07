@@ -9,7 +9,18 @@ use lib '/home/veblen/VeblenBot';
 use strict;
 use Data::Dumper;
 
-use DBI;
+use POSIX;
+
+my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
+
+########################
+
+use Cache::File;
+my $cache = Cache::File->new( cache_root => '/home/veblen/wp10cache');
+my $cache_sep = "<hr/><!-- cache separator -->\n";
+
+########################
+
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
 
@@ -20,7 +31,9 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 my $proj = $param{'project'} || $ARGV[0];
 
-my $pw= `/home/veblen/pw-db.sh`;
+use DBI;
+
+my $pw = `/home/veblen/pw-db.sh`;
 my $dbh = DBI->connect('DBI:mysql:wp10', 'wp10user', $pw)
                 or die "Couldn't connect to database: " . DBI->errstr;
 
@@ -28,17 +41,85 @@ html_header();
 my $projects = query_form($proj);
 
 if ( defined $proj && defined $projects->{$proj} ) {
-  ratings_table($proj);
+  cached_ratings_table($proj);
 }	
 html_footer();
 exit;
 
 #######################
 
-sub ratings_table { 
+sub cached_ratings_table { 
+
   my $proj = shift;
 
-  print "Project: '$proj'<br/>\n";
+  my $sth = $dbh->prepare("select p_timestamp from projects "
+                        . "where p_project = ?");
+  
+  $sth->execute($proj);
+  my @row = $sth->fetchrow_array();
+  my $proj_timestamp = $row[0];
+
+  print "<b>Debugging output</b><br/>\n";
+  print "Current time: $timestamp<br/>\n";
+  print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
+
+  my $key = "TABLE:" . $proj;
+  my $data;
+
+  if ( defined $cgi->{'purge'} ) { 
+    print "Purging cached output<br/>\n";
+  } elsif ( $cache->exists($key) ) { 
+    my $expiry = $cache->expiry($key);
+    print "Cached output expires: " . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
+        . "<br/>\n";
+
+    $data = $cache->get($key);
+    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) 
+      = split /\Q$cache_sep\E/, $data, 5;
+
+    if ( $c_proj_timestamp eq $proj_timestamp ) {
+      print "Cached output valid<br/>\n";
+
+      print "<hr/><center>\n";
+      print $c_html;
+      print "</center>\n";
+      print "\n";
+      print "<hr/><pre>";
+      print $c_wikicode;
+      print "</pre>\n";
+
+      return;
+    } else {
+      print "Cached output must be regenerated<br/>\n";
+    }
+  } else {
+    print "No cached output available<br/>\n";
+  }
+
+  print "Regenerating output<br/>\n";
+
+  my ($html, $wikicode) = ratings_table($proj);
+
+  print "<hr/><center>\n";
+  print $html;
+  print "</center>\n";
+  print "\n";
+  print "<hr/><pre>";
+  print $wikicode;
+  print "</pre>\n";
+
+  $data = "TABLE:$proj" . $cache_sep 
+        . $timestamp . $cache_sep
+        . $proj_timestamp . $cache_sep 
+        . $html . $cache_sep 
+        . $wikicode;
+
+  $cache->set($key, $data, '1 hour');
+}
+
+
+sub ratings_table { 
+  my $proj = shift;
 
   # Step 1: fetch totals from DB and load them into the $data hash
 
@@ -170,14 +251,7 @@ sub ratings_table {
   my $code = $table->wikicode();
   my $r =  $api->parse($code);
 
-  print "<center>\n";
-  print $r->{'text'};
-  print "</center>\n";
-  print "\n";
-  print "<hr/><pre>";
-  print $code;
-  print "</pre>\n";
-
+  return ($r->{'text'}, $code);
 }
 
 ###################################
