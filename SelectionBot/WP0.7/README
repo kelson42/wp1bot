@@ -1,0 +1,26 @@
+This is a preliminary release of the SelectionBot code for version 0.7.
+
+The steps to use the system are: 
+
+1. Create the necessary working directories:
+
+	sh prepareDirs.sh
+
+You can later run 
+
+	prepareDirs.sh clean 
+
+to restore everything to a pristine state, deleting all created data.
+
+2. Make the input databases, following README.Database.
+
+3. Generate the CSV files with 
+
+	perl makeRatingsCSV.pl
+
+The file ProjectWhitelist can be used to filter out only a subset of the 
+projects. It can be enabled by editing near the top of makeRatingsCSV.pl
+
+4. Generate the HTML files with
+
+	perl makeHTMLfromCSV.pl

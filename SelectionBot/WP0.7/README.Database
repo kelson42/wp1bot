@@ -1,0 +1,33 @@
+How to create the BerkeleyDB files that the selection script requires.
+
+1) The necessary inputs are the files  
+
+	counts.lst.gz
+	redirects_targets.lst.gz
+   
+These can be made with the selection_tools package.
+
+2) Edit makeDatabases.pl to set the $HCSCALE variable, which is used as 
+a multiplicative factor to scale the hitcount data. We want the output 
+to be monthly stats, so for example daily input data needs HCSCALE to 
+be 30.
+
+3) The script to create databases makes millions of INSERT operations. 
+In practice, this may run very slowly on a journaling filesystem. The 
+script should take about the same amount of time for each batch of 
+inserts; bad filesystems may make the times rise exponentially. 
+A good solution is to mount the DBm directory as a ramdisk.
+The command, which needs to be run as root, is
+
+	mount -o uid=USERNAME -t tmpfs none ./DBm
+
+The database will be made in the DBm directory, which requires 
+approximately 500MB of space (or RAM, if using a ramdisk) to hold them.
+
+4) Run these commands, fixing the file location DIR as required
+ 
+	perl makeDatabases.pl DIR/target/counts.lst.gz
+	perl makeDatabasesRedirect.pl DIR/targett/redirects_targets.lst.gz 
+
+5) Copy or move the database files to the DB directory. If you mounted
+the DBm directory in memory, you can unmount it after copying the files.
