@@ -4,7 +4,6 @@ use strict;
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
 
-
 require 'read_conf.pl';
 our $Opts = read_conf();
 
@@ -82,7 +81,8 @@ sub cached_ratings_table {
     print "Purging cached output<br/>\n";
   } elsif ( $cache->exists($key) ) { 
     my $expiry = $cache->expiry($key);
-    print "Cached output expires: " . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
+    print "Cached output expires: " 
+        . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
         . "<br/>\n";
 
     $data = $cache->get($key);
@@ -136,12 +136,13 @@ sub ratings_table {
   # Step 1: fetch totals from DB and load them into the $data hash
 
   my $sth = $dbh->prepare(
-    "select count(r_article), r_quality, r_importance, r_project from ratings" .
-    " where r_project = ? group by r_quality, r_importance, r_project");
+    "select count(r_article), r_quality, r_importance, r_project from ratings" 
+  . " where r_project = ? group by r_quality, r_importance, r_project");
 
   $sth->execute($proj);
 
-  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = get_categories($proj);
+  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
+    = get_categories($proj);
 
   my $data = {};
   my $cols = {};
@@ -183,8 +184,10 @@ sub ratings_table {
 
   # These, along with the totals, will appear in the final table. 
   # The important step here is the sorting. 
-  my @PriorityRatings = sort { $SortImp->{$a} <=> $SortImp->{$b} } keys %$cols;
-  my @QualityRatings = sort { $SortQual->{$a} <=> $SortQual->{$b} } keys %$data; 
+  my @PriorityRatings = sort { $SortImp->{$a} <=> $SortImp->{$b} } 
+                             keys %$cols;
+  my @QualityRatings =  sort { $SortQual->{$a} <=> $SortQual->{$b} } 
+                             keys %$data; 
 
   use RatingsTable;
   my $table = RatingsTable::new();
@@ -387,38 +390,5 @@ sub query_form {
   return $projects;
 }
 
-##############
-
-
-sub html_header { 
-print << "HERE";
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
-  <head>
-  <base href="http://en.wikipedia.org">
-  <style type="text/css" media="screen, projection">/*<![CDATA[*/
-    \@import url("http://en.wikipedia.org/skins-1.5/common/shared.css?162");
-    \@import url("http://en.wikipedia.org/skins-1.5/simple/main.css?162");
-    \@import url("/w/index.php?title=MediaWiki:Common.css&usemsgcache=yes&action=raw&ctype=text/css&smaxage=2678400");
-    \@import url("/w/index.php?title=MediaWiki:Monobook.css&usemsgcache=yes&action=raw&ctype=text/css&smaxage=2678400");
-
-		/*]]>*/</style>
-  </head>
-  <body>
-HERE
-
-}
-
-######################33
-
-sub html_footer { 
-print << "HERE";
-  </body>
-</html>
-HERE
-}
-
-
-#################3
-
+#####################################################################
 
