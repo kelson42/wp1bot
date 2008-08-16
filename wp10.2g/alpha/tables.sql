@@ -1,4 +1,5 @@
--- The project table stores a list of participating wikiprojects
+-- The project table stores a list of participating 
+wikiprojects
 
 create table projects ( 
 
@@ -33,7 +34,7 @@ create table ratings (
     r_quality               varchar(63),
         -- quality rating
 
-    r_quality_timestamp     binary(20),
+    r_quality_timestamp     binary(14),
         -- time when quality rating was assigned
         --   NOTE: a revid can be obtained from timestamp via API
 
@@ -92,7 +93,7 @@ create table logging (
        -- length constraints interacting with utf-8 fields in  
        -- mysql. The primary key for this table is just under the limit. 
  
-    l_timestamp      binary(20)  not null,
+    l_timestamp      binary(14)  not null,
        -- timestamp when log entry was added
 
     l_old            varchar(63),
@@ -101,10 +102,9 @@ create table logging (
     l_new            varchar(63),
        -- new value (e.g. GA-Class)
 
-    l_revision_timestamp  binary(20)  not null,
+    l_revision_timestamp  binary(14)  not null,
        -- timestamp when page was edited
 
     key (l_project, l_article, l_action, l_timestamp)
 ) default charset = 'utf8'
   engine = InnoDB;
-
