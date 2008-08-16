@@ -16,15 +16,17 @@ my $t = time();
 our $global_timestamp = strftime("%Y%m%d%H%M%S", gmtime($t));
 our $global_timestamp_wiki = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($t));
 
-use lib '/home/veblen/NewMath';
+require 'read_conf.pl';
+our $Opts = read_conf(); # Also initializes library paths
+
 require 'database_routines.pl';
 require 'wp10_routines.pl';
 
 #############################################################
 # Create and initalize API object
 
-use lib '/home/veblen/VeblenBot';
-use Mediawiki::API;
+require Mediawiki::API;
+
 $api = new Mediawiki::API;  # global object 
 $api->maxlag(12);
 $api->max_retries(20);

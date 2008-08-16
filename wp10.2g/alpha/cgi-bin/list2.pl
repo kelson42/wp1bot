@@ -1,27 +1,30 @@
 #!/usr/bin/perl
 
+use strict;
+
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
 
-use lib '/home/veblen/VeblenBot';
-use lib '/home/cbm/veblen/VeblenBot';
-use lib '/home/cbm/perl/share/perl/5.10.0';
+require 'read_conf.pl';
+our $Opts = read_conf();
 
-use Mediawiki::API;
+require 'database_www.pl';
+require 'layout.pl';
+require 'init_cache.pl';
+
+require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
 $api->base_url('http://en.wikipedia.org/w/api.php');
 
-use strict;
-use Data::Dumper;
+require CGI;
+require CGI::Carp; 
+CGI::Carp->import('fatalsToBrowser');
 
-use CGI;
-use CGI::Carp qw(fatalsToBrowser);
-use DBI;
-use POSIX;
+require DBI;
+require POSIX;
 
-use Cache::File;
-my $cacheFile = Cache::File->new( cache_root => '/home/cbm/wp10cache');
+my $cacheFile = init_cache();
 my $cacheMem = {};
 
 my $cgi = new CGI;
@@ -29,10 +32,7 @@ my %param = %{$cgi->Vars()};
 
 my $proj = $param{'project'} || $ARGV[0];
 
-require "database_www.pl";
-require "layout.pl";
-
-my $dbh = db_connect();
+my $dbh = db_connect($Opts);
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 

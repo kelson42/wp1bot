@@ -1,20 +1,20 @@
 #!/usr/bin/perl
+use strict;
 
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
-# 
-
-use lib '/home/cbm/perl/share/perl/5.10.0/';
-use lib '/home/cbm/VeblenBot';
-use lib '/home/veblen/VeblenBot';
-use Mediawiki::API;
 
 
-use strict;
+require 'read_conf.pl';
+our $Opts = read_conf();
+
+require Mediawiki::API;
+
 use Data::Dumper;
 use URI::Escape;
 
-use POSIX;
+require POSIX;
+POSIX->import('strftime');
 
 require 'layout.pl';
 
@@ -24,14 +24,14 @@ my $script_url = 'http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/list
 
 ########################
 
-use Cache::File;
-my $cache = Cache::File->new( cache_root => '/home/veblen/wp10cache');
+require 'init_cache.pl';
+my $cache = init_cache();
 my $cache_sep = "<hr/><!-- cache separator -->\n";
 
 ########################
 
-use CGI;
-use CGI::Carp qw(fatalsToBrowser);
+require CGI;
+CGI::Carp->import('fatalsToBrowser');
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
@@ -43,7 +43,7 @@ my $proj = $param{'project'} || $ARGV[0];
 use DBI;
 require "database_www.pl";
 
-my $dbh = db_connect();
+my $dbh = db_connect($Opts);
 
 
 layout_header('Summary tables');

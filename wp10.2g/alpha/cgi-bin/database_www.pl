@@ -1,55 +1,32 @@
-sub db_connect { 
-  my $filename;
+use Data::Dumper;
 
-  if ( ! defined $ENV{'HOME'} )   { 
-        $filename = $ENV{'SCRIPT_FILENAME'}; 
-        $filename =~ s/public_html.*//; 
-  } else {
-        $filename = $ENV{'HOME'}; 
-  }
-  $filename = $filename . "/.wp10.conf.www";
-  
-  if ( defined $ENV{'WP10_CREDENTIALS'} ) {
-    $filename = $ENV{'WP10_CREDENTIALS'};
-  }
-
-  die "Can't open database configuration '$filename'\n"
-    unless -r $filename;
-
-  open CONF, "<", $filename;
-  my ($opt, $val, $line);
-  my %opts;
-  while ( $line = <CONF> ) {
-    chomp $line;
-    ($opt, $val) = split /\s+/, $line, 2;
-
-    $opts{$opt} = $val;
-  }
-  close CONF;
+sub db_connect {
+  my $opts = shift;
 
   die "No database given in database conf file\n"
-    unless ( defined $opts{'database'} );
+    unless ( defined $opts->{'database'} );
 
   my $connect = "DBI:mysql"
-           . ":database=" . $opts{'database'};
+           . ":database=" . $opts->{'database'};
 
-  if ( defined $opts{'host'} ) {
-    $connect .= ":host="     . $opts{'host'} ;
+  if ( defined $opts->{'host'} ) {
+    $connect .= ":host="     . $opts->{'host'} ;
   }
 
-  if ( defined $opts{'credentials'} ) {
-    $opts{'password'} = $opts{'password'} || "";
-    $opts{'username'} = $opts{'username'} || "";
-    $connect .= ":mysql_read_default_file=" . $opts{'credentials'};
+  if ( defined $opts->{'credentials-readonly'} ) {
+    $opts->{'password'} = $opts->{'password'} || "";
+    $opts->{'username'} = $opts->{'username'} || "";
+
+    $connect .= ":mysql_read_default_file=" 
+              . $opts->{'credentials-readonly'};
   }
 
-  my $db = DBI->connect($connect, $opts{'username'}, $opts{'password'})
+  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'})
      or die "Couldn't connect to database: " . DBI->errstr;
    
   return $db;
 }
 
 
-
-# Return success
+# Load successfully
 1;
