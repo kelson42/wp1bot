@@ -232,7 +232,7 @@ sub ratings_table {
 
       if ( $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
-                   '[' . $script_url . "project=" . uri_escape($proj) 
+                   '[' . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . $data->{$qual}->{$prio} . "]");
@@ -253,7 +253,7 @@ sub ratings_table {
 
   foreach $qual ( @QualityRatings ) {
     $table->data($qual, "Total", "'''[" 
-                   . $script_url . "project=" . uri_escape($proj) 
+                   . $script_url . "projecta=" . uri_escape($proj) 
 #                    . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . $qualcounts->{$qual} . "]'''");
@@ -261,24 +261,24 @@ sub ratings_table {
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
-                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
 #                    . "&quality=" . uri_escape($qual)  
                    . ' ' . $priocounts->{$prio} . "]'''");
 
     $table->data("Assessed", $prio, 
-                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{$prio} . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . $script_url . "project=" . uri_escape($proj) 
+                   . $script_url . "projecta=" . uri_escape($proj) 
                    . ' ' . $total . "]'''");
 
   $table->data("Assessed", "Total", 
-                "'''[" . $script_url . "project=" . uri_escape($proj) 
+                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{'Total'} . "]'''" );
 

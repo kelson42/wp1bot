@@ -50,7 +50,6 @@ sub ratings_table {
   my $params = shift;
 
   if ( $params->{'intersect'} eq 'on' ) { 
-    print "Intersect<br/>\n";
     ratings_table_intersect($params);
     return;
   } 
@@ -111,7 +110,7 @@ sub ratings_table {
   my $c = $sth->execute(@qparam);
   my $i = $offset;
 
-  print "<table border=1>\n";
+  print "<table class=\"wikitable\">\n";
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
@@ -189,6 +188,11 @@ sub ratings_table_intersect {
     push @qparamc, $importance;
   }
 
+  if ( defined $param{'diffonly'} ) { 
+    $query .= " AND NOT ra.r_quality = rb.r_quality";
+    $queryc .= " AND NOT ra.r_quality = rb.r_quality";
+  }
+
   $query .= " LIMIT ?";
   push @qparam, $limit;
 
@@ -220,9 +224,16 @@ HERE
      
   while ( @row = $sth->fetchrow_array ) {
     $i++;
-    print "<tr><td>$i</td><td>";
-    print join "</td><td>", @row;
-    print "</td></tr>\n";
+
+     print "<tr><td>$i</td>\n";
+    print "    <td>" . $row[0] . "</td>\n";
+    print "    " . get_cached_td_background($row[1]) . "\n";
+    print "    " . get_cached_td_background($row[2]) . "\n";
+    print "    " . get_cached_td_background($row[3]) . "\n";
+    print "    " . get_cached_td_background($row[4]) . "\n";
+    print "</tr>\n";
+
+
   }
   print "</table>\n";
 }
