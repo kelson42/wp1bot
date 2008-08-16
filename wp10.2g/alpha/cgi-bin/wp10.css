@@ -63,3 +63,20 @@ table.subform {
   border-left: 1px solid #555;
   border-bottom: 1px solid #555;
 }
+
+div.indent {
+  padding-left: 1em;
+}
+
+table.wikitable {
+  border-collapse: collapse;
+  border: 1px solid #aaa;
+  background: #eee;
+}
+
+table.wikitable a { text-decoration:none; }
+
+table.wikitable td {
+  border: 1px solid #aaa;
+}
+
