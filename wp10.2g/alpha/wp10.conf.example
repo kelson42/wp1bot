@@ -4,15 +4,21 @@
 # Library directories for required modules
 lib             /home/veblen/VeblenBot
 
-# Read/write directory foro web cache
+# Read/write directory for web cache
 cachedir        /home/veblen/wp10cache
 
 # URLs for support files
 wp10.css        http://localhost/~veblen/wp10.css
 usableforms.js  http://localhost/~veblen/usableforms.js
+list2-url    http://localhost/~veblen/cgi-bin/list2.pl
 
 # Database info and credentials
 database                wp10
 #host                    localhost
 credentials-readwrite   /home/veblen/.my.cnf.wp10
 credentials-readonly    /home/veblen/.my.cnf.wp10
+
+
+# API login information
+api-credentials         /home/cbm/veblen/api.credentials
+

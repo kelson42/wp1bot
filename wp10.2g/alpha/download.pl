@@ -33,7 +33,10 @@ $api->max_retries(20);
 
 $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
-$api->login_from_file("/home/veblen/api.credentials");
+
+if ( defined $Opts->{'api-credentials'} ) { 
+  $api->login_from_file($Opts->{'api-credentials'});
+}
 
 #############################################################
 
