@@ -2,9 +2,11 @@
 
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
-# 
 
 use lib '/home/veblen/VeblenBot';
+use lib '/home/cbm/veblen/VeblenBot';
+use lib '/home/cbm/perl/share/perl/5.10.0';
+
 use Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
@@ -19,7 +21,7 @@ use DBI;
 use POSIX;
 
 use Cache::File;
-my $cacheFile = Cache::File->new( cache_root => '/home/veblen/wp10cache');
+my $cacheFile = Cache::File->new( cache_root => '/home/cbm/wp10cache');
 my $cacheMem = {};
 
 my $cgi = new CGI;
