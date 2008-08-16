@@ -23,12 +23,17 @@ CGI::Carp->import('fatalsToBrowser');
 
 require DBI;
 require POSIX;
+POSIX->import('strftime');
 
 my $cacheFile = init_cache();
 my $cacheMem = {};
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
+
+if ( $param{'limit'} > 50 ) { 
+  $param{'limit'} = 50;
+}
 
 my $proj = $param{'project'} || $ARGV[0];
 

@@ -20,7 +20,9 @@ require 'layout.pl';
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
-my $script_url = 'http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/list.pl?';
+my $script_url = $Opts->{'list2-url'} 
+ or die "No 'list2-url' specified in configuration.\n";
+
 
 ########################
 
