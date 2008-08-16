@@ -1,0 +1,18 @@
+# Example configuration file
+# This must be copied to $HOME/.wp10.conf and customized
+
+# Library directories for required modules
+lib             /home/veblen/VeblenBot
+
+# Read/write directory foro web cache
+cachedir        /home/veblen/wp10cache
+
+# URLs for support files
+wp10.css        http://localhost/~veblen/wp10.css
+usableforms.js  http://localhost/~veblen/usableforms.js
+
+# Database info and credentials
+database                wp10
+#host                    localhost
+credentials-readwrite   /home/veblen/.my.cnf.wp10
+credentials-readonly    /home/veblen/.my.cnf.wp10
