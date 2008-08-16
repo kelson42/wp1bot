@@ -1,0 +1,65 @@
+body { 
+  margin: 0px;
+  padding: 0px;
+  background: #eee;
+}
+
+
+div.head { 
+  width: 100%;
+  background: #036;
+  color: #fff;
+  font-size: 125%;
+  font-face: sans-serif;
+  font-weight: bold;
+  padding: 0.5em 0em 0.25em 0.5em;
+}
+
+
+div.subhead {
+  width: 100%;
+  background:  #1A4F85;	
+  color:  #fff;
+  font-size: 125%;
+  font-face: sans-serif;
+  padding: 0.25em 0em 0.25em 0.5em;
+}
+
+div.content { 
+  background: #fff;
+  padding: 1em 0em 0.25em 0em;
+  border-top: 1px solid #000;
+  border-bottom: 1px solid #000;
+}
+
+
+h1 { 
+  font-size: 150%;
+  padding-left: 1em;
+}
+
+
+table.mainform { 
+  margin-left: 2em;
+  border: 1px solid black;
+  border-collapse: collapse;
+}
+
+table.mainform td {
+  vertical-align: top;
+  padding-left: 0.5em;
+  padding-right: 1em;
+}
+
+table.subform td { 
+  padding-left: 0em;  
+  margin-left: 0em;
+}
+
+table.subform {
+  width: 100%;
+  margin: 5px;
+  padding-left: 1em;
+  border-left: 1px solid #555;
+  border-bottom: 1px solid #555;
+}

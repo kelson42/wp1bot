@@ -5,13 +5,18 @@
 # 
 
 use lib '/home/cbm/perl/share/perl/5.10.0/';
-use lib '/home/cbm/veblen/VeblenBot';
+use lib '/home/cbm/VeblenBot';
+use lib '/home/veblen/VeblenBot';
+use Mediawiki::API;
+
 
 use strict;
 use Data::Dumper;
 use URI::Escape;
 
 use POSIX;
+
+require 'layout.pl';
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
@@ -20,7 +25,7 @@ my $script_url = 'http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/list
 ########################
 
 use Cache::File;
-my $cache = Cache::File->new( cache_root => '/home/cbm/wp10cache');
+my $cache = Cache::File->new( cache_root => '/home/veblen/wp10cache');
 my $cache_sep = "<hr/><!-- cache separator -->\n";
 
 ########################
@@ -36,17 +41,18 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 my $proj = $param{'project'} || $ARGV[0];
 
 use DBI;
-my $dbh = DBI->connect('DBI:mysql:database=u_cbm:host=sql' . 
-             ":mysql_read_default_file=/home/cbm/.my.cnf.www","","")
-                or die "Couldn't connect to database: " . DBI->errstr;
+require "database_www.pl";
 
-html_header();
+my $dbh = db_connect();
+
+
+layout_header('Summary tables');
 my $projects = query_form($proj);
 
 if ( defined $proj && defined $projects->{$proj} ) {
   cached_ratings_table($proj);
 }	
-html_footer();
+layout_footer();
 exit;
 
 #######################
@@ -62,6 +68,7 @@ sub cached_ratings_table {
   my @row = $sth->fetchrow_array();
   my $proj_timestamp = $row[0];
 
+  print "<div class=\"indent\">\n";
   print "<b>Debugging output</b><br/>\n";
   print "Current time: $timestamp<br/>\n";
   print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
@@ -83,13 +90,13 @@ sub cached_ratings_table {
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
 
-      print "<hr/><center>\n";
+      print "</div><hr/><center>\n";
       print $c_html;
       print "</center>\n";
       print "\n";
-      print "<hr/><pre>";
+      print "<hr/><div class=\"indent\"><pre>";
       print $c_wikicode;
-      print "</pre>\n";
+      print "</pre></div>\n";
 
       return;
     } else {
@@ -103,13 +110,13 @@ sub cached_ratings_table {
 
   my ($html, $wikicode) = ratings_table($proj);
 
-  print "<hr/><center>\n";
+  print "</div><hr/><center>\n";
   print $html;
   print "</center>\n";
   print "\n";
-  print "<hr/><pre>";
+  print "<hr/><div class=\"indent\"><pre>";
   print $wikicode;
-  print "</pre>\n";
+  print "</pre></div>\n";
 
   $data = "TABLE:$proj" . $cache_sep 
         . $timestamp . $cache_sep
@@ -275,7 +282,6 @@ sub ratings_table {
                     . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{'Total'} . "]'''" );
 
-  use Mediawiki::API;
   my $api = new Mediawiki::API;
   $api->debug_level(0); # no output at all 
   $api->base_url('http://en.wikipedia.org/w/api.php');

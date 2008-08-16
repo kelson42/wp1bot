@@ -5,48 +5,138 @@
 # 
 
 use lib '/home/veblen/VeblenBot';
+use Mediawiki::API;
+my $api = new Mediawiki::API;
+$api->debug_level(0); # no output at all 
+$api->base_url('http://en.wikipedia.org/w/api.php');
 
 use strict;
 use Data::Dumper;
 
-use DBI;
 use CGI;
 use CGI::Carp qw(fatalsToBrowser);
+use DBI;
+use POSIX;
+
+use Cache::File;
+my $cacheFile = Cache::File->new( cache_root => '/home/veblen/wp10cache');
+my $cacheMem = {};
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
 my $proj = $param{'project'} || $ARGV[0];
 
-my $pw = `/home/veblen/pw-db.sh`;
+require "database_www.pl";
+require "layout.pl";
 
-my $dbh =
-DBI->connect('DBI:mysql:database=u_cbm:host=sql' .
-             ":mysql_read_default_file=/home/cbm/.my.cnf.www","","")
-                or die "Couldn't connect to database: " . DBI->errstr;
+my $dbh = db_connect();
 
-html_header();
+print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+layout_header("Query article assessment data");
+
 my $projects = {};
 query_form(\%param);
 ratings_table(\%param);
-html_footer();
-exit;
+layout_footer();
 
-#######################
+###########################################################################
+###########################################################################
 
 sub ratings_table { 
   my $params = shift;
 
-#  print Dumper($params);
-#  print "<hr/>\n";
+  if ( $params->{'intersect'} eq 'on' ) { 
+    print "Intersect<br/>\n";
+    ratings_table_intersect($params);
+    return;
+  } 
+
+  my $project = $params->{'projecta'};
+  return if ( ! defined $project);
+
+  if ( ! defined $projects->{$project}) { 
+    print "Project '$project' not available\n";
+    return;
+  }
+
+  my $limit = $params->{'limit'} || 20;
+  my $offset = $params->{'offset'} || 0;
+  if ( $offset > 0 ) { $offset --; }
+
+  my $query = "SELECT * FROM ratings WHERE r_project = ?";
+  my $queryc = "SELECT count(r_article) FROM ratings WHERE r_project = ?";
+  my @qparam = ($project);
+  my @qparamc = ($project);
+
+  my $quality = $params->{'quality'};
+
+  if ( defined $quality && $quality =~ /\w|\d/) {
+    if ( $quality eq 'Assessed' ) { 
+      $query .= " AND NOT r_quality = 'Unassessed-Class'";
+      $queryc .= " AND NOT r_quality = 'Unassessed-Class'";
+    } else { 
+      $query .= " AND r_quality = ?";
+      $queryc .= " AND r_quality = ?";
+      push @qparam, $quality;
+      push @qparamc, $quality;
+    }
+  }
+
+  my $importance =  $params->{'importance'};
+  if ( defined $importance && $importance =~ /\w|\d/) {
+    $query .= " AND r_importance = ?";
+    $queryc .= " AND r_importance = ?";
+    push @qparam, $importance;
+    push @qparamc, $importance;
+  }
+
+  $query .= " LIMIT ?";
+  push @qparam, $limit;
+
+  $query .= " OFFSET ?";
+  push @qparam, $offset;
+  my $sthcount = $dbh->prepare($queryc);
+  $sthcount->execute(@qparamc);
+  my @row = $sthcount->fetchrow_array() ;
+
+  print "<p><b>Total results: " . $row[0] 
+        . "</b>.<br/> Displaying up to $limit results beginning with #" 
+        . ($offset +1) . "</p><hr/>\n";
+
+  my $sth = $dbh->prepare($query);
+  my $c = $sth->execute(@qparam);
+  my $i = $offset;
+
+  print "<table border=1>\n";
+  while ( @row = $sth->fetchrow_array ) {
+    $i++;
+
+    print "<tr><td>$i</td>\n";
+    print "    <td>" . $row[0] . "</td>\n";
+    print "    <td>" . $row[1] . "</td>\n";
+    print "    " . get_cached_td_background($row[2]) . "\n";
+    print "    <td>" . $row[3] . "</td>\n";
+    print "    " . get_cached_td_background($row[4]) . "\n";
+    print "    <td>" . $row[5] . "</td>\n";
+    print "</tr>\n";
+  }
+  print "</table>\n";
+}
+  
+
+###########################################################################
+
+sub ratings_table_intersect { 
+  my $params = shift;
 
   my $projecta = $params->{'projecta'};
 
   return if ( ! defined $projecta);
 
   my $projectb = $params->{'projectb'};
+
 
   return if ( ! defined $projectb);
 
@@ -78,6 +168,7 @@ sub ratings_table {
   my @qparamc = ($projecta, $projectb);
 
   my $quality = $params->{'quality'};
+  my $qualityb = $params->{'qualityb'};
 
   if ( defined $quality && $quality =~ /\w|\d/) {
     $query .= " AND ra.r_quality = ?";
@@ -87,6 +178,7 @@ sub ratings_table {
   }
 
   my $importance =  $params->{'importance'};
+  my $importanceb =  $params->{'importanceb'};
 
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND ra.r_importance = ?";
@@ -101,9 +193,6 @@ sub ratings_table {
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-#  print "Q: $query<br/>\n";
-#  print "Params:" . Dumper(@qparam). "<br/>\n";
-
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()	;
@@ -114,9 +203,7 @@ sub ratings_table {
 
 
   my $sth = $dbh->prepare($query);
-
   my $c = $sth->execute(@qparam);
-
   my $i = $offset;
 
   print << "HERE";
@@ -138,16 +225,13 @@ HERE
   print "</table>\n";
 }
 
-#################################
+###########################################################################
 
 sub query_form {
   my $params = shift;
 
-
   my $projecta = $params->{'projecta'} || 'Mathematics';
   my $projectb = $params->{'projectb'} || 'Computer science';
-
-  print "<h1>Demo: intersect assessments for two categories</h1>\n";
 
   my @row;
 
@@ -160,87 +244,138 @@ sub query_form {
 
   my $quality = $params->{'quality'} || "";
   my $importance = $params->{'importance'} || "";
+  my $qualityb = $params->{'qualityb'} || "";
+  my $importanceb = $params->{'importanceb'} || "";
   my $limit = $params->{'limit'} || "20";
   my $offset = $params->{'offset'} || "1";
+  my $intersect = $params->{'intersect'} || "";
 
-
-  print "<form><table>\n";
-
-  print "<tr><td colspan=\"2\"><b>List articles matching:</b></td></tr>\n";
-
-  print "<tr><td>Project A</td><td><select name=\"projecta\">\n";
+  print << "HERE";
+<form>
+<table class="mainform">
+<tr><td><b>First project:</b></td></tr>
+<tr><td><table class="subform">
+  <tr><td>Project name</td>
+  <td><select name="projecta">
+HERE
 
   my $p;
   foreach $p ( sort { $a cmp $b} keys %$projects) { 
     if ( $p eq $projecta ) { 
-      print "<option value=\"" . $p . "\" selected>" . $p ."</option>\n";
+      print "      <option value=\"" . $p 
+          . "\" selected>" . $p ."</option>\n";
     } else { 
-      print "<option value=\"" . $p . "\">" . $p ."</option>\n";
+      print "      <option value=\"" . $p . "\">" . $p ."</option>\n";
     }
   }
   print "</select></td></tr>\n";
+
+  my $intersect_checked = "";
+  if ( $params->{'intersect'} eq 'on' ) { 
+    $intersect_checked = "checked=\"yes\" ";
+  }
 
   print << "HERE";
   <tr><td>Quality</td>
       <td><input type="text" value="$quality" name="quality"/></td></tr>
   <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
-  <tr><td>Results per page</td>
-      <td><input type="text" value="$limit" name="limit"/></td></tr>
-  <tr><td>Start with result #</td>
-      <td><input type="text" value="$offset" name="offset"/></td></tr>
-  <tr><td></td>
+   <tr><td colspan="2">Note: leave quality or importance blank to 
+                       select all values.</td></tr>
+  </table>
+</td></tr>
+<tr><td><b>Specify second project</b>
+        <input type="checkbox" $intersect_checked  name="intersect" 
+         rel="secondproj"/>	
+</td></tr>
+<tr><td><table class=\"subform\" rel="secondproj">
+<tr><td colspan="2">
+<tr><td>Project name</td>
+    <td><select name="projectb">
 HERE
-
-  print "<tr><td colspan=\"2\"><b>That are also assessed by:</b></td></tr>\n";
-  print "<tr><td>Project B</td><td><select name=\"projectb\">\n";
 
   my $p;
   foreach $p ( sort { $a cmp $b} keys %$projects) { 
     if ( $p eq $projectb ) { 
-      print "<option value=\"" . $p . "\" selected>" . $p ."</option>\n";
+      print "      <option value=\"" . $p . "\" selected>" 
+          . $p ."</option>\n";
     } else { 
-      print "<option value=\"" . $p . "\">" . $p ."</option>\n";
+      print "      <option value=\"" . $p . "\">" . $p ."</option>\n";
     }
   }
-  print "</select></td></tr>\n";
 
+  print << "HERE";
+    </select></td></tr>
+  <tr><td>Quality</td>
+      <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
+  <tr><td>Importance</td>
+      <td><input type=\"text\" value="$importanceb" name="importanceb"/>
+      </td></tr>
+HERE
 
-print << "HERE";
-   <td><input type="submit" value="Make list"/></td></tr>
-  </table></form>
+  print "<tr><td colspan=\"2\"><input type=\"checkbox\" name=\"diffonly\" ";
+  if ( defined $param{'diffonly'} ) {
+    print "checked=\"checked\" ";
+  }
+  print "> Show only rows where quality ratings differ</input></td></tr>\n";
+
+  print "</table></td></tr>\n";
+  print << "HERE";
+  <tr><td><b>Output options</b></td></tr>
+  <tr><td><table class="subform">
+  <tr><td>Results per page</td>
+      <td><input type="text" value="$limit" name="limit"/></td></tr>
+  <tr><td>Start with result #</td>
+      <td><input type="text" value="$offset" name="offset"/></td></tr>
+  <tr>
+  <td colspan="2" style="text-align: center;">
+    <input type="submit" value="Make list"/>
+  </td></tr>
+  </table>
+  </td></tr></table></form>
   <hr/>
 HERE
 
 }
 
-##############
+sub get_cached_td_background { 
+  my $class = shift;
 
+  if ( defined $cacheMem->{$class} ) { 
+    print " <!-- hit $class in memory cache --> ";
+    return $cacheMem->{$class};
+  }
 
-sub html_header { 
-print << "HERE";
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
-  <head>
-  <base href="http://en.wikipedia.org">
-  <style type="text/css" media="screen, projection">/*<![CDATA[*/
-    \@import url("http://en.wikipedia.org/skins-1.5/common/shared.css?162");
-    \@import url("http://en.wikipedia.org/skins-1.5/simple/main.css?162");
-    \@import url("/w/index.php?title=MediaWiki:Common.css&usemsgcache=yes&action=raw&ctype=text/css&smaxage=2678400");
-    \@import url("/w/index.php?title=MediaWiki:Monobook.css&usemsgcache=yes&action=raw&ctype=text/css&smaxage=2678400");
+  my $key = "CLASS:" . $class;
+  my $data;
 
-		/*]]>*/</style>
-  </head>
-  <body>
-HERE
-
+  if ( $cacheFile->exists($key) ) { 
+     print " <!-- hit $class in file cache, expires " 
+           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
+           . " --> ";
+    $data = $cacheFile->get($key);
+    $cacheMem->{$class} = $data;
+    return $data;
+  }
+ 
+  $data = get_td_background($class);
+  
+  $cacheFile->set($key, $data, '12 hours');
+  $cacheMem->{$class} = $data;
+  return $data;
 }
 
-######################33
 
-sub html_footer { 
-print << "HERE";
-  </body>
-</html>
-HERE
+sub get_td_background { 
+  my $class = shift;
+  my $r =  $api->parse('{{' . $class . '}}');
+  my $t = $r->{'text'};
+
+  $t =~ s/\|.*//s;
+  $t =~ s!^<p>!!;
+  $class =~ s/-Class//;
+  $t = "<td $t><b>$class</b></td>";
+
+  return $t;
 }
+
