@@ -86,8 +86,8 @@ sub cached_ratings_table {
         . "<br/>\n";
 
     $data = $cache->get($key);
-    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) 
-      = split /\Q$cache_sep\E/, $data, 5;
+    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
+	  split /\Q$cache_sep\E/, $data, 5;
 
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
@@ -141,8 +141,8 @@ sub ratings_table {
 
   $sth->execute($proj);
 
-  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
-    = get_categories($proj);
+  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
+	get_categories($proj);
 
   my $data = {};
   my $cols = {};
