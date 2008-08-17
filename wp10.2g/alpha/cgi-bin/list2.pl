@@ -1,6 +1,7 @@
 #!/usr/bin/perl
 
 use strict;
+use Encode;
 
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
@@ -37,7 +38,7 @@ if ( $param{'limit'} > 500 ) {
 
 my $proj = $param{'project'} || $ARGV[0];
 
-my $dbh = db_connect($Opts);
+our $dbh = db_connect($Opts);
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
@@ -66,7 +67,7 @@ sub ratings_table {
     print "Project '$project' not available\n";
     return;
   }
-
+	
   my $limit = $params->{'limit'} || 20;
   my $offset = $params->{'offset'} || 0;
   if ( $offset > 0 ) { $offset --; }
@@ -106,8 +107,12 @@ sub ratings_table {
   push @qparam, $offset;
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
+  	
   my @row = $sthcount->fetchrow_array() ;
   my $total = $row[0];
+  
+  print_header_text($project);
+
   print "<p><b>Total results: " . $total 
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p><hr/>\n";
@@ -472,3 +477,39 @@ sub get_td_background {
   return $t;
 }
 
+sub get_link_from_api { 
+	my $text = shift;
+	my $r =  $api->parse($text);
+	my $t = $r->{'text'};
+    print $text;
+	# TODO: internationalize this bare URL
+	my $baseURL = "http://en.wikipedia.org";
+	$t =~ s!^<p>!!;
+	my @t = split('</p>',$t);
+	$t = @t[0];
+	
+    @t = split('"',$t,2);
+    $t = @t[0] . "\"" . $baseURL .  @t[1];
+	
+	return $t;
+}
+
+sub print_header_text {
+	my $project = shift;
+	my ($project, $timestamp, $wikipage, $parent);
+	my $tableURL = $ENV{"SCRIPT_URI"};
+	$tableURL = $tableURL . "?project=" . $project;
+
+	($project, $timestamp, $wikipage, $parent) = 
+		get_project_data($project);
+	if ( ! defined $wikipage) 
+	{
+		print "Data for $project "; 	
+	}
+	else
+	{
+		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+	}
+	print "(<b>lists \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
+	
+}
