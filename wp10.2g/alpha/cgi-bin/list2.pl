@@ -498,7 +498,9 @@ sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent);
 	my $tableURL = $ENV{"SCRIPT_URI"};
-	$tableURL = $tableURL . "?project=" . $project;
+	my @t = split('list2.pl',$tableURL);
+	$tableURL = @t[0];
+	$tableURL = $tableURL . "table.pl?project=" . $project;
 
 	($project, $timestamp, $wikipage, $parent) = 
 		get_project_data($project);
