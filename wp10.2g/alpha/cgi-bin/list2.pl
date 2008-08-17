@@ -157,7 +157,7 @@ sub ratings_table_intersect {
   }
 
   my $limit = $params->{'limit'} || 10;
-  if ( $limit > 50 ) { $limit = 50;}
+  if ( $limit > 500 ) { $limit = 500;}
 
   my $offset = $params->{'offset'} || 0;
 
