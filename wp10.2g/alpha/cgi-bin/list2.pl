@@ -31,8 +31,8 @@ my $cacheMem = {};
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
-if ( $param{'limit'} > 50 ) { 
-  $param{'limit'} = 50;
+if ( $param{'limit'} > 500 ) { 
+  $param{'limit'} = 500;
 }
 
 my $proj = $param{'project'} || $ARGV[0];
