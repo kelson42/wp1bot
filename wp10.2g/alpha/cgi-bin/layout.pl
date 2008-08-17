@@ -27,11 +27,15 @@ sub layout_header {
 </head>
 <body>
 <div class="head">
+<a href="http://$ENV{'SERVER_NAME'}/">
+<img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" src="http://$ENV{'SERVER_NAME'}/~titoxd/images/wikimedia-toolserver-button.png"/>
+</a>	
 $App
 </div>
 <div class="subhead">
 $subtitle
 </div>
+
 <div class="content">
 HERE
 
