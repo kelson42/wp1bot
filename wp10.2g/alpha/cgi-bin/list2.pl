@@ -78,6 +78,7 @@ sub ratings_table {
 
   my $quality = $params->{'quality'};
 
+  # FIXME: What does this code do?
   if ( defined $quality && $quality =~ /\w|\d/) {
     if ( $quality eq 'Assessed' ) { 
       $query .= " AND NOT r_quality = 'Unassessed-Class'";
@@ -106,8 +107,8 @@ sub ratings_table {
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array() ;
-
-  print "<p><b>Total results: " . $row[0] 
+  my $total = $row[0];
+  print "<p><b>Total results: " . $total 
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p><hr/>\n";
 
@@ -129,6 +130,38 @@ sub ratings_table {
     print "</tr>\n";
   }
   print "</table>\n";
+	# For display purposes - whether we use a pipe between "previous" and "next"
+	# depends on whether "previous" is defined or not 
+	my $prev = 0;
+  if (($offset - $limit + 1) > 0)
+  {
+		my $newURL = $ENV{"SCRIPT_URI"};
+		$newURL = $newURL . "?projecta=" . $project;
+		$newURL = $newURL . "&quality=" . $quality;
+		$newURL = $newURL . "&importance=" . $importance;
+		$newURL = $newURL . "&limit=" . $limit;	  
+		$newURL = $newURL . "&offset=" . ($offset - $limit + 1);	  
+		
+		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+	    $prev = 1;
+	}
+	
+  if ($limit + $offset < $total)
+  {
+	  if ($prev == 1)
+	  {
+		  print " | ";
+	  }
+	  my $newURL = $ENV{"SCRIPT_URI"};
+	  $newURL = $newURL . "?projecta=" . $project;
+	  $newURL = $newURL . "&quality=" . $quality;
+	  $newURL = $newURL . "&importance=" . $importance;
+	  $newURL = $newURL . "&limit=" . $limit;	  
+	  $newURL = $newURL . "&offset=" . ($limit + $offset + 1);	  
+
+	  print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+  }
+  print "\n";
 }
   
 
@@ -208,7 +241,8 @@ sub ratings_table_intersect {
   $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()	;
 
-  print "<p><b>Total results: " . $row[0] 
+	my $total = $row[0];
+	print "<p><b>Total results: " . $total
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p><hr/>\n";
 
@@ -241,6 +275,47 @@ HERE
 
   }
   print "</table>\n";
+	# For display purposes - whether we use a pipe between "previous" and "next"
+	# depends on whether "previous" is defined or not 
+	my $prev = 0;
+	if (($offset - $limit + 1) > 0)
+	{
+		my $newURL = $ENV{"SCRIPT_URI"};
+		$newURL = $newURL . "?projecta=" . $projecta;
+		$newURL = $newURL . "&quality=" . $quality;
+		$newURL = $newURL . "&importance=" . $importance;
+		$newURL = $newURL . "&intersect=on";
+		$newURL = $newURL . "&projectb=" . $projectb;
+		$newURL = $newURL . "&qualityb=" . $qualityb;
+		$newURL = $newURL . "&importanceb=" . $importanceb;		
+		$newURL = $newURL . "&limit=" . $limit;	  
+		$newURL = $newURL . "&offset=" . ($offset - $limit + 1);	  
+		
+		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+	    $prev = 1;
+	}
+	
+	if ($limit + $offset < $total)
+	{
+		if ($prev == 1)
+		{
+			print " | ";
+		}
+		my $newURL = $ENV{"SCRIPT_URI"};
+		$newURL = $newURL . "?projecta=" . $projecta;
+		$newURL = $newURL . "&quality=" . $quality;
+		$newURL = $newURL . "&importance=" . $importance;
+		$newURL = $newURL . "&intersect=on";
+		$newURL = $newURL . "&projectb=" . $projectb;
+		$newURL = $newURL . "&qualityb=" . $qualityb;
+		$newURL = $newURL . "&importanceb=" . $importanceb;		
+		$newURL = $newURL . "&limit=" . $limit;	  
+		$newURL = $newURL . "&offset=" . ($limit + $offset + 1);	  
+		
+		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+	}
+	print "\n";
+	
 }
 
 ###########################################################################
