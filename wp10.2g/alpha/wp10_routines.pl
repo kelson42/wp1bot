@@ -65,10 +65,10 @@ sub download_project {
   my $project = shift;
 
   print "\n-- Download ratings data for $project\n";
-  my ($homepage, $extra);
+  my ($homepage, $parent, $extra);
 
   eval {
-    ($homepage, $extra) = get_extra_assessments($project); 
+    ($homepage, $parent, $extra) = get_extra_assessments($project); 
     download_project_quality_ratings($project, $extra);
     download_project_importance_ratings($project, $extra);
     db_cleanup_project($project);
@@ -293,7 +293,7 @@ sub get_extra_assessments {
   my $Starter = '{{ReleaseVersionParameters';
   my $Ender = '}}';
 
-  my ($homepage, $line, $param, $num, $left, $right);
+  my ($homepage, $parent, $line, $param, $num, $left, $right);
   my $extras = {};
   my $data = {};
 
@@ -326,6 +326,10 @@ sub get_extra_assessments {
         $homepage = substr($right, 0, 255);
       }
 
+	  if ( $left eq 'parent') { 
+        $parent = substr($right, 0, 255);
+	  }
+	
       if ( $left =~ /^extra(\d+)-(\w+)$/ ) {
         $num = $1;
         $param = $2;
@@ -345,6 +349,11 @@ sub get_extra_assessments {
   if ( defined $homepage) { 
     print "Homepage: '$homepage'\n";
   }
+
+  if ( defined $parent) { 
+    print "Parent project: '$parent'\n";
+  }
+
   print "Extra assessments:\n";
 
   foreach $num ( keys %$extras ) { 
@@ -365,7 +374,7 @@ sub get_extra_assessments {
     print Dumper($extras->{$num}); 
   }
 
-  return ($homepage, $data);
+  return ($homepage, $parent, $data);
 }
 
 #######################################################################
