@@ -481,7 +481,7 @@ sub get_link_from_api {
 	my $text = shift;
 	my $r =  $api->parse($text);
 	my $t = $r->{'text'};
-    print $text;
+
 	# TODO: internationalize this bare URL
 	my $baseURL = "http://en.wikipedia.org";
 	$t =~ s!^<p>!!;
@@ -496,7 +496,7 @@ sub get_link_from_api {
 
 sub print_header_text {
 	my $project = shift;
-	my ($project, $timestamp, $wikipage, $parent);
+	my ($timestamp, $wikipage, $parent);
 	my $tableURL = $ENV{"SCRIPT_URI"};
 	$tableURL = $tableURL . "?project=" . $project;
 
