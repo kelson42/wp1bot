@@ -179,10 +179,10 @@ sub get_project_data {
 	# so a while loop is not needed
 	@row = $sth->fetchrow_array();
 
-	my $p_project->{"project"} = decode("utf8", $row[0]);
-	my $p_timestamp->{"timestamp"} = decode("utf8", $row[1]);
-	my $p_wikipage->{"wikipage"} = decode("utf8", $row[2]);
-	my $p_parent->{"parent"} = decode("utf8", $row[3]);
+	my $p_project = decode("utf8", $row[0]);
+	my $p_timestamp = decode("utf8", $row[1]);
+	my $p_wikipage = decode("utf8", $row[2]);
+	my $p_parent = decode("utf8", $row[3]);
 	
 	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent );
 	
