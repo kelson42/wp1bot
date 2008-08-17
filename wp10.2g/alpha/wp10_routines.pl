@@ -73,6 +73,7 @@ sub download_project {
     download_project_importance_ratings($project, $extra);
     db_cleanup_project($project);
     update_project($project, $global_timestamp, $homepage, $parent);
+	# my $data = get_project_data($project);
     db_commit();
   };
 

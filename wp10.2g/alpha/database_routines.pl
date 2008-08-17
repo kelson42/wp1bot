@@ -165,6 +165,29 @@ sub get_project_ratings {
   return $ratings;
 }
 
+###########################################################
+
+sub get_project_data {
+	my $project = shift;
+	$project = encode("utf8", $project);
+	
+	my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?");
+	$sth->execute($project);
+	
+	my @row;
+	# There really shouldn't be more than one row here,
+	# so a while loop is not needed
+	@row = $sth->fetchrow_array();
+
+	$p_project->{"project"} = decode("utf8", $row[0]);
+	$p_timestamp->{"timestamp"} = decode("utf8", $row[1]);
+	$p_wikipage->{"wikipage"} = decode("utf8", $row[2]);
+	$p_parent->{"parent"} = decode("utf8", $row[3]);
+	
+	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent );
+	
+}
+
 
 ############################################################
 
@@ -243,6 +266,7 @@ sub db_connect {
   return $db;
 }
 
+############################################################
 
 # Load successfully
 1;
