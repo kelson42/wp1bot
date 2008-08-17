@@ -72,7 +72,7 @@ sub download_project {
     download_project_quality_ratings($project, $extra);
     download_project_importance_ratings($project, $extra);
     db_cleanup_project($project);
-    update_project($project, $global_timestamp, $homepage);
+    update_project($project, $global_timestamp, $homepage, $parent);
     db_commit();
   };
 
