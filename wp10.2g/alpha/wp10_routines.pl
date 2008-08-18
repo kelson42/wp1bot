@@ -65,15 +65,14 @@ sub download_project {
   my $project = shift;
 
   print "\n-- Download ratings data for $project\n";
-  my ($homepage, $parent, $extra);
+  my ($homepage, $parent, $extra, $shortname);
 
   eval {
-    ($homepage, $parent, $extra) = get_extra_assessments($project); 
+    ($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
     download_project_quality_ratings($project, $extra);
     download_project_importance_ratings($project, $extra);
     db_cleanup_project($project);
-    update_project($project, $global_timestamp, $homepage, $parent);
-	# my $data = get_project_data($project);
+    update_project($project, $global_timestamp, $homepage, $parent, $shortname);
     db_commit();
   };
 
@@ -294,7 +293,7 @@ sub get_extra_assessments {
   my $Starter = '{{ReleaseVersionParameters';
   my $Ender = '}}';
 
-  my ($homepage, $parent, $line, $param, $num, $left, $right);
+  my ($homepage, $parent, $shortname, $line, $param, $num, $left, $right);
   my $extras = {};
   my $data = {};
 
@@ -330,6 +329,10 @@ sub get_extra_assessments {
 	  if ( $left eq 'parent') { 
         $parent = substr($right, 0, 255);
 	  }
+
+	if ( $left eq 'shortname') { 
+        $shortname = substr($right, 0, 255);
+	}
 	
       if ( $left =~ /^extra(\d+)-(\w+)$/ ) {
         $num = $1;
@@ -355,6 +358,10 @@ sub get_extra_assessments {
     print "Parent project: '$parent'\n";
   }
 
+  if ( defined $shortname) { 
+    print "Display name: '$shortname'\n";
+  }
+
   print "Extra assessments:\n";
 
   foreach $num ( keys %$extras ) { 
@@ -375,7 +382,7 @@ sub get_extra_assessments {
     print Dumper($extras->{$num}); 
   }
 
-  return ($homepage, $parent, $data);
+  return ($homepage, $parent, $data, $shortname);
 }
 
 #######################################################################

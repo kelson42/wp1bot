@@ -415,19 +415,23 @@ sub get_link_from_api {
 
 sub print_header_text {
 	my $project = shift;
-	my ($timestamp, $wikipage, $parent);
+	my ($timestamp, $wikipage, $parent, $shortname);
 	my $listURL = $script_url;
 	$listURL = $listURL . "projecta=" . $project . "&limit=50";
 	
-	($project, $timestamp, $wikipage, $parent) = 
+	($project, $timestamp, $wikipage, $parent, $shortname) = 
 	get_project_data($project);
 	if ( ! defined $wikipage) 
 	{
 		print "Data for $project "; 	
 	}
-	else
+	elsif ( ! defined $shortname) 
 	{
 		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+	}
+	else
+	{
+		print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " "; 		
 	}
 	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 	

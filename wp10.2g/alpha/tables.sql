@@ -1,5 +1,4 @@
--- The project table stores a list of participating 
-wikiprojects
+-- The project table stores a list of participating wikiprojects
 
 create table projects ( 
 
@@ -14,6 +13,9 @@ create table projects (
 
     p_parent          varchar(63),
         -- parent project (for task forces)
+
+    p_shortname          varchar(255),
+        -- display name in headers 
 
     primary key (p_project)
 ) default character set 'utf8' 
@@ -41,7 +43,7 @@ create table ratings (
     r_importance            varchar(63),
         -- importance rating
 
-    r_importance_timestamp  binary(20),
+    r_importance_timestamp  binary(14),
         -- time when importance rating was assigned
 
     primary key (r_project, r_article)

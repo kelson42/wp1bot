@@ -509,21 +509,25 @@ sub get_link_from_api {
 
 sub print_header_text {
 	my $project = shift;
-	my ($timestamp, $wikipage, $parent);
+	my ($timestamp, $wikipage, $parent, $shortname);
 	my $tableURL = $ENV{"SCRIPT_URI"};
 	my @t = split('list2.pl',$tableURL);
 	$tableURL = @t[0];
 	$tableURL = $tableURL . "table.pl?project=" . $project;
 
-	($project, $timestamp, $wikipage, $parent) = 
+	($project, $timestamp, $wikipage, $parent, $shortname) = 
 		get_project_data($project);
 	if ( ! defined $wikipage) 
 	{
 		print "Data for $project "; 	
 	}
-	else
+	elsif ( ! defined $shortname) 
 	{
 		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+	}
+	else
+	{
+		print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " "; 		
 	}
 	print "(<b>lists</b> \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
 	

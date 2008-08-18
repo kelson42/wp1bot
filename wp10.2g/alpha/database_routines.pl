@@ -111,16 +111,17 @@ sub update_project {
   my $timestamp = shift;
   my $wikipage = shift;
   my $parent = shift;
+  my $shortname = shift;
 
   my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
-                         . "p_wikipage = ?, p_parent = ? " 
+                         . "p_wikipage = ?, p_parent = ?, p_shortname = ? " 
                          . "WHERE p_project = ?" );
 
-  my $count = $sth->execute($timestamp, $wikipage, $parent, $project);
+  my $count = $sth->execute($timestamp, $wikipage, $parent, $shortname, $project);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?)");
-    $count = $sth->execute($project, $timestamp, $wikipage, $parent);
+    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?)");
+    $count = $sth->execute($project, $timestamp, $wikipage, $parent, $shortname);
   }
 }
 
@@ -166,30 +167,6 @@ sub get_project_ratings {
 }
 
 ###########################################################
-
-sub get_project_data {
-	my $project = shift;
-	$project = encode("utf8", $project);
-	
-	my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?");
-	$sth->execute($project);
-	
-	my @row;
-	# There really shouldn't be more than one row here,
-	# so a while loop is not needed
-	@row = $sth->fetchrow_array();
-
-	my $p_project = decode("utf8", $row[0]);
-	my $p_timestamp = decode("utf8", $row[1]);
-	my $p_wikipage = decode("utf8", $row[2]);
-	my $p_parent = decode("utf8", $row[3]);
-	
-	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent );
-	
-}
-
-
-############################################################
 
 sub db_commit { 
   print "Commit database\n";

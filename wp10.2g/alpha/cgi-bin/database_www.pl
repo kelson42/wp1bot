@@ -45,8 +45,9 @@ sub get_project_data {
 	my $p_timestamp =  $row[1];
 	my $p_wikipage =  $row[2];
 	my $p_parent =  $row[3];
+	my $p_shortname =  $row[4];
 	
-	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent );
+	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent, $p_shortname );
 	
 }
 
