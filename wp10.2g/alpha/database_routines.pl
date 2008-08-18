@@ -131,6 +131,10 @@ sub update_project {
     $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?)");
     $count = $sth->execute($project, $timestamp, $wikipage, $parent, $shortname);
   }
+
+  update_category_data( $project, 'Unknown-Class', 'quality', '', 1150); 
+  update_category_data( $project, 'Unknown-Class', 'importance','', 1150);
+
 }
 
 ############################################################
