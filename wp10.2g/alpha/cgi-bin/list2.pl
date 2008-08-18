@@ -111,7 +111,9 @@ sub ratings_table {
   my @row = $sthcount->fetchrow_array() ;
   my $total = $row[0];
   
+  print "<div class=\"navbox\">\n";
   print_header_text($project);
+  print "</div>\n";
 
   print "<p><b>Total results: " . $total 
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
@@ -246,9 +248,11 @@ sub ratings_table_intersect {
   $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()	;
 
+  print "<div class=\"navbox\">\n";
   print_header_text($projecta);
   print "<br />";
   print_header_text($projectb);
+  print "</div>\n";
 
   my $total = $row[0];
   print "<p><b>Total results: " . $total

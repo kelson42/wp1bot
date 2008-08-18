@@ -96,3 +96,16 @@ table.wikitable td {
   position: relative;
   text-align: right;
 }
+
+div.navbox {
+  border: 1px solid #aaaaaa;
+  background-color: #ddffdd;
+  background-position: 0 0;
+  margin-bottom: 5px;
+  padding: 0px;
+  text-align:center;
+  width:100%;
+  margin:0 auto 1em;
+  font-size: 100%;
+  line-height: 1.5em;
+}

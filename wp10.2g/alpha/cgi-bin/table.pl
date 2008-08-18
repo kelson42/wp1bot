@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 use strict;
+use Encode;
 
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
@@ -8,6 +9,9 @@ require 'read_conf.pl';
 our $Opts = read_conf();
 
 require Mediawiki::API;
+my $api = new Mediawiki::API;
+$api->debug_level(0); # no output at all 
+$api->base_url('http://en.wikipedia.org/w/api.php');
 
 use Data::Dumper;
 use URI::Escape;
@@ -44,7 +48,7 @@ my $proj = $param{'project'} || $ARGV[0];
 use DBI;
 require "database_www.pl";
 
-my $dbh = db_connect($Opts);
+our $dbh = db_connect($Opts);
 
 
 layout_header('Summary tables');
@@ -92,8 +96,10 @@ sub cached_ratings_table {
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
 
-      print "</div><hr/><center>\n";
-      print $c_html;
+	  print "</div><hr/><div class=\"navbox\">\n";
+	  print_header_text($proj);
+	  print "</div>\n<center>\n";
+	  print $c_html;
       print "</center>\n";
       print "\n";
       print "<hr/><div class=\"indent\"><pre>";
@@ -111,8 +117,10 @@ sub cached_ratings_table {
   print "Regenerating output<br/>\n";
 
   my ($html, $wikicode) = ratings_table($proj);
-
-  print "</div><hr/><center>\n";
+	
+  print "</div><hr/><div class=\"navbox\">\n";
+  print_header_text($proj);
+  print "</div>\n<center>\n";
   print $html;
   print "</center>\n";
   print "\n";
@@ -287,10 +295,6 @@ sub ratings_table {
                     . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{'Total'} . "]'''" );
 
-  my $api = new Mediawiki::API;
-  $api->debug_level(0); # no output at all 
-  $api->base_url('http://en.wikipedia.org/w/api.php');
-
   my $code = $table->wikicode();
   my $r =  $api->parse($code);
 
@@ -392,3 +396,39 @@ sub query_form {
 
 #####################################################################
 
+sub get_link_from_api { 
+	my $text = shift;
+	my $r =  $api->parse($text);
+	my $t = $r->{'text'};
+	
+	# TODO: internationalize this bare URL
+	my $baseURL = "http://en.wikipedia.org";
+	$t =~ s!^<p>!!;
+	my @t = split('</p>',$t);
+	$t = @t[0];
+	
+    @t = split('"',$t,2);
+    $t = @t[0] . "\"" . $baseURL .  @t[1];
+	
+	return $t;
+}
+
+sub print_header_text {
+	my $project = shift;
+	my ($timestamp, $wikipage, $parent);
+	my $listURL = $script_url;
+	$listURL = $listURL . "projecta=" . $project . "&limit=50";
+	
+	($project, $timestamp, $wikipage, $parent) = 
+	get_project_data($project);
+	if ( ! defined $wikipage) 
+	{
+		print "Data for $project "; 	
+	}
+	else
+	{
+		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+	}
+	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
+	
+}
