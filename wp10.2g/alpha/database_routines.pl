@@ -132,8 +132,10 @@ sub update_project {
     $count = $sth->execute($project, $timestamp, $wikipage, $parent, $shortname);
   }
 
-  update_category_data( $project, 'Unknown-Class', 'quality', '', 10); 
-  update_category_data( $project, 'Unknown-Class', 'importance','', 10);
+  update_category_data( $project, 'Unknown-Class', 'quality', 
+                        '', 10, 'Unassessed-Class'); 
+  update_category_data( $project, 'Unknown-Class', 'importance',
+                        '', 10, 'Unassessed-Class');
 
 }
 
@@ -264,6 +266,23 @@ sub db_connect {
 }
 
 ############################################################
+
+sub list_projects { 
+  my $projects = [];
+
+  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  $sth->execute();
+
+  my @row;
+  while ( @row = $sth->fetchrow_array ) { 
+    push @$projects, $row[0];
+  }
+
+  return $projects;
+}
+
+############################################################
+
 
 # Load successfully
 1;

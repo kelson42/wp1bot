@@ -325,6 +325,8 @@ sub get_categories {
     $importanceLabels->{$k} = "{{$k}}";
   }
 
+  $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
+
   return ($sortQual, $sortImp, $qualityLabels, $importanceLabels);
 
 }

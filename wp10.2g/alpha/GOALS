@@ -1,8 +1,6 @@
 Goals to finish before promoting to beta version:
 
-* Switch the sort order numbers to match SelectionBot
-
-* Clean up and finish the code for the global tables
+* Clean up and finish the code for the global tables - double-check all links
 
 * Change list2.pl to allow any project to be typed in. This will also
 allow _no_ project to be typed in, which is needed for the links from
@@ -23,7 +21,8 @@ results (by project, title, quality, importance, etc)
 * Generate some sort of index file (similar to [[WP:1.0/I]]) but online
   (maybe the bot-readable form can be the wikitext to [[WP:1.0/I]])
   
-* Do a full bot run to make sure nothing breaks horribly
-
 * Figure out how to load-balance the script wrt WikiProject Biography
 
+* Do a full bot run to make sure nothing breaks horribly
+
+* Look through cgi-bin for dupicate code, move to a shared location

@@ -45,6 +45,15 @@ my $project;
 $ARGV[0] = decode("utf8", $ARGV[0]);
 
 if ( defined $ARGV[0] ) { 
+  if ( $ARGV[0] eq '-all' ) { 
+    my $projects = list_projects();
+    my $proj;
+    foreach $proj ( @$projects )  {
+      download_project($proj);
+    }
+    exit;
+  }
+
   if ( project_exists($ARGV[0]) ) { 
     download_project($ARGV[0]);
     print "-- main driver done\n";
