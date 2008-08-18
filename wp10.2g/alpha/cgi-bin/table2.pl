@@ -52,33 +52,33 @@ our $dbh = db_connect($Opts);
 
 
 layout_header('Summary tables');
-my $projects = query_form($proj);
 
-if ( defined $proj && defined $projects->{$proj} ) {
-  cached_ratings_table($proj);
-}	
+my ($html, $wikicode) = ratings_table();
+
+  print "</div><hr/><div class=\"navbox\">\n";
+  print_header_text();
+  print "</div>\n<center>\n";
+  print $html;
+  print "</center>\n";
+  print "\n";
+  print "<hr/><div class=\"indent\"><pre>";
+  print $wikicode;
+  print "</pre></div>\n";
+
 layout_footer();
+
 exit;
 
 #######################
 
 sub cached_ratings_table { 
 
-  my $proj = shift;
-
-  my $sth = $dbh->prepare("select p_timestamp from projects "
-                        . "where p_project = ?");
-  
-  $sth->execute($proj);
-  my @row = $sth->fetchrow_array();
-  my $proj_timestamp = $row[0];
 
   print "<div class=\"indent\">\n";
   print "<b>Debugging output</b><br/>\n";
   print "Current time: $timestamp<br/>\n";
-  print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
 
-  my $key = "TABLE:" . $proj;
+  my $key = "TABLE:GLOBAL";
   my $data;
 
   if ( defined $cgi->{'purge'} ) { 
@@ -90,26 +90,9 @@ sub cached_ratings_table {
         . "<br/>\n";
 
     $data = $cache->get($key);
-    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
-	  split /\Q$cache_sep\E/, $data, 5;
+    my ($c_key, $c_timestamp, $c_html, $c_wikicode) = 
+	  split /\Q$cache_sep\E/, $data, 4;
 
-    if ( $c_proj_timestamp eq $proj_timestamp ) {
-      print "Cached output valid<br/>\n";
-
-	  print "</div><hr/><div class=\"navbox\">\n";
-	  print_header_text($proj);
-	  print "</div>\n<center>\n";
-	  print $c_html;
-      print "</center>\n";
-      print "\n";
-      print "<hr/><div class=\"indent\"><pre>";
-      print $c_wikicode;
-      print "</pre></div>\n";
-
-      return;
-    } else {
-      print "Cached output must be regenerated<br/>\n";
-    }
   } else {
     print "No cached output available<br/>\n";
   }
@@ -130,7 +113,6 @@ sub cached_ratings_table {
 
   $data = "TABLE:$proj" . $cache_sep 
         . $timestamp . $cache_sep
-        . $proj_timestamp . $cache_sep 
         . $html . $cache_sep 
         . $wikicode;
 
@@ -154,10 +136,10 @@ sub ratings_table {
                                    and ci.c_rating = r_importance
     group by cq.c_replacement, ci.c_replacement");
 
-  $sth->execute()
+  $sth->execute();
 
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
-	get_categories($proj);
+	get_categories('Mathematics');
 
   my $data = {};
   my $cols = {};
@@ -210,7 +192,7 @@ sub ratings_table {
   $QualityLabels->{'Total'} = "'''Total'''";
   $ImportanceLabels->{'Total'} = "'''Total'''";
 
-  $table->title("$proj pages by quality and importance");
+  $table->title("Rated pages by quality and importance");
   $table->columnlabels($ImportanceLabels);
   $table->rowlabels($QualityLabels);
   $table->columntitle("'''Importance'''");
@@ -303,6 +285,7 @@ sub ratings_table {
                    . ' ' . $totalAssessed->{'Total'} . "]'''" );
 
   my $code = $table->wikicode();
+
   my $r =  $api->parse($code);
 
   return ($r->{'text'}, $code);
