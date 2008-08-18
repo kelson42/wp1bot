@@ -198,7 +198,7 @@ sub download_project_quality_ratings {
 
        if ( ! defined $oldrating->{$art} ) { 
          update_article_data($global_timestamp, $project, $art, "quality", 
-                             $qual, $d->{'timestamp'}, undef);
+                             $qual, $d->{'timestamp'}, 'Unknown-Class');
          next;
        }
 
@@ -213,10 +213,10 @@ sub download_project_quality_ratings {
 
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );    
-    next if ( $oldrating->{$art} eq $Unassessed_Class );
     print "NOT SEEN '$art'\n";
     update_article_data($global_timestamp, $project, $art, 'quality', 
-                        undef, $global_timestamp_wiki, $oldrating->{$art} );
+                        'Unknown-Class', $global_timestamp_wiki, 
+                        $oldrating->{$art} );
   }
 
   return 0;
@@ -255,7 +255,7 @@ sub download_project_importance_ratings {
 
        if ( ! defined $oldrating->{$art} ) { 
          update_article_data($global_timestamp, $project, $art, "importance", 
-                             $imp, $d->{'timestamp'}, undef);
+                             $imp, $d->{'timestamp'}, 'Unknown-Class');
          next;
        }
 
@@ -274,7 +274,8 @@ sub download_project_importance_ratings {
     next if ( exists $seen->{$art} );    
     print "NOT SEEN $art\n";
     update_article_data($global_timestamp, $project, $art, "importance",
-                        undef, $global_timestamp_wiki, $oldrating->{$art});
+                        'Unknown-Class', $global_timestamp_wiki, 
+                        $oldrating->{$art});
   }
 
 }

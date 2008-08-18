@@ -191,8 +191,10 @@ sub db_cleanup_project {
   # If both quality and importance are NULL, that means the article
   # was once rated but isn't any more, so we delete the row
 
-  my $sth = $dbh->prepare("delete from ratings where isnull(r_quality) " 
-                        . "and isnull(r_importance) and r_project = ?");
+  my $sth = $dbh->prepare("delete from ratings " 
+                        . "where r_quality = 'Unknown-Class' " 
+                        . " and r_importance = 'Unknown-Class' "
+                        . " and r_project = ?");
   my $count = $sth->execute($proj);
   print "Deleted articles: $count\n";
 
@@ -201,9 +203,15 @@ sub db_cleanup_project {
   # This will always happen if the article has a quality rating that the 
   # bot doesn't recognize. Change the NULL to 'Unassessed-Class'.
 
-  $sth = $dbh->prepare("update ratings set r_quality = 'Unassessed-Class', " 
+  $sth = $dbh->prepare("update ratings set r_quality = 'Unknown-Class', " 
                      . "r_quality_timestamp = r_importance_timestamp "
                      . "where isnull(r_quality) and r_project = ?");
+  $count = $sth->execute($proj);
+  print "Null quality rows: $count\n";
+
+  $sth = $dbh->prepare("update ratings set r_importance = 'Unknown-Class', " 
+                     . "r_importance_timestamp = r_quality_timestamp "
+                     . "where isnull(r_importance) and r_project = ?");
   $count = $sth->execute($proj);
   print "Null quality rows: $count\n";
 
