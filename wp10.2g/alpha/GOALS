@@ -1,0 +1,25 @@
+Goals to finish before promoting to beta version:
+
+* Switch the sort order numbers to match SelectionBot
+
+* Clean up and finish the code for the global tables
+
+* Change list2.pl to allow any project to be typed in. This will also
+allow _no_ project to be typed in, which is needed for the links from
+the global table
+
+* Change list2.pl to allow the user to specify the sort order of the
+results (by project, title, quality, importance, etc)
+
+* Download and use lists of WP 0.5 and 0.7, FA, and GA articles
+
+* Allow pages in any namespace to be rated (add ns column to ratings table
+  and use it in list2.pl)
+
+* Make logs.pl as CGI script to query logs. Link to it from list2.pl.
+  Should be able to list logs by project and by article. Link to 
+  project logs from table.pl
+
+
+
+
