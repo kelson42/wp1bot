@@ -139,7 +139,9 @@ sub ratings_table {
   $sth->execute();
 
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
-	get_categories('Mathematics');
+	get_categories();
+
+  print Dumper($SortQual);
 
   my $data = {};
   my $cols = {};
@@ -181,9 +183,9 @@ sub ratings_table {
 
   # These, along with the totals, will appear in the final table. 
   # The important step here is the sorting. 
-  my @PriorityRatings = sort { $SortImp->{$a} <=> $SortImp->{$b} } 
+  my @PriorityRatings = sort { $SortImp->{$b} <=> $SortImp->{$a} } 
                              keys %$cols;
-  my @QualityRatings =  sort { $SortQual->{$a} <=> $SortQual->{$b} } 
+  my @QualityRatings =  sort { $SortQual->{$b} <=> $SortQual->{$a} } 
                              keys %$data; 
 
   use RatingsTable;
@@ -294,53 +296,33 @@ sub ratings_table {
 ###################################
 
 sub get_categories { 
-  my $project = shift;
 
-  my $MA = "$project articles";
+  my $Assessed = "Assessed";
+  my $Assessed_Class = "Assessed-Class";
+  my $Unassessed_Class = "Unassessed-Class";
 
-  my $data = {};
+  my $sortQual = { 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
+              'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
+              'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
+              $Assessed_Class => 20, $Unassessed_Class => 0};
+
+  my $sortImp= { 'Top-Class' => 400, 'High-Class' => 300, 
+                 'Mid-Class' => 200, 'Low-Class' => 100, 
+                 $Unassessed_Class => 0};
 
 
-  my $sortQual = {};
-  my $sortImp = {};
   my $qualityLabels = {};
   my $importanceLabels = {};
-  my $categories = {};
 
-
-  my $sth = $dbh->prepare(
-    "SELECT c_type, c_rating, c_ranking, c_category FROM categories " . 
-    "WHERE c_project = ?" );
-
-  $sth->execute($project);
-
-  my @row;
-
-  while ( @row = $sth->fetchrow_array() ) {
-    if ( $row[0] eq 'quality' ) { 
-      $sortQual->{$row[1]} = $row[2];
-      $qualityLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
-    } elsif ( $row[0] eq 'importance' ) { 
-      $sortImp->{$row[1]} = $row[2];
-      $importanceLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
-    }
+  my $k;
+  foreach $k ( keys %$sortQual ) { 
+    $qualityLabels->{$k} = "{{$k}}";
   }
 
-  if ( ! defined $sortImp->{'Unassessed-Class'} ) { 
-    $sortImp->{'Unassessed-Class'} = 1000;
-    $importanceLabels->{'Unassessed-Class'} = "'''None'''";
-  } else { 
-    $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
-  }
+  $qualityLabels->{$Assessed} = "'''$Assessed'''";
 
-  if ( ! defined $sortQual->{'Unassessed-Class'} ) { 
-    $sortQual->{'Unassessed-Class'} = 1100;
-    $qualityLabels->{'Unassessed-Class'} = "'''Unassessed'''";
-  }
-
-  if ( ! defined $sortQual->{'Assessed'} ) { 
-    $sortQual->{'Assessed'} = 1000;
-    $qualityLabels->{'Assessed'} = "'''Assessed'''";
+  foreach $k ( keys %$sortImp ) { 
+    $importanceLabels->{$k} = "{{$k}}";
   }
 
   return ($sortQual, $sortImp, $qualityLabels, $importanceLabels);
