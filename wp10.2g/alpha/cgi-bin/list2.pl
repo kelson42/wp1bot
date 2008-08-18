@@ -80,8 +80,12 @@ sub ratings_table {
 
   my $quality = $params->{'quality'};
 
-  # FIXME: What does this code do?
+  # First, make sure quality is defined and has some alphanumeric 
+  # character in it
   if ( defined $quality && $quality =~ /\w|\d/) {
+
+    # Quality 'Assessed' is a magic word that means "not unassessed".
+    # This is required for certain links from table.pl
     if ( $quality eq 'Assessed' ) { 
       $query .= " AND NOT r_quality = 'Unassessed-Class'";
       $queryc .= " AND NOT r_quality = 'Unassessed-Class'";
