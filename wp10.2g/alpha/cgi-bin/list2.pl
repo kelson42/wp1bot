@@ -56,11 +56,11 @@ layout_footer();
 sub ratings_table { 
   my $params = shift;
 
-  if ( $params->{'intersect'} eq 'on' ) { 
-    ratings_table_intersect($params);
-    return;
+  if (($params->{'intersect'} eq 'on') && ($params->{'projecta'} ne $params->{'projectb'})) { 
+		ratings_table_intersect($params);
+		return;
   } 
-
+	
   my $project = $params->{'projecta'};
   return if ( ! defined $project);
 
