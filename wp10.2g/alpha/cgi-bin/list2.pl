@@ -246,8 +246,12 @@ sub ratings_table_intersect {
   $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()	;
 
-	my $total = $row[0];
-	print "<p><b>Total results: " . $total
+  print_header_text($projecta);
+  print "<br />";
+  print_header_text($projectb);
+
+  my $total = $row[0];
+  print "<p><b>Total results: " . $total
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p><hr/>\n";
 
@@ -512,6 +516,6 @@ sub print_header_text {
 	{
 		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
 	}
-	print "(<b>lists \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
+	print "(<b>lists</b> \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
 	
 }
