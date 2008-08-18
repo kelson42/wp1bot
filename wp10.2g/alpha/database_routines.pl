@@ -132,8 +132,8 @@ sub update_project {
     $count = $sth->execute($project, $timestamp, $wikipage, $parent, $shortname);
   }
 
-  update_category_data( $project, 'Unknown-Class', 'quality', '', 1150); 
-  update_category_data( $project, 'Unknown-Class', 'importance','', 1150);
+  update_category_data( $project, 'Unknown-Class', 'quality', '', 10); 
+  update_category_data( $project, 'Unknown-Class', 'importance','', 10);
 
 }
 

@@ -192,9 +192,9 @@ sub ratings_table {
 
   # These, along with the totals, will appear in the final table. 
   # The important step here is the sorting. 
-  my @PriorityRatings = sort { $SortImp->{$a} <=> $SortImp->{$b} } 
+  my @PriorityRatings = sort { $SortImp->{$b} <=> $SortImp->{$a} } 
                              keys %$cols;
-  my @QualityRatings =  sort { $SortQual->{$a} <=> $SortQual->{$b} } 
+  my @QualityRatings =  sort { $SortQual->{$b} <=> $SortQual->{$a} } 
                              keys %$data; 
 
   use RatingsTable;
@@ -337,19 +337,19 @@ sub get_categories {
   }
 
   if ( ! defined $sortImp->{'Unassessed-Class'} ) { 
-    $sortImp->{'Unassessed-Class'} = 1000;
+    $sortImp->{'Unassessed-Class'} = 0;
     $importanceLabels->{'Unassessed-Class'} = "'''None'''";
   } else { 
     $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
   }
 
   if ( ! defined $sortQual->{'Unassessed-Class'} ) { 
-    $sortQual->{'Unassessed-Class'} = 1100;
+    $sortQual->{'Unassessed-Class'} = 0;
     $qualityLabels->{'Unassessed-Class'} = "'''Unassessed'''";
   }
 
   if ( ! defined $sortQual->{'Assessed'} ) { 
-    $sortQual->{'Assessed'} = 1000;
+    $sortQual->{'Assessed'} = 20;
     $qualityLabels->{'Assessed'} = "'''Assessed'''";
   }
 

@@ -21,14 +21,14 @@ my $No_Class = 'No-Class';
 my $Unassessed_Class = 'Unassessed-Class';
 my $Assessed_Class = 'Assessed-Class';
 
-my %Quality=( 'FA-Class' => 100, 'FL-Class' => 200, 'A-Class' => 300, 
-              'GA-Class' => 400, 'B-Class' => 500, 'C-Class' => 600, 
-              'Start-Class'=>700, 'Stub-Class' => 800, 'List-Class' => 900, 
-              $Assessed_Class => 1000, $Unassessed_Class => 1100);
+my %Quality=( 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
+              'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
+              'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
+              $Assessed_Class => 20, $Unassessed_Class => 0);
 
-my %Importance=( 'Top-Class' => 100, 'High-Class' => 200, 
-                 'Mid-Class' => 300,
-                 'Low-Class' => 400, $Unassessed_Class => 1100); 
+my %Importance=( 'Top-Class' => 400, 'High-Class' => 300, 
+                 'Mid-Class' => 200, 'Low-Class' => 100, 
+                 $Unassessed_Class => 0); 
 
 my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
@@ -212,8 +212,9 @@ sub download_project_quality_ratings {
   } 
 
   foreach $art ( keys %$oldrating ) { 
-    next if ( exists $seen->{$art} );    
-    print "NOT SEEN '$art'\n";
+    next if ( exists $seen->{$art} );   
+    next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
+    print "NOT SEEN (quality) '$art'\n";
     update_article_data($global_timestamp, $project, $art, 'quality', 
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art} );
@@ -269,10 +270,10 @@ sub download_project_importance_ratings {
   } 
 
   foreach $art ( keys %$oldrating ) { 
-      # for importance only, NULL values are OK
-    next if ( ! defined $oldrating->{$art} ) ;
+    # for importance only, NULL values are OK
+    next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
     next if ( exists $seen->{$art} );    
-    print "NOT SEEN $art\n";
+    print "NOT SEEN (importance) $art\n";
     update_article_data($global_timestamp, $project, $art, "importance",
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art});
