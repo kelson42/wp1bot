@@ -2,6 +2,7 @@
 
 use strict;
 use Encode;
+use URI::Escape;
 
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
@@ -142,12 +143,12 @@ sub ratings_table {
 	my $prev = 0;
   if (($offset - $limit + 1) > 0)
   {
-		my $newURL = $ENV{"SCRIPT_URI"};
-		$newURL = $newURL . "?projecta=" . $project;
-		$newURL = $newURL . "&quality=" . $quality;
-		$newURL = $newURL . "&importance=" . $importance;
-		$newURL = $newURL . "&limit=" . $limit;	  
-		$newURL = $newURL . "&offset=" . ($offset - $limit + 1);	  
+    my $newURL = $ENV{"SCRIPT_URI"}
+                      . "?projecta="   . uri_escape($project)
+                      . "&quality="    . uri_escape($quality)
+                      . "&importance=" . uri_escape($importance)
+                      . "&limit="      . $limit
+		      . "&offset=" . ($offset - $limit + 1);	  
 		
 		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
 	    $prev = 1;
@@ -159,12 +160,12 @@ sub ratings_table {
 	  {
 		  print " | ";
 	  }
-	  my $newURL = $ENV{"SCRIPT_URI"};
-	  $newURL = $newURL . "?projecta=" . $project;
-	  $newURL = $newURL . "&quality=" . $quality;
-	  $newURL = $newURL . "&importance=" . $importance;
-	  $newURL = $newURL . "&limit=" . $limit;	  
-	  $newURL = $newURL . "&offset=" . ($limit + $offset + 1);	  
+	  my $newURL = $ENV{"SCRIPT_URI"}
+                     . "?projecta=" . uri_escape($project)
+                     . "&quality=" . uri_escape($quality)
+                     . "&importance=" . uri_escape($importance)
+                     . "&limit=" . $limit
+                     . "&offset=" . ($limit + $offset + 1);	  
 
 	  print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
@@ -293,16 +294,16 @@ HERE
 	my $prev = 0;
 	if (($offset - $limit + 1) > 0)
 	{
-		my $newURL = $ENV{"SCRIPT_URI"};
-		$newURL = $newURL . "?projecta=" . $projecta;
-		$newURL = $newURL . "&quality=" . $quality;
-		$newURL = $newURL . "&importance=" . $importance;
-		$newURL = $newURL . "&intersect=on";
-		$newURL = $newURL . "&projectb=" . $projectb;
-		$newURL = $newURL . "&qualityb=" . $qualityb;
-		$newURL = $newURL . "&importanceb=" . $importanceb;		
-		$newURL = $newURL . "&limit=" . $limit;	  
-		$newURL = $newURL . "&offset=" . ($offset - $limit + 1);	  
+	  my $newURL = $ENV{"SCRIPT_URI"}
+                     . "?projecta="    . uri_escape($projecta)
+                     . "&quality="     . uri_escape($quality)
+                     . "&importance="  . uri_escape($importance)
+                     . "&intersect=on"
+                     . "&projectb="    . uri_escape($projectb)
+                     . "&qualityb="    . uri_escape($qualityb)
+                     . "&importanceb=" . uri_escape($importanceb)
+                     . "&limit=" .    $limit
+                     . "&offset=" . ($offset - $limit + 1);	  
 		
 		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
 	    $prev = 1;
@@ -314,16 +315,16 @@ HERE
 		{
 			print " | ";
 		}
-		my $newURL = $ENV{"SCRIPT_URI"};
-		$newURL = $newURL . "?projecta=" . $projecta;
-		$newURL = $newURL . "&quality=" . $quality;
-		$newURL = $newURL . "&importance=" . $importance;
-		$newURL = $newURL . "&intersect=on";
-		$newURL = $newURL . "&projectb=" . $projectb;
-		$newURL = $newURL . "&qualityb=" . $qualityb;
-		$newURL = $newURL . "&importanceb=" . $importanceb;		
-		$newURL = $newURL . "&limit=" . $limit;	  
-		$newURL = $newURL . "&offset=" . ($limit + $offset + 1);	  
+		my $newURL = $ENV{"SCRIPT_URI"}
+		            . "?projecta="   . uri_escape($projecta)
+                            . "&quality="    . uri_escape($quality)
+                            . "&importance=" . uri_escape($importance)
+                            . "&intersect=on"
+                            . "&projectb="   . uri_escape($projectb)
+                            . "&qualityb="   . uri_escape($qualityb)
+                            . "&importanceb=" . uri_escape($importanceb)
+                            . "&limit="     . $limit
+                            . "&offset=" . ($limit + $offset + 1);	  
 		
 		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
 	}
