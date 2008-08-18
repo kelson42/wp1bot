@@ -65,6 +65,11 @@ create table categories (
 
     c_rating          varchar(63)  not null,
         -- name of the rating (e.g. B-Class)
+
+    c_replacement          varchar(63)  not null,
+        -- replacement name of the rating
+        -- a standard replacement for nonstandard ratings
+        -- e.g. for c_rating = B+-Class, set c_replacement=B-class
   
     c_category        varchar(255) not null,
         -- category used to get pages that are assigned this rating

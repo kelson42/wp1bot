@@ -47,22 +47,30 @@ sub update_category_data {
   my $type = shift;
   my $category = shift;
   my $ranking = shift;
+  my $replacement = shift;
+
+  if ( ! defined $replacement ) { 
+    $replacement = $rating;
+  }
   
   $project = encode("utf8", $project);
   $rating = encode("utf8", $rating);
   $type = encode("utf8", $type);
   $category = encode("utf8", $category);
+  $replacement = encode("utf8", $replacement);
 
   my $sth = $dbh->prepare (
-       "UPDATE categories SET c_category = ?, c_ranking = ? " .
+       "UPDATE categories SET c_category = ?, c_ranking = ?, c_replacement = ? " .
        "WHERE c_project = ? and c_rating= ? and c_type = ? "
      );
 
-  my $count = $sth->execute($category, $ranking, $project, $rating, $type);
+  my $count = $sth->execute($category, $ranking, $replacement, 
+                            $project, $rating, $type);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO categories VALUES (?,?,?,?,?)");
-    $count = $sth->execute($project, $type, $rating, $category, $ranking);
+    $sth = $dbh->prepare ("INSERT INTO categories VALUES (?,?,?,?,?,?)");
+    $count = $sth->execute($project, $type, $rating, 
+                           $replacement, $category, $ranking);
   }
 
 }
