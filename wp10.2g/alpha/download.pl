@@ -42,6 +42,8 @@ if ( defined $Opts->{'api-credentials'} ) {
 
 my $project;
 
+$ARGV[0] = decode("utf8", $ARGV[0]);
+
 if ( defined $ARGV[0] ) { 
   if ( project_exists($ARGV[0]) ) { 
     download_project($ARGV[0]);

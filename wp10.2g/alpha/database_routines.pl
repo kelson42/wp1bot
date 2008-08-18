@@ -273,5 +273,3 @@ sub db_connect {
 
 
 __END__
-
-

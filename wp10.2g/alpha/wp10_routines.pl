@@ -99,7 +99,7 @@ sub get_project_quality_categories {
   print "--- Get project categories for $project by quality\n";
 
   my $cat = "Category:$project articles $By_quality";
-  my $cats = $api->pages_in_category($cat, $categoryNS);
+  my $cats = $api->pages_in_category(encode("utf8",$cat), $categoryNS);
   my $value;
 
   foreach $cat ( @$cats ) { 
@@ -137,13 +137,13 @@ sub get_project_importance_categories {
   print "--- Get project categories for $project by importance\n";
 
   my $cat = "Category:$project articles $By_importance";
-  my $cats = $api->pages_in_category($cat, $categoryNS);
+  my $cats = $api->pages_in_category(encode("utf8",$cat), $categoryNS);
   my $value;
 
   if ( 0 == scalar @$cats ) { 
     print "Fall back to 'priority' naming\n";
     $cat = "Category:$project articles by priority";
-    $cats = $api->pages_in_category($cat, $categoryNS);
+    $cats = $api->pages_in_category(encode("utf8",$cat), $categoryNS);
   }
 
   foreach $cat ( @$cats ) { 
@@ -184,7 +184,7 @@ sub download_project_quality_ratings {
   foreach $qual ( keys %$qcats ) { 
     print "\nFetching list for quality $qual\n";
 
-    $tmp_arts = $api->pages_in_category_detailed($qcats->{$qual});
+    $tmp_arts = $api->pages_in_category_detailed(encode("utf8",$qcats->{$qual}));
 
     my $count = scalar @$tmp_arts;
     my $i = 0;
@@ -242,7 +242,7 @@ sub download_project_importance_ratings {
   foreach $imp ( keys %$icats ) { 
     print "\nFetching list for importance $imp\n";
 
-    $tmp_arts = $api->pages_in_category_detailed($icats->{$imp});
+    $tmp_arts = $api->pages_in_category_detailed(encode("utf8",$icats->{$imp}));
 
     my $count = scalar @$tmp_arts;
     my $i = 0;
