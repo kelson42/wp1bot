@@ -53,7 +53,7 @@ our $dbh = db_connect($Opts);
 
 layout_header('Summary tables');
 
-my ($html, $wikicode) = ratings_table();
+my ($html, $wikicode) = cached_ratings_table();
 
   print "</div><hr/><div class=\"navbox\">\n";
   print_header_text();
@@ -425,4 +425,46 @@ sub print_header_text {
 	}
 	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 	
+}
+
+
+
+sub cached_ratings_table { 
+  print "<div class=\"indent\">\n";
+  print "<b>Debugging output</b><br/>\n";
+  print "Current time: $timestamp<br/>\n";
+
+  my $key = "GLOBAL:TABLE";
+  my $data;
+
+  if ( $cache->exists($key) && ! defined $ARGV[0] ) { 
+    my $expiry = $cache->expiry($key);
+    print "Cached output expires: " 
+        . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
+        . "<br/></div>\n";
+
+    $data = $cache->get($key);
+    my ($c_key, $c_html, $c_wikicode) = 
+          split /\Q$cache_sep\E/, $data, 3;
+
+    return ($c_html, $c_wikicode);
+ }
+
+  print "No cached output, regenerating\n";
+  my $ts = time();
+  
+  my ($html, $wikicode) = ratings_table();
+
+  $ts = time() - $ts;
+  print "Done; $ts seconds elapsed.</div>\n";
+  sleep 4;
+
+  $data = "GLOBAL:TABLE" . $cache_sep 
+        . $html . $cache_sep 
+        . $wikicode;
+
+  $cache->set($key, $data, '1 hour');
+
+
+  return ($html, $wikicode);
 }
