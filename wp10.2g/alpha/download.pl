@@ -72,7 +72,7 @@ if ( defined $ARGV[0] ) {
                       keys %$project_details;
 
     foreach $project ( @projects )  {
-      download_project($project);
+      download_project(decode("utf8",$project));
     }
     exit;
   }

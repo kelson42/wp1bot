@@ -174,9 +174,9 @@ sub get_project_ratings {
     die "Bad type: $type\n";
   }
 
-  $project = encode("utf8", $project);
-
   print "Getting $type ratings for $project from database\n";
+
+  $project = encode("utf8", $project);
 
   my $sth = $dbh->prepare("SELECT r_article, r_$type " 
                         . "FROM ratings WHERE r_project = ?");

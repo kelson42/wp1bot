@@ -190,7 +190,6 @@ sub download_project_quality_ratings {
   my $oldrating = get_project_ratings($project, 'quality');
   my $newrating = {};
 
-
   my $seen = {};
   my $qcats = get_project_quality_categories($project, $extra);
   my ($cat, $tmp_arts, $qual, $art, $d);
