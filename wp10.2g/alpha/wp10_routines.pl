@@ -67,6 +67,12 @@ sub download_project_list {
 sub download_project {
   my $project = shift;
 
+
+  if ( ! db_lock("PROJECT:$project") ) { 
+    print "Cannot get lock for $project, exiting.\n";
+    return;
+  }
+
   print "\n-- Download ratings data for $project\n";
   my ($homepage, $parent, $extra, $shortname);
   
@@ -85,6 +91,8 @@ sub download_project {
     print "Transaction aborted: $@";
     db_rollback();
 	}
+
+  db_unlock("PROJECT:$project");
 
   return 0;
 }

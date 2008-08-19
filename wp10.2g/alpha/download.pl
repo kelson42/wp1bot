@@ -35,7 +35,7 @@ $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
 
 if ( defined $Opts->{'api-credentials'} ) { 
-  $api->login_from_file($Opts->{'api-credentials'});
+#  $api->login_from_file($Opts->{'api-credentials'});
 }
 
 #############################################################
@@ -51,14 +51,32 @@ if ( defined $ARGV[0] ) {
 	download_review_data();	  
 	exit;
   }
+
+  my $project_details = db_get_project_details();
+
   if ( $ARGV[0] eq '-all' ) { 
-    my $projects = list_projects();
-    my $proj;
-    foreach $proj ( @$projects )  {
-      download_project($proj);
+    if ( $ARGV[1] eq 'under' && $ARGV[2] > 0 ) { 
+      foreach $project ( keys %$project_details ) { 
+        delete $project_details->{$project} 
+         if ( $project_details->{$project}->{'p_count'} >= $ARGV[2] );
+      }
+    } elsif ( $ARGV[1] eq 'over' && $ARGV[2] > 0 ) { 
+      foreach $project ( keys %$project_details ) { 
+        delete $project_details->{$project} 
+         if ( $project_details->{$project}->{'p_count'} < $ARGV[2] );
+      }
+    }
+
+    my @projects = sort {    $project_details->{$b}->{'p_timestamp'} 
+                         <=> $project_details->{$a}->{'p_timestamp'} }
+                      keys %$project_details;
+
+    foreach $project ( @projects )  {
+      download_project($project);
     }
     exit;
   }
+
   if ( project_exists($ARGV[0]) ) { 
     download_project($ARGV[0]);
     print "-- main driver done\n";

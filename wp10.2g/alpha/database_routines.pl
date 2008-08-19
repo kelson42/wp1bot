@@ -279,10 +279,10 @@ sub db_connect {
 
 ############################################################
 
-sub list_projects { 
+sub db_list_projects { 
   my $projects = [];
 
-  my $sth = $dbh->prepare("SELECT p_project FROM projects " 
+  my $sth = $dbh->prepare("SELECT * FROM projects " 
                         . "order by p_timestamp asc;");
   $sth->execute();
 
@@ -293,6 +293,15 @@ sub list_projects {
 
   return $projects;
 }
+
+###########################################################
+
+sub db_get_project_details { 
+  my $sth = $dbh->prepare("SELECT * FROM projects;");
+  $sth->execute();
+  return $sth->fetchall_hashref('p_project');
+}
+
 
 ############################################################
 
@@ -376,6 +385,25 @@ sub get_review_data {
 	}
 	
 	return $ratings;	
+}
+
+############################################################
+
+sub db_lock { 
+  my $lock = shift;
+
+  my $sth = $dbh->prepare("SELECT GET_LOCK(?,0)");
+  my $r = $sth->execute($lock);
+  my @row = $sth->fetchrow_array();
+  return $row[0];
+}
+
+sub db_unlock { 
+  my $lock = shift;
+  my $sth = $dbh->prepare("SELECT RELEASE_LOCK(?)");
+  my $r = $sth->execute($lock);
+  my @row = $sth->fetchrow_array();
+  return $row[0];
 }
 
 ############################################################
