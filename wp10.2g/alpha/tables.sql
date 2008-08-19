@@ -14,8 +14,11 @@ create table projects (
     p_parent          varchar(63),
         -- parent project (for task forces)
 
-    p_shortname          varchar(255),
+    p_shortname       varchar(255),
         -- display name in headers 
+
+    p_count           int unsigned default 0,
+        -- how many pages are assessed in project 
 
     primary key (p_project)
 ) default character set 'utf8' collate 'utf8_bin'

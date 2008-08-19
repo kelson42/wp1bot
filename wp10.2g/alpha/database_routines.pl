@@ -121,15 +121,27 @@ sub update_project {
   my $parent = shift;
   my $shortname = shift;
 
-  my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
-                         . "p_wikipage = ?, p_parent = ?, p_shortname = ? " 
-                         . "WHERE p_project = ?" );
+  my $proj_count;
+  my @row;
 
-  my $count = $sth->execute($timestamp, $wikipage, $parent, $shortname, $project);
+  my $sth = $dbh->prepare("SELECT COUNT(r_article) FROM ratings " 
+                        . "WHERE r_project = ?");
+  $sth->execute($project);
+  @row = $sth->fetchrow_array();
+  $proj_count = $row[0];
+
+  my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
+                         . " p_wikipage = ?, p_parent = ?, p_shortname = ?," 
+                         . " p_count  = ? " 
+                         . " WHERE p_project = ?" );
+
+  my $count = $sth->execute($timestamp, $wikipage, $parent, 
+                            $shortname, $proj_count, $project);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?)");
-    $count = $sth->execute($project, $timestamp, $wikipage, $parent, $shortname);
+    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?)");
+    $count = $sth->execute($project, $timestamp, $wikipage, 
+                           $parent, $shortname, $proj_count);
   }
 
   update_category_data( $project, 'Unknown-Class', 'quality', 

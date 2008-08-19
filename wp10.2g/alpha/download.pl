@@ -28,7 +28,7 @@ require 'wp10_routines.pl';
 require Mediawiki::API;
 
 $api = new Mediawiki::API;  # global object 
-$api->maxlag(12);
+$api->maxlag(-1);
 $api->max_retries(20);
 
 $api->base_url('http://en.wikipedia.org/w/api.php');
