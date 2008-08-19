@@ -1,8 +1,5 @@
 Goals to finish before promoting to beta version:
 
-* Change list2.pl to allow the user to specify the sort order of the
-  results (by project, title, quality, importance, etc)
-
 * Download and use lists of WP 0.5 and 0.7, FA, and GA articles
 ** FAs/GAs downloaded, now only need to be used
 ** Need to download WP 0.5 as well
