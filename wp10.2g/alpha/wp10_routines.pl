@@ -306,7 +306,7 @@ sub get_extra_assessments {
   my $project = shift;
 
   my $cat = "Category:$project articles $By_quality";
-  my $txt = $api->content_section($cat, 0);
+  my $txt = $api->content_section(encode("utf8", $cat), 0);
   my @lines = split /\n+/, $txt;
 
   my $Starter = '{{ReleaseVersionParameters';
