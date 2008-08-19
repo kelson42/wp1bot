@@ -26,3 +26,5 @@ results (by project, title, quality, importance, etc)
 * Do a full bot run to make sure nothing breaks horribly
 
 * Look through cgi-bin for dupicate code, move to a shared location
+
+* Fix timestamp truncation errors (all over the place)
