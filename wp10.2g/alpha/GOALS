@@ -17,6 +17,14 @@ Goals to finish before promoting to beta version:
 * Generate some sort of index file (similar to [[WP:1.0/I]]) but online
   (maybe the bot-readable form can be the wikitext to [[WP:1.0/I]])
 ** Add a "type" field for sorting projects, similar to WP 0.5 ? 
+** index.pl added, very simple list. Maybe we can break it up by
+   first letter of shortname, or something like that. 
+** Add progress bars to keep track of % of articles that are assessed,
+   similar to 
+
+    http://fr.wikipedia.org/wiki/Projet:Wikipédia_1.0#Projets
+
+   This will need another column in the projects table.
   
 * Figure out how to load-balance the script wrt WikiProject Biography
 
@@ -25,3 +33,4 @@ Goals to finish before promoting to beta version:
 * Look through cgi-bin for duplicate code, move to a shared location
 
 * Fix timestamp truncation errors (all over the place)
+
