@@ -37,6 +37,12 @@ if ( $param{'limit'} > 500 ) {
   $param{'limit'} = 500;
 }
 
+my $p;
+foreach $p ( keys %param ) { 
+  $param{$p} =~ s/^\s*//;
+  $param{$p} =~ s/\s*$//;
+}
+
 my $proj = $param{'project'} || $ARGV[0];
 
 our $dbh = db_connect($Opts);
@@ -45,9 +51,9 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 layout_header("Query article assessment data");
 
-my $projects = {};
-query_form(\%param);
-ratings_table(\%param);
+my $projects = list_projects();
+query_form(\%param, $projects);
+ratings_table(\%param, $projects);
 layout_footer();
 
 ###########################################################################
@@ -55,28 +61,51 @@ layout_footer();
 
 sub ratings_table { 
   my $params = shift;
+  my $projects = shift;
 
-  if (($params->{'intersect'} eq 'on') && ($params->{'projecta'} ne $params->{'projectb'})) { 
+  my $p;
+  foreach $p ( ( 'importance', 'importanceb', 'quality', 'qualityb' ) ) { 
+    if ( (defined $params->{$p}) 
+         && ! ($params->{$p} =~/^\s*$/ )
+         && ! ($params->{$p} =~ /-Class$/)) { 
+      $params->{$p} .= "-Class";
+    }
+  }
+
+  if (($params->{'intersect'} eq 'on') && 
+      ($params->{'projecta'} ne $params->{'projectb'})) { 
 		ratings_table_intersect($params);
 		return;
   } 
 	
   my $project = $params->{'projecta'};
-  return if ( ! defined $project);
+#  return if ( ! defined $project);
 
-  if ( ! defined $projects->{$project}) { 
-    print "Project '$project' not available\n";
-    return;
-  }
+#  if ( ! defined $projects->{$project}) { 
+#    print "Project '$project' not available\n";
+#    return;
+#  }
 	
   my $limit = $params->{'limit'} || 20;
   my $offset = $params->{'offset'} || 0;
   if ( $offset > 0 ) { $offset --; }
 
-  my $query = "SELECT * FROM ratings WHERE r_project = ?";
-  my $queryc = "SELECT count(r_article) FROM ratings WHERE r_project = ?";
-  my @qparam = ($project);
-  my @qparamc = ($project);
+  my $query = "SELECT * FROM ratings WHERE";
+  my $queryc = "SELECT count(r_article) FROM ratings WHERE";
+  my @qparam;
+  my @qparamc;
+
+  if ( defined $project && $project =~ /\w|\d/ ) { 
+    if ( defined $projects->{$project} ) { 
+      $query .= " r_project = ?";
+      $queryc .= " r_project = ?";
+      push @qparam, $project;
+      push @qparamc, $project;
+    } else { 
+      print "Project '$project' is not in the database<br/>\n";
+      return;
+    }
+  }
 
   my $quality = $params->{'quality'};
 
@@ -97,6 +126,24 @@ sub ratings_table {
     }
   }
 
+  my $pagename = $params->{'pagename'};
+
+  if ( defined $pagename and $pagename =~ /\w|\d/ ) { 
+    if ( $params->{'pagenameWC'} eq 'on' ) { 
+      $pagename = '%' . $pagename . '%';
+      $query .= " AND r_article like ?";
+      $queryc .= " AND r_article like ?";
+      push @qparam, $pagename;
+      push @qparamc, $pagename;
+    } else { 
+      $query .= " AND r_article = ?";
+      $queryc .= " AND r_article = ?";
+      push @qparam, $pagename;
+      push @qparamc, $pagename;
+    }
+  }
+
+
   my $importance =  $params->{'importance'};
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
@@ -110,6 +157,17 @@ sub ratings_table {
 
   $query .= " OFFSET ?";
   push @qparam, $offset;
+
+  # clean up the SQL for edge cases 
+  $query =~ s/WHERE AND/WHERE /;
+  $queryc =~ s/WHERE AND/WHERE /;
+
+  $query =~ s/WHERE LIMIT/LIMIT/;
+  $queryc =~ s/WHERE LIMIT/LIMIT/;
+
+  print "Q: $query<br/>\n";
+  print join "<br/>", @qparam;
+
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
   	
@@ -338,13 +396,9 @@ HERE
 
 ###########################################################################
 
-sub query_form {
-  my $params = shift;
-
-  my $projecta = $params->{'projecta'} || 'Mathematics';
-  my $projectb = $params->{'projectb'} || 'Computer science';
-
+sub list_projects { 
   my @row;
+  my $projects = {};
 
   my $sth = $dbh->prepare("SELECT p_project FROM projects");
   $sth->execute();
@@ -352,6 +406,15 @@ sub query_form {
   while ( @row = $sth->fetchrow_array ) { 
     $projects->{$row[0]} = 1;
   }
+  return $projects;
+}
+
+
+sub query_form {
+  my $params = shift;
+
+  my $projecta = $params->{'projecta'} || '';
+  my $projectb = $params->{'projectb'} || '';
 
   my $quality = $params->{'quality'} || "";
   my $importance = $params->{'importance'} || "";
@@ -360,6 +423,19 @@ sub query_form {
   my $limit = $params->{'limit'} || "20";
   my $offset = $params->{'offset'} || "1";
   my $intersect = $params->{'intersect'} || "";
+  my $pagename = $params->{'pagename'} || "";
+  my $pagenameWC = $params->{'pagenameWC'} || "";
+
+  my $intersect_checked = "";
+  if ( $intersect eq 'on' ) { 
+    $intersect_checked = "checked=\"yes\" ";
+  }
+
+  my $pagename_wc_checked = "";
+  if ( $pagenameWC eq 'on' ) { 
+    $pagename_wc_checked = "checked=\"yes\" ";
+  }
+
 
   print << "HERE";
 <form>
@@ -367,31 +443,17 @@ sub query_form {
 <tr><td><b>First project:</b></td></tr>
 <tr><td><table class="subform">
   <tr><td>Project name</td>
-  <td><select name="projecta">
-HERE
-
-  my $p;
-  foreach $p ( sort { $a cmp $b} keys %$projects) { 
-    if ( $p eq $projecta ) { 
-      print "      <option value=\"" . $p 
-          . "\" selected>" . $p ."</option>\n";
-    } else { 
-      print "      <option value=\"" . $p . "\">" . $p ."</option>\n";
-    }
-  }
-  print "</select></td></tr>\n";
-
-  my $intersect_checked = "";
-  if ( $params->{'intersect'} eq 'on' ) { 
-    $intersect_checked = "checked=\"yes\" ";
-  }
-
-  print << "HERE";
+      <td><input type="text" value="$projecta" name="projecta"/></td></tr>
+  <tr><td>Page name</td>
+      <td><input type="text" value="$pagename" name="pagename"/></td></tr>
+  <tr><td></td>
+      <td><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />	
+          Use this name as a wildcard</td></tr>
   <tr><td>Quality</td>
       <td><input type="text" value="$quality" name="quality"/></td></tr>
   <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
-   <tr><td colspan="2">Note: leave quality or importance blank to 
+   <tr><td colspan="2">Note: leave any field blank to 
                        select all values.</td></tr>
   </table>
 </td></tr>
@@ -400,23 +462,8 @@ HERE
          rel="secondproj"/>	
 </td></tr>
 <tr><td><table class=\"subform\" rel="secondproj">
-<tr><td colspan="2">
-<tr><td>Project name</td>
-    <td><select name="projectb">
-HERE
-
-  my $p;
-  foreach $p ( sort { $a cmp $b} keys %$projects) { 
-    if ( $p eq $projectb ) { 
-      print "      <option value=\"" . $p . "\" selected>" 
-          . $p ."</option>\n";
-    } else { 
-      print "      <option value=\"" . $p . "\">" . $p ."</option>\n";
-    }
-  }
-
-  print << "HERE";
-    </select></td></tr>
+  <tr><td>Project name</td>
+      <td><input type="text" value="$projectb" name="projectb"/></td></tr>
   <tr><td>Quality</td>
       <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
   <tr><td>Importance</td>

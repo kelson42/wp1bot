@@ -141,8 +141,6 @@ sub ratings_table {
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
 	get_categories();
 
-  print Dumper($SortQual);
-
   my $data = {};
   my $cols = {};
   my @row;
@@ -236,7 +234,7 @@ sub ratings_table {
 
       if ( $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
-                   '[' . $script_url . "projecta=" . uri_escape($proj) 
+                   '[' . $script_url 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . $data->{$qual}->{$prio} . "]");
@@ -257,33 +255,29 @@ sub ratings_table {
 
   foreach $qual ( @QualityRatings ) {
     $table->data($qual, "Total", "'''[" 
-                   . $script_url . "projecta=" . uri_escape($proj) 
-#                    . "&importance=" . uri_escape($prio) 
+                   . $script_url 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . $qualcounts->{$qual} . "]'''");
   }
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $script_url 
                     . "&importance=" . uri_escape($prio) 
-#                    . "&quality=" . uri_escape($qual)  
                    . ' ' . $priocounts->{$prio} . "]'''");
 
     $table->data("Assessed", $prio, 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $script_url 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{$prio} . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . $script_url . "projecta=" . uri_escape($proj) 
-                   . ' ' . $total . "]'''");
+                   . $script_url        . ' ' . $total . "]'''");
 
   $table->data("Assessed", "Total", 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
-                    . "&quality=Assessed" 
+                "'''[" . $script_url . "&quality=Assessed" 
                    . ' ' . $totalAssessed->{'Total'} . "]'''" );
 
   my $code = $table->wikicode();
@@ -304,10 +298,10 @@ sub get_categories {
   my $sortQual = { 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
               'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
               'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
-              $Assessed_Class => 20, $Unassessed_Class => 0};
+              $Assessed_Class => 20, 'Unknown-Class' => '10', $Unassessed_Class => 0};
 
   my $sortImp= { 'Top-Class' => 400, 'High-Class' => 300, 
-                 'Mid-Class' => 200, 'Low-Class' => 100, 
+                 'Mid-Class' => 200, 'Low-Class' => 100, 'Unknown-Class' => 10,
                  $Unassessed_Class => 0};
 
 
@@ -391,23 +385,9 @@ sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
 	my $listURL = $script_url;
-	$listURL = $listURL . "projecta=" . $project . "&limit=50";
-	
-	($project, $timestamp, $wikipage, $parent, $shortname) = 
-	get_project_data($project);
-	if ( ! defined $wikipage) 
-	{
-		print "Data for $project "; 	
-	}
-	elsif ( ! defined $shortname) 
-	{
-		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
-	}
-	else
-	{
-		print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " "; 		
-	}
-	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
+
+        print "Overall ratings data " 
+           . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 	
 }
 
