@@ -382,7 +382,7 @@ sub get_link_from_api {
 sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = $script_url;
+	my $listURL = $script_url . "&entry=yes";
 
         print "Overall ratings data " 
            . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";

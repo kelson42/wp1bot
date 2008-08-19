@@ -53,7 +53,11 @@ layout_header("Article lists");
 
 my $projects = list_projects();
 query_form(\%param, $projects);
-ratings_table(\%param, $projects);
+
+if ( ! defined $param{'entry'} ) { 
+  ratings_table(\%param, $projects);
+}
+
 layout_footer();
 
 ###########################################################################
