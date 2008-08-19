@@ -69,25 +69,24 @@ sub download_project {
 
   # We might want do do this only if --featured is passed via the command line or smth
   print "\n-- First, getting all FA and GA data \n";
-  my (%good, %featured) = download_review_data();
-	#for now: update_review_data(%good, %featured);
+  download_review_data();
 
   print "\n-- Download ratings data for $project\n";
-	#my ($homepage, $parent, $extra, $shortname);
+  my ($homepage, $parent, $extra, $shortname);
   
-	eval {
-    #($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
-    #download_project_quality_ratings($project, $extra);
-    #download_project_importance_ratings($project, $extra);
-    #db_cleanup_project($project);
-    #update_project($project, $global_timestamp, $homepage, $parent, $shortname);
+  eval {
+    ($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
+    download_project_quality_ratings($project, $extra);
+    download_project_importance_ratings($project, $extra);
+    db_cleanup_project($project);
+    update_project($project, $global_timestamp, $homepage, $parent, $shortname);
     db_commit();
 	};
 
-	#if ($@) {
-    #print "Transaction aborted: $@";
-    #db_rollback();
-	#}
+	if ($@) {
+    print "Transaction aborted: $@";
+    db_rollback();
+	}
 
   return 0;
 }
