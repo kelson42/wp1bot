@@ -340,7 +340,7 @@ sub get_categories {
     $sortImp->{'Unassessed-Class'} = 0;
     $importanceLabels->{'Unassessed-Class'} = "'''None'''";
   } else { 
-#    $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
+    $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
   }
 
   if ( ! defined $sortQual->{'Unassessed-Class'} ) { 
