@@ -41,8 +41,8 @@ if ( ! defined $param{'sorta'} ) {
   $param{'sorta'} = 'Importance';
 }
 
-if ( ! defined $param{'sorta'} ) { 
-  $param{'sorta'} = 'Quality';
+if ( ! defined $param{'sortb'} ) { 
+  $param{'sortb'} = 'Quality';
 }
 
 my $p;
@@ -277,9 +277,9 @@ sub ratings_table {
 
     print "    <td>" . make_article_link($row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
-    print "    <td>" . $row[3] . "</td>\n";
+    print "    <td>" . make_history_link($row[1],$row[3]) . "</td>\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
-    print "    <td>" . $row[5] . "</td>";
+    print "    <td>" . make_history_link($row[1],$row[5]) . "</td>";
 
     print "<td>$row[6]</td>\n";
 
@@ -800,6 +800,7 @@ sub sort_orders {
           };
 }
 
+###########################################################################
 
 sub make_article_link {
   my $server_uri = "http://en.wikipedia.org/w/index.php";
@@ -809,4 +810,17 @@ sub make_article_link {
          . "\">t</a> &middot; "
          . "<a href=\"$server_uri?title=" . uri_escape($a) 
          . "&action=history\">h</a>)";
- }
+}
+
+###########################################################################
+
+sub make_history_link { 
+  my $art = shift;
+  my $ts = shift;
+  my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
+  return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
+       . "&timestamp=" . uri_escape($ts) . "\">$ts</a>";
+}
+
+###########################################################################
+
