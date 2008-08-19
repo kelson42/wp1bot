@@ -295,11 +295,7 @@ sub update_review_data {
 		print "Unrecognized review state: $value \n"; 
 		return -1;
 	};
-	
-	$art = encode("utf8", $art);
-	$value = encode("utf8", $value);
-	$oldvalue = encode("utf8", $oldvalue);
-	
+		
 	my $sth = $dbh->prepare ("UPDATE review SET rev_value = ?, " 
 	. "rev_timestamp = ? WHERE rev_article = ?");
 	
@@ -313,7 +309,31 @@ sub update_review_data {
 		$count = $sth->execute($value, $art, $timestamp);
 	}
 	
-	print "U:" . "$value // $art // $timestamp // was '$oldvalue'\n";
+	print "U:" . "$art // $value // $timestamp // was '$oldvalue'\n";
+	
+}
+
+############################################################
+## Probably needs to be merged with update_review_data()
+
+sub remove_review_data {
+	# Process all the parameters
+	my $art = shift;
+	my $value = shift;
+	my $oldvalue = shift;
+	
+	unless ( ($value eq 'None') ) {
+		print "Unrecognized review state: $value \n"; 
+		return -1;
+	}	
+
+	my $sth = $dbh->prepare ("DELETE FROM review WHERE rev_value = ? AND " 
+	. "rev_article = ?");
+	
+	# Executes the DELETE query. 
+	my $count = $sth->execute($oldvalue, $art);
+		
+	print "U:" . "$art // $value // removed // was '$oldvalue'\n";
 	
 }
 
@@ -340,7 +360,7 @@ sub get_review_data {
 	while ( @row = $sth->fetchrow_array() ) {
 		$row[0] = decode("utf8", $row[0]);
 		$ratings->{$row[0]} = $row[1];
-		# print "$row[0]: $row[1] \n";
+		print "$row[0]: $row[1] \n";
 	}
 	
 	return $ratings;	

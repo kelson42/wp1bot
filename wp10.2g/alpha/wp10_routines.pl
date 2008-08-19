@@ -75,11 +75,11 @@ sub download_project {
   my ($homepage, $parent, $extra, $shortname);
   
   eval {
-    ($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
-    download_project_quality_ratings($project, $extra);
-    download_project_importance_ratings($project, $extra);
-    db_cleanup_project($project);
-    update_project($project, $global_timestamp, $homepage, $parent, $shortname);
+	  #($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
+	  #download_project_quality_ratings($project, $extra);
+	  #download_project_importance_ratings($project, $extra);
+	  #db_cleanup_project($project);
+	  #update_project($project, $global_timestamp, $homepage, $parent, $shortname);
     db_commit();
 	};
 
@@ -400,7 +400,7 @@ sub download_review_data {
 	my (%rating);
 	
 	# Get older featured and good article data from database
-	my (%oldrating) = get_review_data();
+	my ($oldrating) = get_review_data();
 	
 	my $seen = {};
 	my %qcats = ('GA', $goodCat, 'FA', $featuredCat);
@@ -423,30 +423,28 @@ sub download_review_data {
 			$seen->{$art} = 1;
 			
 			# New entry
-			if ( ! defined %oldrating->{$art} ) { 
+			if ( ! defined %$oldrating->{$art} ) { 
 				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, 'None');
-				print $global_timestamp . " " . $art . " " . $qual . $d->{'timestamp'} . "\n";
+				#print $global_timestamp . " " . $art . " " . $qual . $d->{'timestamp'} . "\n";
 				next;
 			}
 			
 			# Old entry, although it could have been updated, so we need to check
-			if ( %oldrating->{$art} eq $qual ) {
+			if ( %$oldrating->{$art} eq $qual ) {
 				# No change
 			} else {
-				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, %oldrating->{$art});
-				print $global_timestamp . " " . $art . " " . $qual . " " . $d->{'timestamp'} . " " . %oldrating->{$art};
+				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, %$oldrating->{$art});
+				#print $global_timestamp . " " . $art . " " . $qual . " " . $d->{'timestamp'} . " " . %$oldrating->{$art};
 			} 
 		}
 	} 
 	
-	#foreach $art ( keys %$oldrating ) { 
-	#	next if ( exists $seen->{$art} );   
-	#	next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
-	#	print "NOT SEEN (quality) '$art'\n";
-	#	update_article_data($global_timestamp, $project, $art, 'quality', 
-	#	'Unknown-Class', $global_timestamp_wiki, 
-	#	$oldrating->{$art} );
-	#}
+	# Check if every article from the old listing is available
+	foreach $art ( keys %$oldrating ) { 
+		next if ( exists $seen->{$art} );   
+		print "NOT SEEN ($oldrating->{$art}) '$art' \n";
+		remove_review_data($art, 'None', $oldrating->{$art});
+	}
 	
 	return 0;
 
