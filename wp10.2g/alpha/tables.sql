@@ -36,15 +36,17 @@ create table ratings (
     r_quality               varchar(63),
         -- quality rating
 
-    r_quality_timestamp     binary(14),
+    r_quality_timestamp     binary(20),
         -- time when quality rating was assigned
         --   NOTE: a revid can be obtained from timestamp via API
+        --  a wiki-format timestamp
 
     r_importance            varchar(63),
         -- importance rating
 
-    r_importance_timestamp  binary(14),
+    r_importance_timestamp  binary(20),
         -- time when importance rating was assigned
+        -- a wiki-style timestamp
 
     primary key (r_project, r_article)
 ) default character set 'utf8' collate 'utf8_bin'
@@ -109,8 +111,9 @@ create table logging (
     l_new            varchar(63),
        -- new value (e.g. GA-Class)
 
-    l_revision_timestamp  binary(14)  not null,
+    l_revision_timestamp  binary(20)  not null,
        -- timestamp when page was edited
+       -- a wiki-format timestamp
 
     key (l_project, l_article, l_action, l_timestamp)
 ) default charset = 'utf8' collate 'utf8_bin'
@@ -128,10 +131,11 @@ create table review (
     rev_article             varchar(255) not null,
         -- article title
 
-    rev_timestamp     binary(14),
+    rev_timestamp     binary(20),
         -- time when review was completed and the article was tagged 
 		-- with the proper talk page banner
         --   NOTE: a revid can be obtained from timestamp via API
+        --  a wiki-format timestamp
 
     primary key (rev_value, rev_article)
 ) default character set 'utf8' collate 'utf8_bin'

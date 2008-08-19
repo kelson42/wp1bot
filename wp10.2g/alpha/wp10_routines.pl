@@ -71,11 +71,13 @@ sub download_project {
   my ($homepage, $parent, $extra, $shortname);
   
   eval {
-	($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
+	($homepage, $parent, $extra, $shortname) = 
+          get_extra_assessments($project); 
 	download_project_quality_ratings($project, $extra);
 	download_project_importance_ratings($project, $extra);
 	db_cleanup_project($project);
-	update_project($project, $global_timestamp, $homepage, $parent, $shortname);
+	update_project($project, $global_timestamp, $homepage, 
+                       $parent, $shortname);
     db_commit();
 	};
 
@@ -283,7 +285,7 @@ sub download_project_importance_ratings {
     next if ( exists $seen->{$art} );    
     print "NOT SEEN (importance) $art\n";
     update_article_data($global_timestamp, $project, $art, "importance",
-                        'Unknown-Class', $global_timestamp, 
+                        'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art});
   }
 
@@ -397,7 +399,22 @@ sub get_extra_assessments {
 
 #######################################################################
 
-sub download_review_data {
+sub download_review_data { 
+
+  eval {
+    download_review_data_internal();
+    db_commit();
+  };
+
+  if ($@) {
+    print "Transaction aborted: $@";
+    db_rollback();
+  }
+}
+
+#######################################################################
+
+sub download_review_data_internal {
 	my (%rating);
 	
 	# Get older featured and good article data from database
@@ -446,9 +463,7 @@ sub download_review_data {
 		print "NOT SEEN ($oldrating->{$art}) '$art' \n";
 		remove_review_data($art, 'None', $oldrating->{$art});
 	}
-	
 	return 0;
-
 }
 
 # Load successfully

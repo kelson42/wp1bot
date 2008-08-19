@@ -300,9 +300,9 @@ sub update_review_data {
 	my $sth = $dbh->prepare ("UPDATE review SET rev_value = ?, " 
 	. "rev_timestamp = ? WHERE rev_article = ?");
 	
-	# Executes the UPDATE query. If there are no entries matching the article's
-	# name in the table, the query will return 0, allowing us to create an INSERT
-	# query instead.
+	# Executes the UPDATE query. If there are no entries matching the 
+        # article's name in the table, the query will return 0, allowing us 
+        # to create an INSERT query instead.
 	my $count = $sth->execute($value, $timestamp, $art);
 	
 	if ( $count eq '0E0' ) { 
@@ -361,7 +361,6 @@ sub get_review_data {
 	while ( @row = $sth->fetchrow_array() ) {
 		$row[0] = decode("utf8", $row[0]);
 		$ratings->{$row[0]} = $row[1];
-		print "$row[0]: $row[1] \n";
 	}
 	
 	return $ratings;	
