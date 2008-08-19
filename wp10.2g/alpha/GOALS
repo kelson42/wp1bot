@@ -1,16 +1,14 @@
 Goals to finish before promoting to beta version:
 
-* Clean up and finish the code for the global tables - double-check all links
-
-* Change list2.pl to allow any project to be typed in. This will also
-allow _no_ project to be typed in, which is needed for the links from
-the global table
+* Clean up and finish the code for the global tables 
+** Double-check all links have the right target 
 
 * Change list2.pl to allow the user to specify the sort order of the
-results (by project, title, quality, importance, etc)
+  results (by project, title, quality, importance, etc)
 
 * Download and use lists of WP 0.5 and 0.7, FA, and GA articles
 ** FAs/GAs downloaded, now only need to be used
+** Need to download WP 0.5 as well
 
 * Allow pages in any namespace to be rated (add ns column to ratings table
   and use it in list2.pl)
@@ -21,6 +19,7 @@ results (by project, title, quality, importance, etc)
 
 * Generate some sort of index file (similar to [[WP:1.0/I]]) but online
   (maybe the bot-readable form can be the wikitext to [[WP:1.0/I]])
+** Add a "type" field for sorting projects, similar to WP 0.5 ? 
   
 * Figure out how to load-balance the script wrt WikiProject Biography
 
@@ -29,6 +28,3 @@ results (by project, title, quality, importance, etc)
 * Look through cgi-bin for dupicate code, move to a shared location
 
 * Fix timestamp truncation errors (all over the place)
-
-* Need to figure out how to make SQL requests case-sensitive 
-** see [[Where No Man Has Gone Before]] vs. [[Where no man has gone before]] - what's wrong with these people?
