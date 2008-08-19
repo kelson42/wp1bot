@@ -37,6 +37,10 @@ if ( $param{'limit'} > 500 ) {
   $param{'limit'} = 500;
 }
 
+if ( ! defined $param{'sorta'} ) { 
+  $param{'sorta'} = 'Project';
+}
+
 my $p;
 foreach $p ( keys %param ) { 
   $param{$p} =~ s/^\s*//;
@@ -94,10 +98,36 @@ sub ratings_table {
   my $offset = $params->{'offset'} || 0;
   if ( $offset > 0 ) { $offset --; }
 
-  my $query = "SELECT * FROM ratings WHERE";
-  my $queryc = "SELECT count(r_article) FROM ratings WHERE";
+
+  my $query;
+  my $queryc;
   my @qparam;
   my @qparamc;
+
+  my $sort = $params->{'sorta'};
+
+  $queryc = "SELECT count(r_article) FROM ratings WHERE";
+
+  if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
+    $query = "SELECT * FROM ratings WHERE";
+  } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query = "SELECT r_project, r_article, r_quality,
+                     r_quality_timestamp, r_importance,
+                     r_importance_timestamp, c_ranking
+                 from ratings join categories
+                on r_project = c_project
+                 and c_type = 'importance'
+                 and c_rating = r_importance WHERE";
+  } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
+    $query = "SELECT r_project, r_article, r_quality,
+                     r_quality_timestamp, r_importance,
+                     r_importance_timestamp, c_ranking
+                from ratings join categories
+                on r_project = c_project
+                 and c_type = 'quality'
+                 and c_rating = r_quality WHERE";
+  }
+
 
   if ( defined $project && $project =~ /\w|\d/ ) { 
     if ( defined $projects->{$project} ) { 
@@ -156,6 +186,20 @@ sub ratings_table {
     push @qparamc, $importance;
   }
 
+
+  if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
+      || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query .= " ORDER BY c_ranking";
+  } else { 
+    $query .= " ORDER BY r_project";
+  }
+
+  if ( ! ($sort =~ /reverse/) ) { 
+    $query .= ' DESC';
+  } 
+
+  $query .= ", r_article";
+
   $query .= " LIMIT ?";
   push @qparam, $limit;
 
@@ -166,8 +210,8 @@ sub ratings_table {
   $query =~ s/WHERE AND/WHERE /;
   $queryc =~ s/WHERE AND/WHERE /;
 
-  $query =~ s/WHERE LIMIT/LIMIT/;
-  $queryc =~ s/WHERE LIMIT/LIMIT/;
+  $query =~ s/WHERE ORDER/ORDER/;
+  $queryc =~ s/WHERE ORDER/ORDER/;
 
   print "Q: $query<br/>\n";
   print join "<br/>", @qparam;
@@ -200,7 +244,11 @@ sub ratings_table {
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    <td>" . $row[3] . "</td>\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
-    print "    <td>" . $row[5] . "</td>\n";
+    print "    <td>" . $row[5] . "</td>";
+
+    print "<td>$row[6]</td>\n";
+
+    print "\n";
     print "</tr>\n";
   }
   print "</table>\n";
@@ -271,14 +319,47 @@ sub ratings_table_intersect {
   if ( $offset > 0 ) { $offset --; }
 
 
-  my $query = "SELECT ra.r_article, ra.r_quality, ra.r_importance, rb.r_quality, rb.r_importance ". 
-              "  FROM ratings as ra join ratings as rb on rb.r_article = ra.r_article" . 
-              " WHERE ra.r_project = ? AND rb.r_project = ?";
+  my $query;
+
   my $queryc = "SELECT count(ra.r_article) FROM ratings as ra join ratings as rb on rb.r_article = ra.r_article" . 
               " WHERE ra.r_project = ? AND rb.r_project = ?";
 
   my @qparam = ($projecta, $projectb);
   my @qparamc = ($projecta, $projectb);
+
+  my $sort = $params->{'sorta'};
+
+  if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
+    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
+                       rb.r_quality, rb.r_importance
+                FROM ratings as ra 
+                JOIN ratings as rb 
+                     on rb.r_article = ra.r_article
+                WHERE ra.r_project = ? AND rb.r_project = ?";
+  } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
+                       rb.r_quality, rb.r_importance, c_ranking
+                FROM ratings AS ra 
+                JOIN ratings AS rb 
+                     ON rb.r_article = ra.r_article
+                JOIN categories 
+                     ON ra.r_project = c_project
+                     AND c_type = 'importance'
+                     AND c_rating = ra.r_importance
+                WHERE ra.r_project = ? AND rb.r_project = ?";
+  } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
+    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
+                       rb.r_quality, rb.r_importance, c_ranking
+                FROM ratings AS ra 
+                JOIN ratings AS rb 
+                     ON rb.r_article = ra.r_article
+                JOIN categories 
+                     ON ra.r_project = c_project
+                     AND c_type = 'quality'
+                     AND c_rating = ra.r_quality
+                WHERE ra.r_project = ? AND rb.r_project = ?";
+  }
+
 
   my $quality = $params->{'quality'};
   my $qualityb = $params->{'qualityb'};
@@ -305,11 +386,26 @@ sub ratings_table_intersect {
     $queryc .= " AND NOT ra.r_quality = rb.r_quality";
   }
 
+  if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
+      || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query .= " ORDER BY c_ranking";
+  } else { 
+    $query .= " ORDER BY ra.r_project";
+  }
+
+  if ( ! ($sort =~ /reverse/) ) { 
+    $query .= ' DESC';
+  } 
+
+  $query .= ", ra.r_article";
+
   $query .= " LIMIT ?";
   push @qparam, $limit;
 
   $query .= " OFFSET ?";
   push @qparam, $offset;
+
+  print "Q: $query\n";
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -457,7 +553,7 @@ sub query_form {
       <td><input type="text" value="$quality" name="quality"/></td></tr>
   <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
-   <tr><td colspan="2">Note: leave any field blank to 
+   <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
   </table>
 </td></tr>
@@ -481,14 +577,31 @@ HERE
   }
   print "> Show only rows where quality ratings differ</input></td></tr>\n";
 
-  print "</table></td></tr>\n";
   print << "HERE";
+  </table></td></tr>
   <tr><td><b>Output options</b></td></tr>
   <tr><td><table class="subform">
   <tr><td>Results per page</td>
       <td><input type="text" value="$limit" name="limit"/></td></tr>
   <tr><td>Start with result #</td>
       <td><input type="text" value="$offset" name="offset"/></td></tr>
+HERE
+
+print "<tr><td>Sort by</td><td><select name=\"sorta\">\n";
+
+my $sorts = sort_orders();
+my $s;
+foreach $s ( sort {$a cmp $b} keys %$sorts ) {
+  print "<option value=\"$s\"";
+  if ( $s eq $param{'sorta'} ) { print " selected"; }
+  print ">$s</option>\n";
+}
+print "</select></td></tr>\n";
+
+
+print << "HERE"
+   <tr><td colspan="2" class="note">Note: sorting is done relative 
+to the first project. </td></tr>
   <tr>
   <td colspan="2" style="text-align: center;">
     <input type="submit" value="Make list"/>
@@ -527,6 +640,7 @@ sub get_cached_td_background {
   return $data;
 }
 
+###########################################################################
 
 sub get_td_background { 
   my $class = shift;
@@ -540,6 +654,8 @@ sub get_td_background {
 
   return $t;
 }
+
+###########################################################################
 
 sub get_link_from_api { 
 	my $text = shift;
@@ -557,6 +673,8 @@ sub get_link_from_api {
 	
 	return $t;
 }
+
+###########################################################################
 
 sub print_header_text {
 	my $project = shift;
@@ -582,4 +700,17 @@ sub print_header_text {
 	}
 	print "(<b>lists</b> \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
 	
+}
+
+###########################################################################
+
+sub sort_orders { 
+   return { 
+            'Project' => 'r_project',
+            'Project (reverse)' => 'r_project DESC',
+            'Quality' => 'r_quality',
+            'Quality (reverse)' => 'r_quality DESC',
+            'Importance' => 'r_importance',
+            'Importance (reverse)' => 'r_importance DESC',
+          };
 }
