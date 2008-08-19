@@ -33,12 +33,16 @@ my $cacheMem = {};
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
-if ( $param{'limit'} > 500 ) { 
-  $param{'limit'} = 500;
+if ( $param{'limit'} > 1000 ) { 
+  $param{'limit'} = 1000;
 }
 
 if ( ! defined $param{'sorta'} ) { 
-  $param{'sorta'} = 'Project';
+  $param{'sorta'} = 'Importance';
+}
+
+if ( ! defined $param{'sorta'} ) { 
+  $param{'sorta'} = 'Quality';
 }
 
 my $p;
@@ -87,17 +91,10 @@ sub ratings_table {
   } 
 	
   my $project = $params->{'projecta'};
-#  return if ( ! defined $project);
-
-#  if ( ! defined $projects->{$project}) { 
-#    print "Project '$project' not available\n";
-#    return;
-#  }
 	
-  my $limit = $params->{'limit'} || 20;
+  my $limit = $params->{'limit'} || 100;
   my $offset = $params->{'offset'} || 0;
   if ( $offset > 0 ) { $offset --; }
-
 
   my $query;
   my $queryc;
@@ -109,25 +106,41 @@ sub ratings_table {
   $queryc = "SELECT count(r_article) FROM ratings WHERE";
 
   if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
-    $query = "SELECT * FROM ratings WHERE";
+    $query = "SELECT * FROM ratings";
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
     $query = "SELECT r_project, r_article, r_quality,
                      r_quality_timestamp, r_importance,
-                     r_importance_timestamp, c_ranking
-                 from ratings join categories
-                on r_project = c_project
-                 and c_type = 'importance'
-                 and c_rating = r_importance WHERE";
+                     r_importance_timestamp
+              FROM ratings JOIN categories AS ca
+                ON r_project = ca.c_project
+                 AND ca.c_type = 'importance'
+                 AND ca.c_rating = r_importance";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
     $query = "SELECT r_project, r_article, r_quality,
                      r_quality_timestamp, r_importance,
-                     r_importance_timestamp, c_ranking
-                from ratings join categories
-                on r_project = c_project
-                 and c_type = 'quality'
-                 and c_rating = r_quality WHERE";
+                     r_importance_timestamp
+                FROM ratings JOIN categories AS ca
+                 ON r_project = ca.c_project
+                 AND ca.c_type = 'quality'
+                 AND ca.c_rating = r_quality";
   }
 
+  my $sortb = $params->{'sortb'};
+  if ( $sortb eq 'Project' || $sortb eq 'Project (reverse)' ) { 
+    # No extra SQL needed
+  } elsif ( $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
+    $query .= " JOIN categories AS cb
+                ON r_project = cb.c_project
+                 AND cb.c_type = 'importance'
+                 AND cb.c_rating = r_importance";
+  } elsif ( $sortb eq 'Quality' || $sortb eq 'Quality (reverse)' ) { 
+    $query .= " JOIN categories AS cb
+                ON r_project = cb.c_project
+                 AND cb.c_type = 'quality'
+                 AND cb.c_rating = r_quality";
+  }
+
+  $query .= " WHERE";
 
   if ( defined $project && $project =~ /\w|\d/ ) { 
     if ( defined $projects->{$project} ) { 
@@ -178,6 +191,7 @@ sub ratings_table {
 
 
   my $importance =  $params->{'importance'};
+   print "I: $importance<br/>\n";
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
     $queryc .= " AND r_importance = ?";
@@ -188,12 +202,24 @@ sub ratings_table {
 
   if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
       || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .= " ORDER BY c_ranking";
+    $query .= " ORDER BY ca.c_ranking";
   } else { 
     $query .= " ORDER BY r_project";
   }
 
   if ( ! ($sort =~ /reverse/) ) { 
+    $query .= ' DESC';
+  } 
+
+
+  if (   $sortb eq 'Quality' || $sortb eq 'Quality (reverse)'
+      || $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
+    $query .= ", cb.c_ranking";
+  } else { 
+    $query .= ", r_project";
+  }
+
+  if ( ! ($sortb =~ /reverse/) ) { 
     $query .= ' DESC';
   } 
 
@@ -333,32 +359,45 @@ sub ratings_table_intersect {
                        rb.r_quality, rb.r_importance
                 FROM ratings as ra 
                 JOIN ratings as rb 
-                     on rb.r_article = ra.r_article
-                WHERE ra.r_project = ? AND rb.r_project = ?";
+                     on rb.r_article = ra.r_article";
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
     $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
-                       rb.r_quality, rb.r_importance, c_ranking
+                       rb.r_quality, rb.r_importance
                 FROM ratings AS ra 
                 JOIN ratings AS rb 
                      ON rb.r_article = ra.r_article
-                JOIN categories 
+                JOIN categories AS ca
                      ON ra.r_project = c_project
-                     AND c_type = 'importance'
-                     AND c_rating = ra.r_importance
-                WHERE ra.r_project = ? AND rb.r_project = ?";
+                     AND ca.c_type = 'importance'
+                     AND ca.c_rating = ra.r_importance";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
     $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
-                       rb.r_quality, rb.r_importance, c_ranking
+                       rb.r_quality, rb.r_importance
                 FROM ratings AS ra 
                 JOIN ratings AS rb 
                      ON rb.r_article = ra.r_article
-                JOIN categories 
-                     ON ra.r_project = c_project
-                     AND c_type = 'quality'
-                     AND c_rating = ra.r_quality
-                WHERE ra.r_project = ? AND rb.r_project = ?";
+                JOIN categories AS ca
+                     ON ra.r_project = ca.c_project
+                     AND ca.c_type = 'quality'
+                     AND ca.c_rating = ra.r_quality";
   }
 
+  my $sortb = $params->{'sortb'};
+  if ( $sortb eq 'Project' || $sortb eq 'Project (reverse)' ) { 
+    # No extra SQL needed
+  } elsif ( $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
+    $query .= " JOIN categories AS cb
+                ON ra.r_project = cb.c_project
+                 AND cb.c_type = 'importance'
+                 AND cb.c_rating = ra.r_importance";
+  } elsif ( $sortb eq 'Quality' || $sortb eq 'Quality (reverse)' ) { 
+    $query .= " JOIN categories AS cb
+                ON ra.r_project = cb.c_project
+                 AND cb.c_type = 'quality'
+                 AND cb.c_rating = ra.r_quality";
+  }
+
+  $query .= " WHERE ra.r_project = ? AND rb.r_project = ?";
 
   my $quality = $params->{'quality'};
   my $qualityb = $params->{'qualityb'};
@@ -418,7 +457,7 @@ sub ratings_table_intersect {
 
   if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
       || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .= " ORDER BY c_ranking";
+    $query .= " ORDER BY ca.c_ranking";
   } else { 
     $query .= " ORDER BY ra.r_project";
   }
@@ -426,6 +465,18 @@ sub ratings_table_intersect {
   if ( ! ($sort =~ /reverse/) ) { 
     $query .= ' DESC';
   } 
+
+  if (   $sortb eq 'Quality' || $sortb eq 'Quality (reverse)'
+      || $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
+    $query .= ", cb.c_ranking";
+  } else { 
+    $query .= ", ra.r_project";
+  }
+
+  if ( ! ($sortb =~ /reverse/) ) { 
+    $query .= ' DESC';
+  } 
+
 
   $query .= ", ra.r_article";
 
@@ -551,7 +602,7 @@ sub query_form {
   my $importance = $params->{'importance'} || "";
   my $qualityb = $params->{'qualityb'} || "";
   my $importanceb = $params->{'importanceb'} || "";
-  my $limit = $params->{'limit'} || "20";
+  my $limit = $params->{'limit'} || "100";
   my $offset = $params->{'offset'} || "1";
   my $intersect = $params->{'intersect'} || "";
   my $pagename = $params->{'pagename'} || "";
@@ -576,12 +627,18 @@ sub query_form {
   my $sorts = sort_orders();
   my $s;
   my $sort_html = "";
+  my $sort_htmlb = "";
   foreach $s ( sort {$a cmp $b} keys %$sorts ) {
     $sort_html .=  "<option value=\"$s\"";
+    $sort_htmlb .=  "<option value=\"$s\"";
     if ( $s eq $param{'sorta'} ) { 
       $sort_html .= " selected"; 
     }
+    if ( $s eq $param{'sortb'} ) { 
+      $sort_htmlb .= " selected"; 
+    }
     $sort_html .= ">$s</option>\n";
+    $sort_htmlb .= ">$s</option>\n";
   }
 
   print << "HERE";
@@ -627,8 +684,11 @@ sub query_form {
       <td><input type="text" value="$limit" name="limit"/></td></tr>
   <tr><td>Start with result #</td>
       <td><input type="text" value="$offset" name="offset"/></td></tr>
-  <tr><td>Sort by</td><td><select name="sorta">
+  <tr><td>Primary sort by</td><td><select name="sorta">
       $sort_html
+      </select></td></tr>
+  <tr><td>Secondary sort by</td><td><select name="sortb">
+      $sort_htmlb
       </select></td></tr>
   <tr><td colspan="2" class="note">Note: sorting is done 
             relative to the first project. </td></tr>
