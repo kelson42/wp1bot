@@ -27,13 +27,11 @@ my $script_url = $Opts->{'list2-url'}
  or die "No 'list2-url' specified in configuration.\n";
 
 
-########################
+#####################################################################
 
 require 'init_cache.pl';
 my $cache = init_cache();
 my $cache_sep = "<hr/><!-- cache separator -->\n";
-
-########################
 
 require CGI;
 CGI::Carp->import('fatalsToBrowser');
@@ -50,29 +48,28 @@ require "database_www.pl";
 
 our $dbh = db_connect($Opts);
 
-
-layout_header('Summary tables');
+layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
-  print "</div><hr/><div class=\"navbox\">\n";
-  print_header_text();
-  print "</div>\n<center>\n";
-  print $html;
-  print "</center>\n";
-  print "\n";
-  print "<hr/><div class=\"indent\"><pre>";
-  print $wikicode;
-  print "</pre></div>\n";
+print "</div><hr/><div class=\"navbox\">\n";
+print_header_text();
+print "</div>\n<center>\n";
+print $html;
+print "</center>\n";
+print "\n";
+print "<hr/><div class=\"indent\"><pre>";
+print $wikicode;
+print "</pre></div>\n";
 
 layout_footer();
 
 exit;
 
-#######################
+#####################################################################
+#####################################################################
 
 sub cached_ratings_table { 
-
 
   print "<div class=\"indent\">\n";
   print "<b>Debugging output</b><br/>\n";
@@ -119,6 +116,7 @@ sub cached_ratings_table {
   $cache->set($key, $data, '1 hour');
 }
 
+#####################################################################
 
 sub ratings_table { 
   my $proj = shift;
@@ -155,7 +153,6 @@ sub ratings_table {
     # the result of the if statements above
     $data->{$row[1]}->{$row[2]} += $row[0];
     $cols->{$row[2]} = 1;
-
   }
 
   # Step 2 - remove any rows or columns that shouldn't be displayed
@@ -287,7 +284,7 @@ sub ratings_table {
   return ($r->{'text'}, $code);
 }
 
-###################################
+#####################################################################
 
 sub get_categories { 
 
@@ -322,11 +319,10 @@ sub get_categories {
   $importanceLabels->{'Unassessed-Class'} =~ s/Unassessed-Class/No-Class/;
 
   return ($sortQual, $sortImp, $qualityLabels, $importanceLabels);
-
 }
 
 
-#################################
+#####################################################################
 
 sub query_form {
 
@@ -381,6 +377,8 @@ sub get_link_from_api {
 	return $t;
 }
 
+#####################################################################
+
 sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
@@ -388,10 +386,9 @@ sub print_header_text {
 
         print "Overall ratings data " 
            . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
-	
 }
 
-
+#####################################################################
 
 sub cached_ratings_table { 
   print "<div class=\"indent\">\n";
@@ -412,7 +409,7 @@ sub cached_ratings_table {
           split /\Q$cache_sep\E/, $data, 3;
 
     return ($c_html, $c_wikicode);
- }
+  }
 
   print "No cached output, regenerating\n";
   my $ts = time();
@@ -432,3 +429,5 @@ sub cached_ratings_table {
 
   return ($html, $wikicode);
 }
+
+#####################################################################
