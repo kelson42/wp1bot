@@ -164,9 +164,8 @@ sub ratings_table {
 
   if ( defined $pagename and $pagename =~ /\w|\d/ ) { 
     if ( $params->{'pagenameWC'} eq 'on' ) { 
-      $pagename = '%' . $pagename . '%';
-      $query .= " AND r_article like ?";
-      $queryc .= " AND r_article like ?";
+      $query .= " AND r_article REGEXP ?";
+      $queryc .= " AND r_article REGEXP ?";
       push @qparam, $pagename;
       push @qparamc, $pagename;
     } else { 
@@ -214,7 +213,7 @@ sub ratings_table {
   $queryc =~ s/WHERE ORDER/ORDER/;
 
   print "Q: $query<br/>\n";
-  print join "<br/>", @qparam;
+#  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -228,13 +227,13 @@ sub ratings_table {
 
   print "<p><b>Total results: " . $total 
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "</p><hr/>\n";
+        . ($offset +1) . "</p>\n";
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
   my $i = $offset;
 
-  print "<table class=\"wikitable\">\n";
+  print "<center>\n<table class=\"wikitable\">\n";
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
@@ -251,7 +250,7 @@ sub ratings_table {
     print "\n";
     print "</tr>\n";
   }
-  print "</table>\n";
+  print "</table>\n</center>\n";
 	# For display purposes - whether we use a pipe between "previous" and "next"
 	# depends on whether "previous" is defined or not 
 	my $prev = 0;
@@ -371,6 +370,13 @@ sub ratings_table_intersect {
     push @qparamc, $quality;
   }
 
+  if ( defined $qualityb && $qualityb =~ /\w|\d/) {
+    $query .= " AND rb.r_quality = ?";
+    $queryc .= " AND rb.r_quality = ?";
+    push @qparam, $qualityb;
+    push @qparamc, $qualityb;
+  }
+
   my $importance =  $params->{'importance'};
   my $importanceb =  $params->{'importanceb'};
 
@@ -379,6 +385,30 @@ sub ratings_table_intersect {
     $queryc .= " AND ra.r_importance = ?";
     push @qparam, $importance;
     push @qparamc, $importance;
+  }
+
+  if ( defined $importanceb && $importanceb =~ /\w|\d/) {
+    $query .= " AND rb.r_importance = ?";
+    $queryc .= " AND rb.r_importance = ?";
+    push @qparam, $importanceb;
+    push @qparamc, $importanceb;
+  }
+
+
+  my $pagename = $params->{'pagename'};
+
+  if ( defined $pagename and $pagename =~ /\w|\d/ ) {
+    if ( $params->{'pagenameWC'} eq 'on' ) {
+      $query .= " AND ra.r_article REGEXP ?";
+      $queryc .= " AND ra.r_article REGEXP ?";
+      push @qparam, $pagename;
+      push @qparamc, $pagename;
+    } else {
+      $query .= " AND ra.r_article = ?";
+      $queryc .= " AND ra.r_article = ?";
+      push @qparam, $pagename;
+      push @qparamc, $pagename;
+    }
   }
 
   if ( defined $param{'diffonly'} ) { 
@@ -405,7 +435,8 @@ sub ratings_table_intersect {
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-  print "Q: $query\n";
+  print "Q: $query\<br/>\n";
+#  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -420,7 +451,7 @@ sub ratings_table_intersect {
   my $total = $row[0];
   print "<p><b>Total results: " . $total
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "</p><hr/>\n";
+        . ($offset +1) . "</p>\n";
 
 
   my $sth = $dbh->prepare($query);
@@ -428,12 +459,13 @@ sub ratings_table_intersect {
   my $i = $offset;
 
   print << "HERE";
+<center>
 <table class="wikitable">
 <tr>
-  <td><b>Result</b></td>
-  <td><b>Article</b></td>
-  <td colspan="2"><b>$projecta</b></td>
-  <td colspan="2"><b>$projectb</b></td>
+  <th><b>Result</b></th>
+  <th><b>Article</b></th>
+  <th colspan="2"><b>$projecta</b></th>
+  <th colspan="2"><b>$projectb</b></th>
 </tr>
 HERE
      
@@ -450,7 +482,7 @@ HERE
 
 
   }
-  print "</table>\n";
+  print "</table>\n</center>\n";
 	# For display purposes - whether we use a pipe between "previous" and "next"
 	# depends on whether "previous" is defined or not 
 	my $prev = 0;
@@ -486,8 +518,7 @@ HERE
                             . "&qualityb="   . uri_escape($qualityb)
                             . "&importanceb=" . uri_escape($importanceb)
                             . "&limit="     . $limit
-                            . "&offset=" . ($limit + $offset + 1);	  
-		
+                            . "&offset=" . ($limit + $offset + 1);	  		
 		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
 	}
 	print "\n";
@@ -536,6 +567,22 @@ sub query_form {
     $pagename_wc_checked = "checked=\"yes\" ";
   }
 
+  my $diffonly_checked = "";
+  if ( defined $param{'diffonly'} ) {
+    $diffonly_checked = "checked";
+  }
+
+
+  my $sorts = sort_orders();
+  my $s;
+  my $sort_html = "";
+  foreach $s ( sort {$a cmp $b} keys %$sorts ) {
+    $sort_html .=  "<option value=\"$s\"";
+    if ( $s eq $param{'sorta'} ) { 
+      $sort_html .= " selected"; 
+    }
+    $sort_html .= ">$s</option>\n";
+  }
 
   print << "HERE";
 <form>
@@ -546,15 +593,15 @@ sub query_form {
       <td><input type="text" value="$projecta" name="projecta"/></td></tr>
   <tr><td>Page name</td>
       <td><input type="text" value="$pagename" name="pagename"/></td></tr>
-  <tr><td></td>
-      <td><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />	
-          Use this name as a wildcard</td></tr>
   <tr><td>Quality</td>
       <td><input type="text" value="$quality" name="quality"/></td></tr>
   <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
+  <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
+      Treat page name as a <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
    <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
+
   </table>
 </td></tr>
 <tr><td><b>Specify second project</b>
@@ -569,45 +616,27 @@ sub query_form {
   <tr><td>Importance</td>
       <td><input type=\"text\" value="$importanceb" name="importanceb"/>
       </td></tr>
-HERE
-
-  print "<tr><td colspan=\"2\"><input type=\"checkbox\" name=\"diffonly\" ";
-  if ( defined $param{'diffonly'} ) {
-    print "checked=\"checked\" ";
-  }
-  print "> Show only rows where quality ratings differ</input></td></tr>\n";
-
-  print << "HERE";
+  <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
+     Show only rows where quality ratings differ</input>
+     </td></tr>
   </table></td></tr>
-  <tr><td><b>Output options</b></td></tr>
-  <tr><td><table class="subform">
+
+<tr><td><b>Output options</b></td></tr>
+<tr><td><table class="subform">
   <tr><td>Results per page</td>
       <td><input type="text" value="$limit" name="limit"/></td></tr>
   <tr><td>Start with result #</td>
       <td><input type="text" value="$offset" name="offset"/></td></tr>
-HERE
-
-print "<tr><td>Sort by</td><td><select name=\"sorta\">\n";
-
-my $sorts = sort_orders();
-my $s;
-foreach $s ( sort {$a cmp $b} keys %$sorts ) {
-  print "<option value=\"$s\"";
-  if ( $s eq $param{'sorta'} ) { print " selected"; }
-  print ">$s</option>\n";
-}
-print "</select></td></tr>\n";
-
-
-print << "HERE"
-   <tr><td colspan="2" class="note">Note: sorting is done relative 
-to the first project. </td></tr>
-  <tr>
-  <td colspan="2" style="text-align: center;">
+  <tr><td>Sort by</td><td><select name="sorta">
+      $sort_html
+      </select></td></tr>
+  <tr><td colspan="2" class="note">Note: sorting is done 
+            relative to the first project. </td></tr>
+  <tr><td colspan="2" style="text-align: center;">
     <input type="submit" value="Make list"/>
-  </td></tr>
-  </table>
-  </td></tr></table></form>
+    </td></tr>
+  </table></td></tr>
+</table></form>
   <hr/>
 HERE
 
@@ -677,29 +706,31 @@ sub get_link_from_api {
 ###########################################################################
 
 sub print_header_text {
-	my $project = shift;
-	my ($timestamp, $wikipage, $parent, $shortname);
-	my $tableURL = $ENV{"SCRIPT_URI"};
-	my @t = split('list2.pl',$tableURL);
-	$tableURL = @t[0];
-	$tableURL = $tableURL . "table.pl?project=" . $project;
+  my $project = shift;
+  my ($timestamp, $wikipage, $parent, $shortname);
+  my $tableURL = $ENV{"SCRIPT_URI"};
+  my @t = split('list2.pl',$tableURL);
+  $tableURL = @t[0] . "table.pl";
 
-	($project, $timestamp, $wikipage, $parent, $shortname) = 
-		get_project_data($project);
-	if ( ! defined $wikipage) 
-	{
-		print "Data for $project "; 	
-	}
-	elsif ( ! defined $shortname) 
-	{
-		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
-	}
-	else
-	{
-		print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " "; 		
-	}
-	print "(<b>lists</b> \| <a href=\"" . $tableURL . "\">summary table</a>)\n";
-	
+  if ( $project =~ /\w|\d/ ) { 
+    $tableURL = $tableURL . "?project=" . $project;
+
+    ($project, $timestamp, $wikipage, $parent, $shortname) = 
+      get_project_data($project);
+
+    if ( ! defined $wikipage) {
+      print "Data for $project "; 	
+    } elsif ( ! defined $shortname) {
+      print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+    } else {
+      print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " ";
+    }
+  } else { 
+    print " Data for all projects ";
+  }
+
+  print "(<b>list</b> \| <a href=\"" . $tableURL 
+        . "\">summary table</a>)\n";
 }
 
 ###########################################################################
