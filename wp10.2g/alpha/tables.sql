@@ -115,3 +115,24 @@ create table logging (
     key (l_project, l_article, l_action, l_timestamp)
 ) default charset = 'utf8'
   engine = InnoDB;
+
+-- The review table stores the data for community-wide reviews such as
+-- Featured and Good Articles. Each article will
+-- be once, with either an FA or GA marking. 
+
+create table review ( 
+
+    rev_value               varchar(10)  not null,
+        -- whether an article is FA or GA
+
+    rev_article             varchar(255) not null,
+        -- article title
+
+    rev_timestamp     binary(14),
+        -- time when review was completed and the article was tagged 
+		-- with the proper talk page banner
+        --   NOTE: a revid can be obtained from timestamp via API
+
+    primary key (rev_value, rev_article)
+) default character set 'utf8'
+  engine = InnoDB;

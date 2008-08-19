@@ -8,6 +8,7 @@ our $global_timestamp_wiki;
 # i18n
 
 my $categoryNS = 14;
+my $talkNS = 1;
 
 my $Articles = 'articles';   
 my $By_quality = 'by quality';
@@ -15,6 +16,8 @@ my $By_importance = 'by importance';
 my $Category = 'Category';
 my $Lang = 'en';
 my $Root_category = 'Category:Wikipedia 1.0 assessments';
+my $goodCat = "$Category:Wikipedia good articles";
+my $featuredCat = "$Category:Wikipedia featured articles";
 
 my $Class = 'Class';
 my $No_Class = 'No-Class';
@@ -64,22 +67,27 @@ sub download_project_list {
 sub download_project {
   my $project = shift;
 
+  # We might want do do this only if --featured is passed via the command line or smth
+  print "\n-- First, getting all FA and GA data \n";
+  my (%good, %featured) = download_review_data();
+	#for now: update_review_data(%good, %featured);
+
   print "\n-- Download ratings data for $project\n";
-  my ($homepage, $parent, $extra, $shortname);
-
-  eval {
-    ($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
-    download_project_quality_ratings($project, $extra);
-    download_project_importance_ratings($project, $extra);
-    db_cleanup_project($project);
-    update_project($project, $global_timestamp, $homepage, $parent, $shortname);
+	#my ($homepage, $parent, $extra, $shortname);
+  
+	eval {
+    #($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
+    #download_project_quality_ratings($project, $extra);
+    #download_project_importance_ratings($project, $extra);
+    #db_cleanup_project($project);
+    #update_project($project, $global_timestamp, $homepage, $parent, $shortname);
     db_commit();
-  };
+	};
 
-  if ($@) {
-    print "Transaction aborted: $@";
-    db_rollback();
-  }
+	#if ($@) {
+    #print "Transaction aborted: $@";
+    #db_rollback();
+	#}
 
   return 0;
 }
@@ -388,6 +396,62 @@ sub get_extra_assessments {
 }
 
 #######################################################################
+
+sub download_review_data {
+	my (%rating);
+	
+	# Get older featured and good article data from database
+	my (%oldrating) = get_review_data();
+	
+	my $seen = {};
+	my %qcats = ('GA', $goodCat, 'FA', $featuredCat);
+	my ($cat, $tmp_arts, $qual, $art, $d);
+	
+	foreach $qual ( keys %qcats ) { 
+		print "\nFetching list for $qual\n";
+		
+		$tmp_arts = $api->pages_in_category_detailed(encode("utf8",%qcats->{$qual}));
+		
+		my $count = scalar @$tmp_arts;
+		my $i = 0;
+		
+		foreach $d ( @$tmp_arts ) {
+			$i++;
+			$art = $d->{'title'};
+			next unless ( $art =~ /^Talk:/);
+			
+			$art =~ s/^Talk://;
+			$seen->{$art} = 1;
+			
+			# New entry
+			if ( ! defined %oldrating->{$art} ) { 
+				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, 'None');
+				print $global_timestamp . " " . $art . " " . $qual . $d->{'timestamp'} . "\n";
+				next;
+			}
+			
+			# Old entry, although it could have been updated, so we need to check
+			if ( %oldrating->{$art} eq $qual ) {
+				# No change
+			} else {
+				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, %oldrating->{$art});
+				print $global_timestamp . " " . $art . " " . $qual . " " . $d->{'timestamp'} . " " . %oldrating->{$art};
+			} 
+		}
+	} 
+	
+	#foreach $art ( keys %$oldrating ) { 
+	#	next if ( exists $seen->{$art} );   
+	#	next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
+	#	print "NOT SEEN (quality) '$art'\n";
+	#	update_article_data($global_timestamp, $project, $art, 'quality', 
+	#	'Unknown-Class', $global_timestamp_wiki, 
+	#	$oldrating->{$art} );
+	#}
+	
+	return 0;
+
+}
 
 # Load successfully
 1;

@@ -283,6 +283,71 @@ sub list_projects {
 
 ############################################################
 
+sub update_review_data {
+	# Process all the parameters
+	my $global_timestamp = shift;
+	my $art = shift;
+	my $value = shift;
+	my $timestamp = shift;
+	my $oldvalue = shift;
+	
+	unless ( ($value eq 'GA') || ($value eq 'FA') ) {
+		print "Unrecognized review state: $value \n"; 
+		return -1;
+	};
+	
+	$art = encode("utf8", $art);
+	$value = encode("utf8", $value);
+	$oldvalue = encode("utf8", $oldvalue);
+	
+	my $sth = $dbh->prepare ("UPDATE review SET rev_value = ?, " 
+	. "rev_timestamp = ? WHERE rev_article = ?");
+	
+	# Executes the UPDATE query. If there are no entries matching the article's
+	# name in the table, the query will return 0, allowing us to create an INSERT
+	# query instead.
+	my $count = $sth->execute($value, $timestamp, $art);
+	
+	if ( $count eq '0E0' ) { 
+		$sth = $dbh->prepare ("INSERT INTO review VALUES (?,?,?)");
+		$count = $sth->execute($value, $art, $timestamp);
+	}
+	
+	print "U:" . "$value // $art // $timestamp // was '$oldvalue'\n";
+	
+}
+
+############################################################
+
+sub get_review_data {
+	my $value = shift;
+	my $sth;
+	
+	if ( ! defined $value ) 
+	{ 
+		$sth = $dbh->prepare ("SELECT rev_article, rev_value FROM review");
+		$sth->execute();
+	}
+	else
+	{
+		$sth = $dbh->prepare ("SELECT rev_article, rev_value FROM review WHERE rev_value = ?");
+		$sth->execute($value);
+	}
+	
+	# Iterate through the results
+	my $ratings = {};
+	my @row;
+	while ( @row = $sth->fetchrow_array() ) {
+		$row[0] = decode("utf8", $row[0]);
+		$ratings->{$row[0]} = $row[1];
+		# print "$row[0]: $row[1] \n";
+	}
+	
+	return $ratings;	
+}
+
+############################################################
+
 
 # Load successfully
 1;
