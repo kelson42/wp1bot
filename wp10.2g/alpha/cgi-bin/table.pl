@@ -73,8 +73,9 @@ sub cached_ratings_table {
   my @row = $sth->fetchrow_array();
   my $proj_timestamp = $row[0];
 
+  print " <!-- foo \n";
   print "<div class=\"indent\">\n";
-  print "<b>Debugging output</b><br/>\n";
+  print "<b>Debugging output x</b><br/>\n";
   print "Current time: $timestamp<br/>\n";
   print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
 
@@ -96,7 +97,7 @@ sub cached_ratings_table {
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
 
-	  print "</div><hr/><div class=\"navbox\">\n";
+	  print "</div> --> \n <div class=\"navbox\">\n";
 	  print_header_text($proj);
 	  print "</div>\n<center>\n";
 	  print $c_html;
@@ -118,7 +119,7 @@ sub cached_ratings_table {
 
   my ($html, $wikicode) = ratings_table($proj);
 	
-  print "</div><hr/><div class=\"navbox\">\n";
+  print "</div> --> \n <div class=\"navbox\">\n";
   print_header_text($proj);
   print "</div>\n<center>\n";
   print $html;
@@ -389,7 +390,7 @@ sub query_form {
   print "</select>\n";
   print "<input type=\"submit\" value=\"Make table\"/>\n";
   print "</form>\n";
-  print "<hr/>\n";
+  print "\n";
 
   return $projects;
 }
@@ -423,15 +424,15 @@ sub print_header_text {
 	get_project_data($project);
 	if ( ! defined $wikipage) 
 	{
-		print "Data for $project "; 	
+		print "Data for <b>$project</b> "; 	
 	}
 	elsif ( ! defined $shortname) 
 	{
-		print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+		print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b>"; 
 	}
 	else
 	{
-		print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " "; 		
+		print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> "; 		
 	}
 	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 	

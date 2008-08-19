@@ -164,7 +164,7 @@ sub ratings_table {
 
     # Quality 'Assessed' is a magic word that means "not unassessed".
     # This is required for certain links from table.pl
-    if ( $quality eq 'Assessed' ) { 
+    if ( $quality eq 'Assessed-Class' ) { 
       $query .= " AND NOT r_quality = 'Unassessed-Class'";
       $queryc .= " AND NOT r_quality = 'Unassessed-Class'";
     } else { 
@@ -242,10 +242,10 @@ sub ratings_table {
   $queryc =~ s/WHERE\s*$//;
 
 
-  print "Q: $query<br/>\n";
+#  print "Q: $query<br/>\n";
 #  print join "<br/>", @qparam;
 
-  print "QC: $queryc<br/>\n";
+#  print "QC: $queryc<br/>\n";
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -491,7 +491,7 @@ sub ratings_table_intersect {
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-  print "Q: $query\<br/>\n";
+#  print "Q: $query\<br/>\n";
 #  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
@@ -637,9 +637,12 @@ sub query_form {
 
   print << "HERE";
 <form>
+
+
 <table class="mainform">
-<tr><td><b>First project:</b></td></tr>
-<tr><td><table class="subform">
+
+<tr><td><b>First project</b><br/>
+<table class="subform">
   <tr><td>Project name</td>
       <td><input type="text" value="$projecta" name="projecta"/></td></tr>
   <tr><td>Page name</td>
@@ -652,28 +655,10 @@ sub query_form {
       Treat page name as a <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
    <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
-
-  </table>
-</td></tr>
-<tr><td><b>Specify second project</b>
-        <input type="checkbox" $intersect_checked  name="intersect" 
-         rel="secondproj"/>	
-</td></tr>
-<tr><td><table class=\"subform\" rel="secondproj">
-  <tr><td>Project name</td>
-      <td><input type="text" value="$projectb" name="projectb"/></td></tr>
-  <tr><td>Quality</td>
-      <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
-  <tr><td>Importance</td>
-      <td><input type=\"text\" value="$importanceb" name="importanceb"/>
-      </td></tr>
-  <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
-     Show only rows where quality ratings differ</input>
-     </td></tr>
-  </table></td></tr>
-
-<tr><td><b>Output options</b></td></tr>
-<tr><td><table class="subform">
+ </table>
+</td>
+<td><b>Output options</b><br/>
+<table class="subform">
   <tr><td>Results per page</td>
       <td><input type="text" value="$limit" name="limit"/></td></tr>
   <tr><td>Start with result #</td>
@@ -686,11 +671,31 @@ sub query_form {
       </select></td></tr>
   <tr><td colspan="2" class="note">Note: sorting is done 
             relative to the first project. </td></tr>
-  <tr><td colspan="2" style="text-align: center;">
-    <input type="submit" value="Make list"/>
-    </td></tr>
-  </table></td></tr>
-</table></form>
+</table><br/>
+<div style="text-align: center;">
+<input type="submit" value="Generate list"/></div>
+</td>
+</tr>
+</table>
+
+<table class="mainform">
+<tr><td>
+<input type="checkbox" $intersect_checked  name="intersect"  rel="secondproj"/>	
+<b>Specify second project</b><br/>
+<table class=\"subform\" rel="secondproj">
+  <tr><td>Project name</td>
+      <td><input type="text" value="$projectb" name="projectb"/></td></tr>
+  <tr><td>Quality</td>
+      <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
+  <tr><td>Importance</td>
+      <td><input type=\"text\" value="$importanceb" name="importanceb"/>
+      </td></tr>
+  <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
+     Show only pages with differing quality ratings</input>
+     </td></tr>
+  </table>
+</td></tr></table>
+</form>
   <hr/>
 HERE
 
@@ -773,11 +778,11 @@ sub print_header_text {
       get_project_data($project);
 
     if ( ! defined $wikipage) {
-      print "Data for $project "; 	
+      print "Data for <b>$project</b> "; 	
     } elsif ( ! defined $shortname) {
-      print "Data for " . get_link_from_api("[[$wikipage]]") . " "; 
+      print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
     } else {
-      print "Data for " . get_link_from_api("[[$wikipage|$shortname]]") . " ";
+      print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> ";
     }
   } else { 
     print " Data for all projects ";
@@ -817,9 +822,13 @@ sub make_article_link {
 sub make_history_link { 
   my $art = shift;
   my $ts = shift;
+
+  my $d = $ts;
+  $d =~ s/T.*//;
+
   my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
   return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
-       . "&timestamp=" . uri_escape($ts) . "\">$ts</a>";
+       . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
 }
 
 ###########################################################################
