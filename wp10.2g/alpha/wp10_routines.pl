@@ -67,19 +67,15 @@ sub download_project_list {
 sub download_project {
   my $project = shift;
 
-  # We might want do do this only if --featured is passed via the command line or smth
-  print "\n-- First, getting all FA and GA data \n";
-  download_review_data();
-
   print "\n-- Download ratings data for $project\n";
   my ($homepage, $parent, $extra, $shortname);
   
   eval {
-	  #($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
-	  #download_project_quality_ratings($project, $extra);
-	  #download_project_importance_ratings($project, $extra);
-	  #db_cleanup_project($project);
-	  #update_project($project, $global_timestamp, $homepage, $parent, $shortname);
+	($homepage, $parent, $extra, $shortname) = get_extra_assessments($project); 
+	download_project_quality_ratings($project, $extra);
+	download_project_importance_ratings($project, $extra);
+	db_cleanup_project($project);
+	update_project($project, $global_timestamp, $homepage, $parent, $shortname);
     db_commit();
 	};
 
