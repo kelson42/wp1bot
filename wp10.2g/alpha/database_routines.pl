@@ -227,7 +227,7 @@ sub db_cleanup_project {
                      . "r_importance_timestamp = r_quality_timestamp "
                      . "where isnull(r_importance) and r_project = ?");
   $count = $sth->execute($proj);
-  print "Null quality rows: $count\n";
+  print "Null importance rows: $count\n";
 
   return 0;
 }
