@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-my $App = "Wikipedia Release Version";
+my $App = "Wikipedia Release Version Data";
 
 our $Opts;
 
@@ -19,6 +19,7 @@ sub layout_header {
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
 <head>
   <base href="http://en.wikipedia.org">
+  <title>$subtitle - $App</title>
   <style type="text/css" media="screen">
      \@import "$stylesheet";
   </style>

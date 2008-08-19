@@ -51,6 +51,15 @@ sub get_project_data {
 	
 }
 
+###########################################################
+
+sub db_get_project_details { 
+  my $sth = $dbh->prepare("SELECT * FROM projects;");
+  $sth->execute();
+  return $sth->fetchall_hashref('p_project');
+}
+
+###########################################################
 
 # Load successfully
 1;

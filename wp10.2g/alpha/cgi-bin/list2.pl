@@ -49,7 +49,7 @@ our $dbh = db_connect($Opts);
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-layout_header("Query article assessment data");
+layout_header("Article lists");
 
 my $projects = list_projects();
 query_form(\%param, $projects);
