@@ -1,8 +1,5 @@
 Goals to finish before promoting to beta version:
 
-* Clean up and finish the code for the global tables 
-** Double-check all links have the right target 
-
 * Change list2.pl to allow the user to specify the sort order of the
   results (by project, title, quality, importance, etc)
 
@@ -25,6 +22,6 @@ Goals to finish before promoting to beta version:
 
 * Do a full bot run to make sure nothing breaks horribly
 
-* Look through cgi-bin for dupicate code, move to a shared location
+* Look through cgi-bin for duplicate code, move to a shared location
 
 * Fix timestamp truncation errors (all over the place)
