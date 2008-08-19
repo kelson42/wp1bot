@@ -178,6 +178,8 @@ sub download_project_quality_ratings {
   print "Get stored quality ratings for $project\n";
 
   my $oldrating = get_project_ratings($project, 'quality');
+  my $newrating = {};
+
 
   my $seen = {};
   my $qcats = get_project_quality_categories($project, $extra);
@@ -213,6 +215,9 @@ sub download_project_quality_ratings {
        } 
     }
   } 
+
+
+
 
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
@@ -278,7 +283,7 @@ sub download_project_importance_ratings {
     next if ( exists $seen->{$art} );    
     print "NOT SEEN (importance) $art\n";
     update_article_data($global_timestamp, $project, $art, "importance",
-                        'Unknown-Class', $global_timestamp_wiki, 
+                        'Unknown-Class', $global_timestamp, 
                         $oldrating->{$art});
   }
 

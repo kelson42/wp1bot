@@ -18,7 +18,7 @@ create table projects (
         -- display name in headers 
 
     primary key (p_project)
-) default character set 'utf8' 
+) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
 
@@ -47,7 +47,7 @@ create table ratings (
         -- time when importance rating was assigned
 
     primary key (r_project, r_article)
-) default character set 'utf8'
+) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
 
@@ -78,7 +78,7 @@ create table categories (
         -- sortkey, used when creating tables 
 
     primary key (c_project, c_type, c_rating)
-) default character set 'utf8'
+) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
 
@@ -113,7 +113,7 @@ create table logging (
        -- timestamp when page was edited
 
     key (l_project, l_article, l_action, l_timestamp)
-) default charset = 'utf8'
+) default charset = 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
 -- The review table stores the data for community-wide reviews such as
@@ -134,5 +134,5 @@ create table review (
         --   NOTE: a revid can be obtained from timestamp via API
 
     primary key (rev_value, rev_article)
-) default character set 'utf8'
+) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;

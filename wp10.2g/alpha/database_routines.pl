@@ -22,12 +22,12 @@ sub update_article_data {
   die "Bad table: $table" 
     unless ( ($table eq 'quality') || ($table eq 'importance') );
 
+  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
+
   $art = encode("utf8", $art);
   $project = encode("utf8", $project);
   $value = encode("utf8", $value);
   $oldvalue = encode("utf8", $oldvalue);
-
-  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
 
   my $sth_insert_logging = $dbh->prepare("INSERT INTO logging " . 
                                          "values (?,?,?,?,?,?,?)");
@@ -270,7 +270,8 @@ sub db_connect {
 sub list_projects { 
   my $projects = [];
 
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  my $sth = $dbh->prepare("SELECT p_project FROM projects " 
+                        . "order by p_timestamp asc;");
   $sth->execute();
 
   my @row;
