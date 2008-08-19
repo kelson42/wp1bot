@@ -10,6 +10,7 @@ the global table
 results (by project, title, quality, importance, etc)
 
 * Download and use lists of WP 0.5 and 0.7, FA, and GA articles
+** FAs/GAs downloaded, now only need to be used
 
 * Allow pages in any namespace to be rated (add ns column to ratings table
   and use it in list2.pl)
@@ -28,3 +29,6 @@ results (by project, title, quality, importance, etc)
 * Look through cgi-bin for dupicate code, move to a shared location
 
 * Fix timestamp truncation errors (all over the place)
+
+* Need to figure out how to make SQL requests case-sensitive 
+** see [[Where No Man Has Gone Before]] vs. [[Where no man has gone before]] - what's wrong with these people?
