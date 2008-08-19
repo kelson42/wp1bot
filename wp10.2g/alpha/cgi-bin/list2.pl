@@ -106,19 +106,21 @@ sub ratings_table {
   $queryc = "SELECT count(r_article) FROM ratings WHERE";
 
   if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
-    $query = "SELECT * FROM ratings";
+    $query = "SELECT r_project, r_article, r_importance, 
+                     r_importance_timestamp, r_quality, r_quality_timestamp
+                 FROM ratings";
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query = "SELECT r_project, r_article, r_quality,
-                     r_quality_timestamp, r_importance,
-                     r_importance_timestamp
+    $query = "SELECT r_project, r_article, 
+                   r_importance, r_importance_timestamp,
+                   r_quality, r_quality_timestamp
               FROM ratings JOIN categories AS ca
                 ON r_project = ca.c_project
                  AND ca.c_type = 'importance'
                  AND ca.c_rating = r_importance";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
-    $query = "SELECT r_project, r_article, r_quality,
-                     r_quality_timestamp, r_importance,
-                     r_importance_timestamp
+    $query = "SELECT r_project, r_article, 
+                  r_importance, r_importance_timestamp,
+                 r_quality, r_quality_timestamp
                 FROM ratings JOIN categories AS ca
                  ON r_project = ca.c_project
                  AND ca.c_type = 'quality'
@@ -191,7 +193,6 @@ sub ratings_table {
 
 
   my $importance =  $params->{'importance'};
-   print "I: $importance<br/>\n";
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
     $queryc .= " AND r_importance = ?";
@@ -207,7 +208,7 @@ sub ratings_table {
     $query .= " ORDER BY r_project";
   }
 
-  if ( ! ($sort =~ /reverse/) ) { 
+  if ( ($sort =~ /Project/) xor (! ($sort =~ /reverse/) ))  { 
     $query .= ' DESC';
   } 
 
@@ -219,7 +220,7 @@ sub ratings_table {
     $query .= ", r_project";
   }
 
-  if ( ! ($sortb =~ /reverse/) ) { 
+  if ( ($sortb =~ /Project/) xor (! ($sortb =~ /reverse/) ))  { 
     $query .= ' DESC';
   } 
 
@@ -238,8 +239,13 @@ sub ratings_table {
   $query =~ s/WHERE ORDER/ORDER/;
   $queryc =~ s/WHERE ORDER/ORDER/;
 
+  $queryc =~ s/WHERE\s*$//;
+
+
   print "Q: $query<br/>\n";
 #  print join "<br/>", @qparam;
+
+  print "QC: $queryc<br/>\n";
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -264,8 +270,12 @@ sub ratings_table {
     $i++;
 
     print "<tr><td>$i</td>\n";
-    print "    <td>" . $row[0] . "</td>\n";
-    print "    <td>" . $row[1] . "</td>\n";
+
+    if (  ! ( $project =~ /\w|\d/ ) ) { 
+      print "    <td>" . $row[0] . "</td>\n";
+    }
+
+    print "    <td>" . make_article_link($row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    <td>" . $row[3] . "</td>\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
@@ -277,36 +287,32 @@ sub ratings_table {
     print "</tr>\n";
   }
   print "</table>\n</center>\n";
-	# For display purposes - whether we use a pipe between "previous" and "next"
-	# depends on whether "previous" is defined or not 
-	my $prev = 0;
-  if (($offset - $limit + 1) > 0)
-  {
-    my $newURL = $ENV{"SCRIPT_URI"}
-                      . "?projecta="   . uri_escape($project)
-                      . "&quality="    . uri_escape($quality)
-                      . "&importance=" . uri_escape($importance)
-                      . "&limit="      . $limit
-		      . "&offset=" . ($offset - $limit + 1);	  
-		
-		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
-	    $prev = 1;
-	}
-	
-  if ($limit + $offset < $total)
-  {
-	  if ($prev == 1)
-	  {
-		  print " | ";
-	  }
-	  my $newURL = $ENV{"SCRIPT_URI"}
-                     . "?projecta=" . uri_escape($project)
-                     . "&quality=" . uri_escape($quality)
-                     . "&importance=" . uri_escape($importance)
-                     . "&limit=" . $limit
-                     . "&offset=" . ($limit + $offset + 1);	  
 
-	  print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+  # For display purposes - whether we use a pipe between "previous" and "next"
+  # depends on whether "previous" is defined or not 
+  my $prev = 0;
+
+  my $p;
+  my $params_enc;
+  foreach $p ( keys %$params ) { 
+    next if ( $p eq 'offset' ) ;
+    $params_enc .= "$p=" . uri_escape($params->{$p}) . "&";   
+  }
+
+  if (($offset - $limit + 1) > 0)  {
+    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+		      . "&offset=" . ($offset - $limit + 1);	  
+    print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+    $prev = 1;
+  }
+	
+  if ($limit + $offset < $total)  {
+    if ($prev == 1)  {
+      print " | ";
+    }
+    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc 
+              . "&offset=" . ($limit + $offset + 1);	  
+    print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
   print "\n";
 }
@@ -355,14 +361,14 @@ sub ratings_table_intersect {
   my $sort = $params->{'sorta'};
 
   if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
-                       rb.r_quality, rb.r_importance
+    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
+                       rb.r_importance, rb.r_quality
                 FROM ratings as ra 
                 JOIN ratings as rb 
                      on rb.r_article = ra.r_article";
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
-                       rb.r_quality, rb.r_importance
+    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
+                       rb.r_importance, rb.r_quality
                 FROM ratings AS ra 
                 JOIN ratings AS rb 
                      ON rb.r_article = ra.r_article
@@ -371,8 +377,8 @@ sub ratings_table_intersect {
                      AND ca.c_type = 'importance'
                      AND ca.c_rating = ra.r_importance";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_quality, ra.r_importance, 
-                       rb.r_quality, rb.r_importance
+    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
+                       rb.r_importance, rb.r_quality
                 FROM ratings AS ra 
                 JOIN ratings AS rb 
                      ON rb.r_article = ra.r_article
@@ -462,7 +468,7 @@ sub ratings_table_intersect {
     $query .= " ORDER BY ra.r_project";
   }
 
-  if ( ! ($sort =~ /reverse/) ) { 
+  if ( ($sort =~ /Project/) xor (! ($sort =~ /reverse/) ))  { 
     $query .= ' DESC';
   } 
 
@@ -473,10 +479,9 @@ sub ratings_table_intersect {
     $query .= ", ra.r_project";
   }
 
-  if ( ! ($sortb =~ /reverse/) ) { 
+  if ( ($sortb =~ /Project/) xor (! ($sortb =~ /reverse/) ))  { 
     $query .= ' DESC';
   } 
-
 
   $query .= ", ra.r_article";
 
@@ -524,7 +529,7 @@ HERE
     $i++;
 
      print "<tr><td>$i</td>\n";
-    print "    <td>" . $row[0] . "</td>\n";
+    print "    <td>" . make_article_link($row[0]) . "</td>\n";
     print "    " . get_cached_td_background($row[1]) . "\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
@@ -534,46 +539,35 @@ HERE
 
   }
   print "</table>\n</center>\n";
-	# For display purposes - whether we use a pipe between "previous" and "next"
-	# depends on whether "previous" is defined or not 
-	my $prev = 0;
-	if (($offset - $limit + 1) > 0)
-	{
-	  my $newURL = $ENV{"SCRIPT_URI"}
-                     . "?projecta="    . uri_escape($projecta)
-                     . "&quality="     . uri_escape($quality)
-                     . "&importance="  . uri_escape($importance)
-                     . "&intersect=on"
-                     . "&projectb="    . uri_escape($projectb)
-                     . "&qualityb="    . uri_escape($qualityb)
-                     . "&importanceb=" . uri_escape($importanceb)
-                     . "&limit=" .    $limit
-                     . "&offset=" . ($offset - $limit + 1);	  
+
+  my $p;
+  my $params_enc;
+  foreach $p ( keys %$params ) { 
+    next if ( $p eq 'offset' ) ;
+    $params_enc .= "$p=" . uri_escape($params->{$p}) . "&";   
+  }
+
+  # For display purposes - whether we use a pipe between "previous" and "next"
+  # depends on whether "previous" is defined or not 
+  my $prev = 0;
+  if (($offset - $limit + 1) > 0) {
+    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+               . "offset=" . ($offset - $limit + 1);	  
 		
-		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
-	    $prev = 1;
-	}
+    print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+    $prev = 1;
+  }
 	
-	if ($limit + $offset < $total)
-	{
-		if ($prev == 1)
-		{
-			print " | ";
-		}
-		my $newURL = $ENV{"SCRIPT_URI"}
-		            . "?projecta="   . uri_escape($projecta)
-                            . "&quality="    . uri_escape($quality)
-                            . "&importance=" . uri_escape($importance)
-                            . "&intersect=on"
-                            . "&projectb="   . uri_escape($projectb)
-                            . "&qualityb="   . uri_escape($qualityb)
-                            . "&importanceb=" . uri_escape($importanceb)
-                            . "&limit="     . $limit
-                            . "&offset=" . ($limit + $offset + 1);	  		
-		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
-	}
-	print "\n";
-	
+  if ($limit + $offset < $total){ 
+    if ($prev == 1) {
+ 	print " | ";
+    }
+    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+                 . "&offset=" . ($offset + $limit + 1);	  
+
+    print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+  }
+  print "\n";	
 }
 
 ###########################################################################
@@ -805,3 +799,14 @@ sub sort_orders {
             'Importance (reverse)' => 'r_importance DESC',
           };
 }
+
+
+sub make_article_link {
+  my $server_uri = "http://en.wikipedia.org/w/index.php";
+  my $a = shift;
+  return "<a href=\"$server_uri?title=" . uri_escape($a) . "\">$a</a>"
+         . " (<a href=\"$server_uri?title=Talk:" . uri_escape($a) 
+         . "\">t</a> &middot; "
+         . "<a href=\"$server_uri?title=" . uri_escape($a) 
+         . "&action=history\">h</a>)";
+ }
