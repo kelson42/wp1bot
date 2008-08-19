@@ -18,6 +18,7 @@ my $Lang = 'en';
 my $Root_category = 'Category:Wikipedia 1.0 assessments';
 my $goodCat = "$Category:Wikipedia good articles";
 my $featuredCat = "$Category:Wikipedia featured articles";
+my $listCat = "$Category:Wikipedia featured lists";
 
 my $Class = 'Class';
 my $No_Class = 'No-Class';
@@ -428,7 +429,7 @@ sub download_review_data_internal {
 	my ($oldrating) = get_review_data();
 	
 	my $seen = {};
-	my %qcats = ('GA', $goodCat, 'FA', $featuredCat);
+	my %qcats = ('GA', $goodCat, 'FA', $featuredCat, 'FL', $listCat);
 	my ($cat, $tmp_arts, $qual, $art, $d);
 	
 	foreach $qual ( keys %qcats ) { 

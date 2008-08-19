@@ -313,7 +313,7 @@ sub update_review_data {
 	my $timestamp = shift;
 	my $oldvalue = shift;
 	
-	unless ( ($value eq 'GA') || ($value eq 'FA') ) {
+	unless ( ($value eq 'GA') || ($value eq 'FA') || ($value eq 'FL') ) {
 		print "Unrecognized review state: $value \n"; 
 		return -1;
 	};

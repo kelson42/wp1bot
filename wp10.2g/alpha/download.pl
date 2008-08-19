@@ -47,7 +47,7 @@ $ARGV[0] = decode("utf8", $ARGV[0]);
 if ( defined $ARGV[0] ) { 
   if ( $ARGV[0] eq '-featured' ) { 
 	# Don't download all the GAs and FAs unless explicitly asked to do so
-	print "\n-- First, getting all FA and GA data \n";
+	print "\n-- First, getting all FA, FL and GA data \n";
 	download_review_data();	  
 	exit;
   }
