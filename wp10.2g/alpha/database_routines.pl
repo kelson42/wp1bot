@@ -343,53 +343,116 @@ sub remove_review_data {
 	my $art = shift;
 	my $value = shift;
 	my $oldvalue = shift;
-	
+
 	unless ( ($value eq 'None') ) {
 		print "Unrecognized review state: $value \n"; 
 		return -1;
 	}	
 
-	my $sth = $dbh->prepare ("DELETE FROM review WHERE rev_value = ? AND " 
-	. "rev_article = ?");
-	
+	my $sth = $dbh->prepare ("DELETE FROM review 
+                                  WHERE rev_value = ? AND rev_article = ?");
 	# Executes the DELETE query. 
 	my $count = $sth->execute($oldvalue, $art);
-		
+
 	print "U:" . "$art // $value // removed // was '$oldvalue'\n";
-	
+
 }
 
 ############################################################
 
 sub get_review_data {
-	my $value = shift;
-	my $sth;
-	
-	if ( ! defined $value ) 
-	{ 
-		$sth = $dbh->prepare ("SELECT rev_article, rev_value FROM review");
-		$sth->execute();
-	}
-	else
-	{
-		$sth = $dbh->prepare ("SELECT rev_article, rev_value FROM review WHERE rev_value = ?");
-		$sth->execute($value);
-	}
-	
-	# Iterate through the results
-	my $ratings = {};
-	my @row;
-	while ( @row = $sth->fetchrow_array() ) {
-		$row[0] = decode("utf8", $row[0]);
-		$ratings->{$row[0]} = $row[1];
-	}
-	
-	return $ratings;	
+  my $value = shift;
+  my $sth;
+
+  if ( ! defined $value ) {
+    $sth = $dbh->prepare ("SELECT rev_article, rev_value
+                           FROM review");
+    $sth->execute();
+  } else {
+    $sth = $dbh->prepare ("SELECT rev_article, rev_value
+                           FROM review WHERE rev_value = ?");
+    $sth->execute($value);
+  }
+
+  # Iterate through the results
+  my $ratings = {};
+  my @row;
+  while ( @row = $sth->fetchrow_array() ) {
+    $row[0] = decode("utf8", $row[0]);
+    $ratings->{$row[0]} = $row[1];
+  }
+
+  return $ratings;	
 }
 
 ############################################################
 
-sub db_lock { 
+sub db_get_release_data {
+  my $value = shift;
+  my $sth;
+
+  $sth = $dbh->prepare ("SELECT * FROM releases");
+  $sth->execute();
+
+  my @row;
+  my $data = {};
+  my ($art, $cat, $timestamp);
+
+  while ( @row = $sth->fetchrow_array() ) {
+    $art = decode("utf8", $row[0]);
+    $cat = decode("utf8", $row[1]);
+    $timestamp = $row[2];
+    $data->{$art} = {};
+    $data->{$art}->{'0.5:category'} = $cat;
+    $data->{$art}->{'0.5:timestamp'} = $timestamp;
+  }
+
+  return $data;	
+}
+
+############################################################
+
+
+sub db_set_release_data { 
+    my $art = shift;
+    my $type = shift;
+    my $cat = shift;
+    my $timestamp = shift;
+
+    $art = encode("utf8", $art);
+    $cat = encode("utf8", $cat);
+
+    if ( $type ne '0.5' ) { 
+	die "Bad type: $type\n";
+    }
+
+    my $sth = $dbh->prepare("UPDATE releases
+                             SET rel_0p5_category = ?, rel_0p5_timestamp = ?
+                             WHERE rel_article = ?");
+    my $res = $sth->execute($cat, $timestamp, $art);
+
+    if ( $res eq '0E0' ) { 
+      $sth = $dbh->prepare("INSERT INTO releases VALUES (?,?,?)");
+      $sth->execute($art, $cat, $timestamp);
+    }                     
+
+}
+
+############################################################
+
+
+sub db_cleanup_releases { 
+    my $sth = $dbh->prepare("DELETE FROM releases 
+                             WHERE rel_0p5_category = 'None'");
+
+    my $count = $sth->execute();
+
+    print "Cleanup releases table: $count rows removed\n";
+}
+
+############################################################
+
+sub db_lock {
   my $lock = shift;
 
   my $sth = $dbh->prepare("SELECT GET_LOCK(?,0)");
@@ -398,7 +461,7 @@ sub db_lock {
   return $row[0];
 }
 
-sub db_unlock { 
+sub db_unlock {
   my $lock = shift;
   my $sth = $dbh->prepare("SELECT RELEASE_LOCK(?)");
   my $r = $sth->execute($lock);

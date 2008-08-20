@@ -52,6 +52,11 @@ if ( defined $ARGV[0] ) {
 	exit;
   }
 
+  if ( $ARGV[0] eq '-release' ) { 
+	download_release_data();	  
+	exit;
+  }
+
   my $project_details = db_get_project_details();
 
   if ( $ARGV[0] eq '-all' ) { 

@@ -119,12 +119,13 @@ create table logging (
        -- a wiki-format timestamp
 
     key (l_project, l_article, l_action, l_timestamp)
-) default charset = 'utf8' collate 'utf8_bin'
+) default charset 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
--- The review table stores the data for community-wide reviews such as
--- Featured and Good Articles. Each article will
--- be once, with either an FA or GA marking. 
+
+-- The review table stores the data for community-wide reviews:
+-- Featured and Good Articles. Each article will be included at 
+-- most once, marked either GA or FA. 
 
 create table review ( 
 
@@ -140,36 +141,30 @@ create table review (
         --   NOTE: a revid can be obtained from timestamp via API
         --  a wiki-format timestamp
 
-    primary key (rev_value, rev_article)
+    primary key (rev_article),
+    key (rev_value)
+
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
--- The version table stores static release information for all pages  
+-- The releases table stores static release information for all pages  
 -- under WP:1.0's scope. 
--- be once, with either an FA or GA marking. 
 
-create table version ( 
+create table releases ( 
 
-    v_value               varchar(16)  not null,
-        -- short key identifying an article's membership in a release
-        --   NOTE: an article's membership in an older release (such as
-		--  WP:v0.5), almost always guarantees membership in a newer
-		--  release (such as WP:v1.0)
-
-    v_article             varchar(255) not null,
+    rel_article             varchar(255) not null,
         -- article title
 
-    v_timestamp     binary(20),
-        -- time when article was added to a release category and tagged 
-		-- with the proper talk page banner
-        --   NOTE: a revid can be obtained from timestamp via API
-        --  a wiki-format timestamp
-	
-    v_category		int unsigned default 0,
-        -- numerical representation of an article's classification 
-		-- (e.g. Natsci, Arts, EngTech)
-		-- empty values are zero by default	
+    rel_0p5_category        varchar(63) not null,
+        -- The Wikipedia 0.5 category (Arts, Language, etc.)
 
-    primary key (v_value, v_article)
+    rel_0p5_timestamp       binary(16),
+        -- time when article was added to a 0.5 release category
+        -- NOTE: a revid can be obtained from timestamp via API
+        -- a wiki-format timestamp
+	
+    primary key (rel_article),
+    key         (rel_0p5_category)
+
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;

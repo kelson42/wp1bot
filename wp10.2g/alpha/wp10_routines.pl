@@ -9,15 +9,15 @@ our $global_timestamp_wiki;
 
 my $categoryNS = 14;
 my $talkNS = 1;
-
+my $Category = 'Category';
 my $Articles = 'articles';   
 my $By_quality = 'by quality';
 my $By_importance = 'by importance';
-my $Category = 'Category';
+
 my $Lang = 'en';
 my $Root_category = 'Category:Wikipedia 1.0 assessments';
 my $goodCat = "$Category:Wikipedia good articles";
-my $featuredCat = "$Category:Wikipedia featured articles";
+my $featuredCat = "$Category:Featured articles";
 my $listCat = "$Category:Wikipedia featured lists";
 
 my $Class = 'Class';
@@ -67,7 +67,6 @@ sub download_project_list {
 
 sub download_project {
   my $project = shift;
-
 
   if ( ! db_lock("PROJECT:$project") ) { 
     print "Cannot get lock for $project, exiting.\n";
@@ -225,9 +224,6 @@ sub download_project_quality_ratings {
        } 
     }
   } 
-
-
-
 
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
@@ -423,56 +419,121 @@ sub download_review_data {
 #######################################################################
 
 sub download_review_data_internal {
-	my (%rating);
+  my (%rating);
+  
+  # Get older featured and good article data from database
+  my ($oldrating) = get_review_data();
 	
-	# Get older featured and good article data from database
-	my ($oldrating) = get_review_data();
+  my $seen = {};
+  my %qcats = ('GA', $goodCat, 'FA', $featuredCat, 'FL', $listCat);
+  my ($cat, $tmp_arts, $qual, $art, $d);
 	
-	my $seen = {};
-	my %qcats = ('GA', $goodCat, 'FA', $featuredCat, 'FL', $listCat);
-	my ($cat, $tmp_arts, $qual, $art, $d);
-	
-	foreach $qual ( keys %qcats ) { 
-		print "\nFetching list for $qual\n";
-		
-		$tmp_arts = $api->pages_in_category_detailed(encode("utf8",%qcats->{$qual}));
-		
-		my $count = scalar @$tmp_arts;
-		my $i = 0;
-		
-		foreach $d ( @$tmp_arts ) {
-			$i++;
-			$art = $d->{'title'};
-			next unless ( $art =~ /^Talk:/);
-			
-			$art =~ s/^Talk://;
-			$seen->{$art} = 1;
-			
-			# New entry
-			if ( ! defined %$oldrating->{$art} ) { 
-				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, 'None');
-				#print $global_timestamp . " " . $art . " " . $qual . $d->{'timestamp'} . "\n";
-				next;
-			}
-			
-			# Old entry, although it could have been updated, so we need to check
-			if ( %$oldrating->{$art} eq $qual ) {
-				# No change
-			} else {
-				update_review_data($global_timestamp, $art, $qual, $d->{'timestamp'}, %$oldrating->{$art});
-				#print $global_timestamp . " " . $art . " " . $qual . " " . $d->{'timestamp'} . " " . %$oldrating->{$art};
-			} 
-		}
-	} 
-	
-	# Check if every article from the old listing is available
-	foreach $art ( keys %$oldrating ) { 
-		next if ( exists $seen->{$art} );   
-		print "NOT SEEN ($oldrating->{$art}) '$art' \n";
-		remove_review_data($art, 'None', $oldrating->{$art});
-	}
-	return 0;
+  foreach $qual ( keys %qcats ) { 
+    print "\nFetching list for $qual\n";
+    
+    $tmp_arts = $api->pages_in_category_detailed(encode("utf8",%qcats->{$qual}));
+    
+    my $count = scalar @$tmp_arts;
+    my $i = 0;
+    
+    foreach $d ( @$tmp_arts ) {
+      $i++;
+      $art = $d->{'title'};
+      next unless ( $art =~ /^Talk:/);
+      
+      $art =~ s/^Talk://;
+      $seen->{$art} = 1;
+      
+      # New entry
+      if ( ! defined %$oldrating->{$art} ) { 
+	update_review_data($global_timestamp, $art, $qual, 
+			   $d->{'timestamp'}, 'None');
+
+	next;
+      }
+      
+      # Old entry, although it could have been updated, so we need to check
+      if ( %$oldrating->{$art} eq $qual ) {
+	# No change
+      } else {
+	update_review_data($global_timestamp, $art, $qual, 
+			   $d->{'timestamp'}, %$oldrating->{$art});
+      } 
+    }
+  } 
+  
+  # Check if every article from the old listing is available
+  foreach $art ( keys %$oldrating ) { 
+    next if ( exists $seen->{$art} );   
+    print "NOT SEEN ($oldrating->{$art}) '$art' \n";
+    remove_review_data($art, 'None', $oldrating->{$art});
+  }
+  return 0;
 }
+
+#######################################################################
+sub download_release_data { 
+
+  eval {
+    download_release_data_internal();
+    db_cleanup_releases();
+    db_commit();
+  };
+
+  if ($@) {
+    print "Transaction aborted: $@";
+    db_rollback();
+  }
+}
+
+#######################################################################
+
+sub download_release_data_internal {
+
+  my $cat = "Version 0.5 articles by category";
+  my $suffix = " Version 0.5 articles";
+
+  my $oldArts = db_get_release_data();
+#  print Dumper($oldArts);
+
+  my $res = $api->pages_in_category($cat, $categoryNS);
+
+  my ($type, $r, $page);
+  my $seen = {};
+
+  foreach $cat ( @$res ) {
+    print "$cat\n";
+    $type = $cat;
+    $type =~ s/\Q$suffix\E$//;
+    $type =~ s/^\Q$Category\E://;
+    my $res = $api->pages_in_category_detailed($cat);
+
+    foreach $r ( @$res ) {
+      next unless ( $r->{'ns'} == $talkNS);
+      $page = $r->{'title'};
+      $page =~ s/^Talk://;
+
+      if ( defined $oldArts->{$page}
+	   && $oldArts->{$page}->{'0.5:category'} eq $type ) {
+      } else { 
+	print "New: $page // $type\n";
+	db_set_release_data($page, '0.5', $type, $r->{'timestamp'});
+      }
+      $seen->{$page} = 1;
+    }
+  }
+
+  foreach $page ( keys %$oldArts ) { 
+    if ( ( ! defined $seen->{$page} )
+	 && $oldArts->{$page}->{'0.5:category'} ne 'None' ) { 
+      print "NOT SEEN: $page\n";
+      db_set_release_data($page, '0.5', 'None', $global_timestamp_wiki);
+    }
+  }
+
+}
+#######################################################################
+
 
 # Load successfully
 1;
