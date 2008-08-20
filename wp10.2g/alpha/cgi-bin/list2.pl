@@ -46,10 +46,23 @@ if ( ! defined $param{'sortb'} ) {
 }
 
 my $p;
+my $logFile = "list2." . time() . "." . $$;
+my $logEntry = $logFile;
+
 foreach $p ( keys %param ) { 
   $param{$p} =~ s/^\s*//;
   $param{$p} =~ s/\s*$//;
+  $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
 }
+
+
+if ( defined $Opts->{'log-dir'} 
+     && -d $Opts->{'log-dir'} ) { 
+  open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
+  print LOG $logEntry . "\n";
+  close LOG;
+}
+
 
 my $proj = $param{'project'} || $ARGV[0];
 
@@ -101,48 +114,26 @@ sub ratings_table {
   my @qparam;
   my @qparamc;
 
+
+  $queryc = "SELECT count(r_article) FROM ratings";
+
+  $query = "SELECT r_project, r_article, r_importance, 
+                   r_importance_timestamp, r_quality, 
+                   r_quality_timestamp, rel_0p5_category, 
+                   rev_value, ISNULL(rel_0p5_category) as null_rel,
+                   ISNULL(rev_value) as null_rev
+                 FROM ratings ";
+
   my $sort = $params->{'sorta'};
-
-  $queryc = "SELECT count(r_article) FROM ratings WHERE";
-
-  if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
-    $query = "SELECT r_project, r_article, r_importance, 
-                     r_importance_timestamp, r_quality, r_quality_timestamp
-                 FROM ratings";
-  } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query = "SELECT r_project, r_article, 
-                   r_importance, r_importance_timestamp,
-                   r_quality, r_quality_timestamp
-              FROM ratings JOIN categories AS ca
-                ON r_project = ca.c_project
-                 AND ca.c_type = 'importance'
-                 AND ca.c_rating = r_importance";
-  } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
-    $query = "SELECT r_project, r_article, 
-                  r_importance, r_importance_timestamp,
-                 r_quality, r_quality_timestamp
-                FROM ratings JOIN categories AS ca
-                 ON r_project = ca.c_project
-                 AND ca.c_type = 'quality'
-                 AND ca.c_rating = r_quality";
-  }
-
   my $sortb = $params->{'sortb'};
-  if ( $sortb eq 'Project' || $sortb eq 'Project (reverse)' ) { 
-    # No extra SQL needed
-  } elsif ( $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
-    $query .= " JOIN categories AS cb
-                ON r_project = cb.c_project
-                 AND cb.c_type = 'importance'
-                 AND cb.c_rating = r_importance";
-  } elsif ( $sortb eq 'Quality' || $sortb eq 'Quality (reverse)' ) { 
-    $query .= " JOIN categories AS cb
-                ON r_project = cb.c_project
-                 AND cb.c_type = 'quality'
-                 AND cb.c_rating = r_quality";
-  }
+  $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
+
+
+  $query .= "LEFT JOIN releases ON r_article = rel_article ";
+  $query .= "LEFT JOIN review ON r_article = rev_article ";
 
   $query .= " WHERE";
+  $queryc .= " WHERE";
 
   if ( defined $project && $project =~ /\w|\d/ ) { 
     if ( defined $projects->{$project} ) { 
@@ -201,28 +192,10 @@ sub ratings_table {
   }
 
 
-  if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
-      || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .= " ORDER BY ca.c_ranking";
-  } else { 
-    $query .= " ORDER BY r_project";
-  }
-
-  if ( ($sort =~ /Project/) xor (! ($sort =~ /reverse/) ))  { 
-    $query .= ' DESC';
-  } 
-
-
-  if (   $sortb eq 'Quality' || $sortb eq 'Quality (reverse)'
-      || $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
-    $query .= ", cb.c_ranking";
-  } else { 
-    $query .= ", r_project";
-  }
-
-  if ( ($sortb =~ /Project/) xor (! ($sortb =~ /reverse/) ))  { 
-    $query .= ' DESC';
-  } 
+  $query .= " ORDER BY ";
+  $query .= sort_key($sort, "a", "");
+  $query .= ", ";
+  $query .= sort_key($sortb, "b", "");
 
   $query .= ", r_article";
 
@@ -242,7 +215,7 @@ sub ratings_table {
   $queryc =~ s/WHERE\s*$//;
 
 
-#  print "Q: $query<br/>\n";
+ print "Q: $query<br/>\n";
 #  print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
@@ -281,7 +254,18 @@ sub ratings_table {
     print "    " . get_cached_td_background($row[4]) . "\n";
     print "    <td>" . make_history_link($row[1],$row[5]) . "</td>";
 
-    print "<td>$row[6]</td>\n";
+
+    if ( defined $row[7] ) { 
+      print make_review_link($row[7]) ;
+    } else { 
+      print "<td></td>\n"; 
+    }
+
+    if ( defined $row[6] ) { 
+      print "<td>" . make_wp05_link($row[6]) . "</td>\n";
+    } else { 
+      print "<td></td>\n"; 
+    }
 
     print "\n";
     print "</tr>\n";
@@ -352,56 +336,30 @@ sub ratings_table_intersect {
 
   my $query;
 
-  my $queryc = "SELECT count(ra.r_article) FROM ratings as ra join ratings as rb on rb.r_article = ra.r_article" . 
-              " WHERE ra.r_project = ? AND rb.r_project = ?";
+  my $queryc = "SELECT count(ra.r_article) 
+                FROM ratings as ra join ratings as rb on rb.r_article = ra.r_article
+                WHERE ra.r_project = ? AND rb.r_project = ?";
 
   my @qparam = ($projecta, $projectb);
   my @qparamc = ($projecta, $projectb);
 
+
+  $query = "SELECT ra.r_article, ra.r_importance, ra.r_quality,
+                   rb.r_importance, rb.r_quality, rel_0p5_category,
+                   rev_value, ISNULL(rel_0p5_category) as null_rel,
+                   ISNULL(rev_value) as null_rev
+            FROM ratings as ra
+            JOIN ratings as rb
+                 on rb.r_article = ra.r_article ";
+
+
   my $sort = $params->{'sorta'};
-
-  if ( $sort eq 'Project' || $sort eq 'Project (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
-                       rb.r_importance, rb.r_quality
-                FROM ratings as ra 
-                JOIN ratings as rb 
-                     on rb.r_article = ra.r_article";
-  } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
-                       rb.r_importance, rb.r_quality
-                FROM ratings AS ra 
-                JOIN ratings AS rb 
-                     ON rb.r_article = ra.r_article
-                JOIN categories AS ca
-                     ON ra.r_project = c_project
-                     AND ca.c_type = 'importance'
-                     AND ca.c_rating = ra.r_importance";
-  } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
-    $query =   "SELECT ra.r_article, ra.r_importance, ra.r_quality,
-                       rb.r_importance, rb.r_quality
-                FROM ratings AS ra 
-                JOIN ratings AS rb 
-                     ON rb.r_article = ra.r_article
-                JOIN categories AS ca
-                     ON ra.r_project = ca.c_project
-                     AND ca.c_type = 'quality'
-                     AND ca.c_rating = ra.r_quality";
-  }
-
   my $sortb = $params->{'sortb'};
-  if ( $sortb eq 'Project' || $sortb eq 'Project (reverse)' ) { 
-    # No extra SQL needed
-  } elsif ( $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
-    $query .= " JOIN categories AS cb
-                ON ra.r_project = cb.c_project
-                 AND cb.c_type = 'importance'
-                 AND cb.c_rating = ra.r_importance";
-  } elsif ( $sortb eq 'Quality' || $sortb eq 'Quality (reverse)' ) { 
-    $query .= " JOIN categories AS cb
-                ON ra.r_project = cb.c_project
-                 AND cb.c_type = 'quality'
-                 AND cb.c_rating = ra.r_quality";
-  }
+  $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
+
+
+  $query .= " LEFT JOIN releases ON ra.r_article = rel_article ";
+  $query .= " LEFT JOIN review ON ra.r_article = rev_article ";
 
   $query .= " WHERE ra.r_project = ? AND rb.r_project = ?";
 
@@ -457,33 +415,17 @@ sub ratings_table_intersect {
   }
 
   if ( defined $param{'diffonly'} ) { 
-    $query .= " AND NOT ra.r_quality = rb.r_quality";
-    $queryc .= " AND NOT ra.r_quality = rb.r_quality";
+    $query .= " AND NOT ra.r_quality = rb.r_quality ";
+    $queryc .= " AND NOT ra.r_quality = rb.r_quality ";
   }
 
-  if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
-      || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .= " ORDER BY ca.c_ranking";
-  } else { 
-    $query .= " ORDER BY ra.r_project";
-  }
 
-  if ( ($sort =~ /Project/) xor (! ($sort =~ /reverse/) ))  { 
-    $query .= ' DESC';
-  } 
+  $query .= " ORDER BY ";
+  $query .= sort_key($sort, "a", "");
+  $query .= ", ";
+  $query .= sort_key($sortb, "b", "");
 
-  if (   $sortb eq 'Quality' || $sortb eq 'Quality (reverse)'
-      || $sortb eq 'Importance' || $sortb eq 'Importance (reverse)' ) { 
-    $query .= ", cb.c_ranking";
-  } else { 
-    $query .= ", ra.r_project";
-  }
-
-  if ( ($sortb =~ /Project/) xor (! ($sortb =~ /reverse/) ))  { 
-    $query .= ' DESC';
-  } 
-
-  $query .= ", ra.r_article";
+  $query .= ", r_article";
 
   $query .= " LIMIT ?";
   push @qparam, $limit;
@@ -491,7 +433,7 @@ sub ratings_table_intersect {
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-#  print "Q: $query\<br/>\n";
+  print "Q: $query\<br/>\n";
 #  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
@@ -522,6 +464,7 @@ sub ratings_table_intersect {
   <th><b>Article</b></th>
   <th colspan="2"><b>$projecta</b></th>
   <th colspan="2"><b>$projectb</b></th>
+  <th colspan="2"><b>Review</b><br/><b>Release</b></th>
 </tr>
 HERE
      
@@ -534,6 +477,20 @@ HERE
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
+
+
+    if ( defined $row[6] ) { 
+      print make_review_link($row[6]) ;
+    } else { 
+      print "<td></td>\n"; 
+    }
+
+    if ( defined $row[5] ) { 
+      print "<td>" . make_wp05_link($row[5]) . "</td>\n";
+    } else { 
+      print "<td></td>\n"; 
+    }
+
     print "</tr>\n";
 
 
@@ -701,6 +658,8 @@ HERE
 
 }
 
+###########################################################################
+
 sub get_cached_td_background { 
   my $class = shift;
 
@@ -720,9 +679,9 @@ sub get_cached_td_background {
     $cacheMem->{$class} = $data;
     return $data;
   }
- 
+
   $data = get_td_background($class);
-  
+
   $cacheFile->set($key, $data, '12 hours');
   $cacheMem->{$class} = $data;
   return $data;
@@ -746,20 +705,20 @@ sub get_td_background {
 ###########################################################################
 
 sub get_link_from_api { 
-	my $text = shift;
-	my $r =  $api->parse($text);
-	my $t = $r->{'text'};
+  my $text = shift;
+  my $r =  $api->parse($text);
+  my $t = $r->{'text'};
 
-	# TODO: internationalize this bare URL
-	my $baseURL = "http://en.wikipedia.org";
-	$t =~ s!^<p>!!;
-	my @t = split('</p>',$t);
-	$t = @t[0];
-	
-    @t = split('"',$t,2);
-    $t = @t[0] . "\"" . $baseURL .  @t[1];
-	
-	return $t;
+  # TODO: internationalize this bare URL
+  my $baseURL = "http://en.wikipedia.org";
+  $t =~ s!^<p>!!;
+  my @t = split('</p>',$t);
+  $t = @t[0];
+
+  @t = split('"',$t,2);
+  $t = @t[0] . "\"" . $baseURL .  @t[1];
+
+  return $t;
 }
 
 ###########################################################################
@@ -792,18 +751,6 @@ sub print_header_text {
         . "\">summary table</a>)\n";
 }
 
-###########################################################################
-
-sub sort_orders { 
-   return { 
-            'Project' => 'r_project',
-            'Project (reverse)' => 'r_project DESC',
-            'Quality' => 'r_quality',
-            'Quality (reverse)' => 'r_quality DESC',
-            'Importance' => 'r_importance',
-            'Importance (reverse)' => 'r_importance DESC',
-          };
-}
 
 ###########################################################################
 
@@ -833,3 +780,116 @@ sub make_history_link {
 
 ###########################################################################
 
+sub make_wp05_link { 
+  my $cat = shift;
+  my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
+  my $linkb = "http://en.wikipedia.org/wiki/Wikipedia:Version_0.5";
+  my $abbrev = {  'Arts' => 'A',
+		  'Engineering, applied sciences, and technology' => 'ET',
+		  'Everyday life' => 'EL',
+		  'Geography' => 'G',
+		  'History' => 'H',
+		  'Language and literature' => 'LL',
+		  'Mathematics' => 'Ma',
+		  'Natural sciences' => 'NS',
+		  'Philosophy and religion' => 'PR',
+		  'Social sciences and society' => 'SS',
+		  'Uncategorized'  => 'U'};
+
+  return "<a href=\"$linka\">0.5</a> " .
+        "(<a href=\"$linkb/" . uri_escape($cat) . "\">" . $abbrev->{$cat} . "</a>)";
+}
+
+
+###########################################################################
+
+sub make_review_link { 
+  my $type = shift;
+
+  return get_cached_td_background($type . "-Class") ;
+}
+
+###########################################################################
+
+sub sort_orders { 
+   return { 
+            'Project' => 'r_project',
+            'Project (reverse)' => 'r_project DESC',
+            'Quality' => 'r_quality',
+            'Quality (reverse)' => 'r_quality DESC',
+            'Importance' => 'r_importance',
+            'Importance (reverse)' => 'r_importance DESC',
+            'Release status' => 'rel_0p5_category',
+            'Importance' => 'r_importance',
+	    'Review status' => 'rev_value',
+          };
+}
+
+###########################################################################
+
+sub sort_key { 
+  my $sort = shift;
+  my $which = shift;
+  my $prefix = shift;
+
+  if ( defined $prefix && $prefix ne "") {
+    $prefix .= ".";
+  }
+
+  my $query = "";
+
+  if (   $sort eq 'Quality' || $sort eq 'Quality (reverse)'
+      || $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query .= " c$which.c_ranking";
+  } elsif ( $sort eq 'Release status' )  { 
+    $query .= " null_rel ASC, rel_0p5_category";
+  } elsif ( $sort eq 'Review status' )  { 
+    $query .= " null_rev ASC, rev_value";
+  } else {
+    $query .= " " . $prefix . "r_project";
+  }
+
+  if ( $sort =~ /reverse/ ) { 
+    if ( $sort =~ /Project/ ) { 
+      # no
+    } else {
+      $query .= ' DESC';
+    }
+  } else {
+    if ( $sort =~ /Project/ ) { 
+      $query .= ' DESC';
+    }
+  }
+
+  return $query;
+
+}
+
+##########################################################################
+
+sub sort_sql { 
+  my $sort = shift;
+  my $which = shift;
+  my $ratings = shift;
+
+  if ( defined $ratings && $ratings ne "" ) { 
+    $ratings .= ".";
+  }
+  
+  my $query = "";
+  if ( $sort eq 'Project' || $sort eq 'Project (reverse)' 
+       || $sort eq 'Release status' || $sort eq 'Review status') { 
+    # No additional SQL needed
+  } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
+    $query .=   " JOIN categories AS c$which
+                     ON " . $ratings . "r_project = $which.c_project
+                     AND c$which.c_type = 'importance'
+                     AND c$which.c_rating = " . $ratings ."r_importance";
+  } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
+    $query .=   " JOIN categories AS c$which
+                     ON " . $ratings . "r_project = c$which.c_project
+                     AND c$which.c_type = 'quality'
+                     AND c$which.c_rating = " . $ratings . "r_quality";
+  }
+  return $query;
+}

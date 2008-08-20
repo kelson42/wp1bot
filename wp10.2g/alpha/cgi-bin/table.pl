@@ -397,22 +397,7 @@ sub query_form {
 
 #####################################################################
 
-sub get_link_from_api { 
-	my $text = shift;
-	my $r =  $api->parse($text);
-	my $t = $r->{'text'};
-	
-	# TODO: internationalize this bare URL
-	my $baseURL = "http://en.wikipedia.org";
-	$t =~ s!^<p>!!;
-	my @t = split('</p>',$t);
-	$t = @t[0];
-	
-    @t = split('"',$t,2);
-    $t = @t[0] . "\"" . $baseURL .  @t[1];
-	
-	return $t;
-}
+
 
 sub print_header_text {
 	my $project = shift;
@@ -436,4 +421,21 @@ sub print_header_text {
 	}
 	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 	
+}
+
+sub get_link_from_api { 
+	my $text = shift;
+	my $r =  $api->parse($text);
+	my $t = $r->{'text'};
+	
+	# TODO: internationalize this bare URL
+	my $baseURL = "http://en.wikipedia.org";
+	$t =~ s!^<p>!!;
+	my @t = split('</p>',$t);
+	$t = @t[0];
+	
+    @t = split('"',$t,2);
+    $t = @t[0] . "\"" . $baseURL .  @t[1];
+	
+	return $t;
 }
