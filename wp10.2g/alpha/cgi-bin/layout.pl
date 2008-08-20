@@ -23,8 +23,8 @@ sub layout_header {
   <style type="text/css" media="screen">
      \@import "$stylesheet";
   </style>
-<script type="text/javascript"   
-  src="$usableforms";</script>
+<script type="text/javascript"  src="$usableforms"></script>
+<script type="text/javascript"  src="http://toolserver.org/~cbm/foo.js"></script>
 </head>
 <body>
 <div class="head">

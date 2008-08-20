@@ -117,23 +117,24 @@ sub ratings_table {
 
   $queryc = "SELECT count(r_article) FROM ratings";
 
-  $query = "SELECT r_project, r_article, r_importance, 
-                   r_importance_timestamp, r_quality, 
-                   r_quality_timestamp, rel_0p5_category, 
-                   rev_value, ISNULL(rel_0p5_category) as null_rel,
-                   ISNULL(rev_value) as null_rev
-                 FROM ratings ";
+  $query = << "HERE";
+SELECT r_project, r_article, r_importance, 
+       r_importance_timestamp, r_quality, 
+       r_quality_timestamp, rel_0p5_category, 
+       rev_value, ISNULL(rel_0p5_category) as null_rel,
+       ISNULL(rev_value) as null_rev
+FROM ratings 
+HERE
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
   $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
 
+  $query .= " LEFT JOIN releases ON r_article = rel_article ";
+  $query .= " \n   LEFT JOIN reviews ON r_article = rev_article ";
 
-  $query .= "LEFT JOIN releases ON r_article = rel_article ";
-  $query .= "LEFT JOIN reviews ON r_article = rev_article ";
-
-  $query .= " WHERE";
-  $queryc .= " WHERE";
+  $query .= " \nWHERE";
+  $queryc .= " \nWHERE";
 
   if ( defined $project && $project =~ /\w|\d/ ) { 
     if ( defined $projects->{$project} ) { 
@@ -192,7 +193,7 @@ sub ratings_table {
   }
 
 
-  $query .= " ORDER BY ";
+  $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
   $query .= sort_key($sortb, "b", "");
@@ -206,17 +207,17 @@ sub ratings_table {
   push @qparam, $offset;
 
   # clean up the SQL for edge cases 
-  $query =~ s/WHERE AND/WHERE /;
-  $queryc =~ s/WHERE AND/WHERE /;
+  $query =~ s/WHERE\s*AND/WHERE /;
+  $queryc =~ s/WHERE\s*AND/WHERE /;
 
-  $query =~ s/WHERE ORDER/ORDER/;
-  $queryc =~ s/WHERE ORDER/ORDER/;
+  $query =~ s/WHERE\s*ORDER/ORDER/;
+  $queryc =~ s/WHERE\s*ORDER/ORDER/;
 
   $queryc =~ s/WHERE\s*$//;
 
 
- print "Q: $query<br/>\n";
-#  print join "<br/>", @qparam;
+ print "<pre>Qs:\n$query</pre>\n";
+# print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
 
@@ -238,7 +239,18 @@ sub ratings_table {
   my $c = $sth->execute(@qparam);
   my $i = $offset;
 
-  print "<center>\n<table class=\"wikitable\">\n";
+  print << "HERE";
+  <center><table class="wikitable">
+  <tr>
+    <th><b>Result</b></th>
+    <th><b>Article</b></th>
+    <th colspan="2"><b>Importance</b></th>
+    <th colspan="2"><b>Quality</b></th>
+    <th colspan="2"><b>Review</b><br/><b>Release</b></th>
+  </tr>
+HERE
+
+
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
@@ -344,24 +356,24 @@ sub ratings_table_intersect {
   my @qparamc = ($projecta, $projectb);
 
 
-  $query = "SELECT ra.r_article, ra.r_importance, ra.r_quality,
-                   rb.r_importance, rb.r_quality, rel_0p5_category,
-                   rev_value, ISNULL(rel_0p5_category) as null_rel,
-                   ISNULL(rev_value) as null_rev
-            FROM ratings as ra
-            JOIN ratings as rb
-                 on rb.r_article = ra.r_article ";
-
+  $query = << "HERE";
+SELECT ra.r_article, ra.r_importance, ra.r_quality,
+       rb.r_importance, rb.r_quality, rel_0p5_category,
+       rev_value, ISNULL(rel_0p5_category) as null_rel,
+       ISNULL(rev_value) as null_rev
+FROM ratings as ra
+ JOIN ratings as rb on rb.r_article = ra.r_article 
+HERE
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
-  $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
+  $query .= sort_sql($sort, "a", "ra") . " " . sort_sql($sortb, "b", "ra") ." ";
 
 
   $query .= " LEFT JOIN releases ON ra.r_article = rel_article ";
-  $query .= " LEFT JOIN reviews ON ra.r_article = rev_article ";
+  $query .= " \n   LEFT JOIN reviews ON ra.r_article = rev_article ";
 
-  $query .= " WHERE ra.r_project = ? AND rb.r_project = ?";
+  $query .= " \nWHERE ra.r_project = ? AND rb.r_project = ?";
 
   my $quality = $params->{'quality'};
   my $qualityb = $params->{'qualityb'};
@@ -420,12 +432,12 @@ sub ratings_table_intersect {
   }
 
 
-  $query .= " ORDER BY ";
+  $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
   $query .= sort_key($sortb, "b", "");
 
-  $query .= ", r_article";
+  $query .= ", ra.r_article";
 
   $query .= " LIMIT ?";
   push @qparam, $limit;
@@ -433,7 +445,7 @@ sub ratings_table_intersect {
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-  print "Q: $query\<br/>\n";
+  print "<pre>Q: $query</pre><br/>\n";
 #  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
@@ -598,7 +610,7 @@ sub query_form {
 
 <table class="mainform">
 
-<tr><td><b>First project</b><br/>
+<tr><td id="projecta"><b>First project</b><br/>
 <table class="subform">
   <tr><td>Project name</td>
       <td><input type="text" value="$projecta" name="projecta"/></td></tr>
@@ -635,7 +647,7 @@ sub query_form {
 </tr>
 </table>
 
-<table class="mainform">
+<table class="mainform" id="projectb">
 <tr><td>
 <input type="checkbox" $intersect_checked  name="intersect"  rel="secondproj"/>	
 <b>Specify second project</b><br/>
@@ -851,12 +863,14 @@ sub sort_key {
 
   if ( $sort =~ /reverse/ ) { 
     if ( $sort =~ /Project/ ) { 
-      # no
-    } else {
       $query .= ' DESC';
+    } else {
+      # no
     }
   } else {
     if ( $sort =~ /Project/ ) { 
+      #no
+    } else {
       $query .= ' DESC';
     }
   }
@@ -882,14 +896,14 @@ sub sort_sql {
     # No additional SQL needed
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
     $query .=   " JOIN categories AS c$which
-                     ON " . $ratings . "r_project = $which.c_project
+                     ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'importance'
-                     AND c$which.c_rating = " . $ratings ."r_importance";
+                     AND c$which.c_rating = " . $ratings ."r_importance\n ";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
     $query .=   " JOIN categories AS c$which
                      ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'quality'
-                     AND c$which.c_rating = " . $ratings . "r_quality";
+                     AND c$which.c_rating = " . $ratings . "r_quality\n ";
   }
   return $query;
 }
