@@ -127,7 +127,7 @@ create table logging (
 -- Featured and Good Articles. Each article will be included at 
 -- most once, marked either GA or FA. 
 
-create table review ( 
+create table reviews ( 
 
     rev_value               varchar(10)  not null,
         -- whether an article is FA or GA

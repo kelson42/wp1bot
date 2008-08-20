@@ -28,6 +28,7 @@ require 'wp10_routines.pl';
 require Mediawiki::API;
 
 $api = new Mediawiki::API;  # global object 
+
 $api->maxlag(-1);
 $api->max_retries(20);
 
@@ -38,6 +39,7 @@ if ( defined $Opts->{'api-credentials'} ) {
 #  $api->login_from_file($Opts->{'api-credentials'});
 }
 
+
 #############################################################
 
 my $project;
@@ -45,14 +47,14 @@ my $project;
 $ARGV[0] = decode("utf8", $ARGV[0]);
 
 if ( defined $ARGV[0] ) { 
-  if ( $ARGV[0] eq '-featured' ) { 
+  if ( $ARGV[0] eq '-reviews' ) { 
 	# Don't download all the GAs and FAs unless explicitly asked to do so
 	print "\n-- First, getting all FA, FL and GA data \n";
 	download_review_data();	  
 	exit;
   }
 
-  if ( $ARGV[0] eq '-release' ) { 
+  if ( $ARGV[0] eq '-releases' ) { 
 	download_release_data();	  
 	exit;
   }
@@ -79,6 +81,21 @@ if ( defined $ARGV[0] ) {
     foreach $project ( @projects )  {
       download_project(decode("utf8",$project));
     }
+    exit;
+  }
+
+  if ( $ARGV[0] =~ /^-/ ) { 
+    print << "HERE";
+
+Unknown option $ARGV[0]
+  $0                   : update all projects on wiki
+  $0 -all              : update all projects already in database
+    $0 -all under <N>  : limit -all to projects with <= N articles 
+    $0 -all over <N>   : limit -all to projects with > N articles
+  $0 -releases         : update WP 1.0 data
+  $0 -reviews          : update FA/FL/GA data
+  $0 <PROJECT>         : update PROJECT
+HERE
     exit;
   }
 

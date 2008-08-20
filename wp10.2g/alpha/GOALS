@@ -1,9 +1,5 @@
 Goals to finish before promoting to beta version:
 
-* Download and use lists of WP 0.5 and 0.7, FA, and GA articles
-** FAs/GAs downloaded, now only need to be used
-** Need to download WP 0.5 as well
-
 * Allow pages in any namespace to be rated (add ns column to ratings table
   and use it in list2.pl)
 
@@ -13,9 +9,12 @@ Goals to finish before promoting to beta version:
 
 * Generate some sort of index file (similar to [[WP:1.0/I]]) but online
   (maybe the bot-readable form can be the wikitext to [[WP:1.0/I]])
+
 ** Add a "type" field for sorting projects, similar to WP 0.5 ? 
+
 ** index.pl added, very simple list. Maybe we can break it up by
    first letter of shortname, or something like that. 
+
 ** Add progress bars to keep track of % of articles that are assessed,
    similar to 
 

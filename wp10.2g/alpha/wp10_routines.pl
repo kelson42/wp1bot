@@ -17,7 +17,7 @@ my $By_importance = 'by importance';
 my $Lang = 'en';
 my $Root_category = 'Category:Wikipedia 1.0 assessments';
 my $goodCat = "$Category:Wikipedia good articles";
-my $featuredCat = "$Category:Featured articles";
+my $featuredCat = "$Category:Wikipedia featured articles";
 my $listCat = "$Category:Wikipedia featured lists";
 
 my $Class = 'Class';

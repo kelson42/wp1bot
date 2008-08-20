@@ -318,7 +318,7 @@ sub update_review_data {
 		return -1;
 	};
 		
-	my $sth = $dbh->prepare ("UPDATE review SET rev_value = ?, " 
+	my $sth = $dbh->prepare ("UPDATE reviews SET rev_value = ?, " 
 	. "rev_timestamp = ? WHERE rev_article = ?");
 	
 	# Executes the UPDATE query. If there are no entries matching the 
@@ -327,7 +327,7 @@ sub update_review_data {
 	my $count = $sth->execute($value, $timestamp, $art);
 	
 	if ( $count eq '0E0' ) { 
-		$sth = $dbh->prepare ("INSERT INTO review VALUES (?,?,?)");
+		$sth = $dbh->prepare ("INSERT INTO reviews VALUES (?,?,?)");
 		$count = $sth->execute($value, $art, $timestamp);
 	}
 	
@@ -349,7 +349,7 @@ sub remove_review_data {
 		return -1;
 	}	
 
-	my $sth = $dbh->prepare ("DELETE FROM review 
+	my $sth = $dbh->prepare ("DELETE FROM reviews
                                   WHERE rev_value = ? AND rev_article = ?");
 	# Executes the DELETE query. 
 	my $count = $sth->execute($oldvalue, $art);
@@ -366,11 +366,11 @@ sub get_review_data {
 
   if ( ! defined $value ) {
     $sth = $dbh->prepare ("SELECT rev_article, rev_value
-                           FROM review");
+                           FROM reviews");
     $sth->execute();
   } else {
     $sth = $dbh->prepare ("SELECT rev_article, rev_value
-                           FROM review WHERE rev_value = ?");
+                           FROM reviews WHERE rev_value = ?");
     $sth->execute($value);
   }
 

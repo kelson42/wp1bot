@@ -130,7 +130,7 @@ sub ratings_table {
 
 
   $query .= "LEFT JOIN releases ON r_article = rel_article ";
-  $query .= "LEFT JOIN review ON r_article = rev_article ";
+  $query .= "LEFT JOIN reviews ON r_article = rev_article ";
 
   $query .= " WHERE";
   $queryc .= " WHERE";
@@ -359,7 +359,7 @@ sub ratings_table_intersect {
 
 
   $query .= " LEFT JOIN releases ON ra.r_article = rel_article ";
-  $query .= " LEFT JOIN review ON ra.r_article = rev_article ";
+  $query .= " LEFT JOIN reviews ON ra.r_article = rev_article ";
 
   $query .= " WHERE ra.r_project = ? AND rb.r_project = ?";
 
