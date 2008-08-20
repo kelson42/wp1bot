@@ -607,26 +607,30 @@ sub query_form {
   print << "HERE";
 <form>
 
-
+<table class="outer">
+<tr><td>
 <table class="mainform">
-
-<tr><td id="projecta"><b>First project</b><br/>
-<table class="subform">
-  <tr><td>Project name</td>
+<tr>
+<td id="projecta" class="toprow"><b>First project</b><br/>
+  <table class="subform">
+    <tr><td>Project name</td>
       <td><input type="text" value="$projecta" name="projecta"/></td></tr>
-  <tr><td>Page name</td>
+    <tr><td>Page name</td>
       <td><input type="text" value="$pagename" name="pagename"/></td></tr>
-  <tr><td>Quality</td>
+    <tr><td>Quality</td>
       <td><input type="text" value="$quality" name="quality"/></td></tr>
-  <tr><td>Importance</td>
+    <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
-  <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
-      Treat page name as a <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
-   <tr><td colspan="2" class="note">Note: leave any field blank to 
+    <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
+      Treat page name as a 
+      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
+    <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
- </table>
+  </table>
 </td>
-<td><b>Output options</b><br/>
+</tr>
+<tr>
+<td class="bottomrow"><b>Output options</b><br/>
 <table class="subform">
   <tr><td>Results per page</td>
       <td><input type="text" value="$limit" name="limit"/></td></tr>
@@ -640,32 +644,54 @@ sub query_form {
       </select></td></tr>
   <tr><td colspan="2" class="note">Note: sorting is done 
             relative to the first project. </td></tr>
-</table><br/>
-<div style="text-align: center;">
-<input type="submit" value="Generate list"/></div>
+</table>
+<div style="text-align: center;"><input type="submit" value="Generate list"/></div>
 </td>
 </tr>
 </table>
-
-<table class="mainform" id="projectb">
-<tr><td>
-<input type="checkbox" $intersect_checked  name="intersect"  rel="secondproj"/>	
-<b>Specify second project</b><br/>
-<table class=\"subform\" rel="secondproj">
-  <tr><td>Project name</td>
+</td>
+<td style="vertical-align: top;">
+<table class="mainform">
+<td id="projectb" class="toprow"><input type="checkbox" 
+        $intersect_checked  name="intersect"  rel="secondproj"/>
+       <b>Specify second project</b><br/>
+  <table class=\"subform\" rel="secondproj">
+    <tr><td>Project name</td>
       <td><input type="text" value="$projectb" name="projectb"/></td></tr>
-  <tr><td>Quality</td>
+    <tr><td>Quality</td>
       <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
-  <tr><td>Importance</td>
-      <td><input type=\"text\" value="$importanceb" name="importanceb"/>
-      </td></tr>
-  <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
-     Show only pages with differing quality ratings</input>
-     </td></tr>
+    <tr><td>Importance</td>
+      <td><input type=\"text\" value="$importanceb" name="importanceb"/></td></tr>
+    <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
+       Show only pages with differing quality ratings</input></td></tr>
   </table>
-</td></tr></table>
+</td></tr>
+
+
+  <tr>
+    <td class="bottomrow">
+     <input type="checkbox" $intersect_checked  name="intersect"  rel="release"/>
+     <b>Filter release / review data</b><br/>
+     <table class=\"subform\" rel="release">
+       <tr><td>Test</td></tr>
+      </table>
+  </td></tr>
+  </table>
+</td></tr>
+
+
+
+</tr></table>
+
+</td></tr>
+
+</table>
+
+
+
+
 </form>
-  <hr/>
+
 HERE
 
 }
