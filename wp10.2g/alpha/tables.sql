@@ -143,3 +143,33 @@ create table review (
     primary key (rev_value, rev_article)
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
+
+-- The version table stores static release information for all pages  
+-- under WP:1.0's scope. 
+-- be once, with either an FA or GA marking. 
+
+create table version ( 
+
+    v_value               varchar(16)  not null,
+        -- short key identifying an article's membership in a release
+        --   NOTE: an article's membership in an older release (such as
+		--  WP:v0.5), almost always guarantees membership in a newer
+		--  release (such as WP:v1.0)
+
+    v_article             varchar(255) not null,
+        -- article title
+
+    v_timestamp     binary(20),
+        -- time when article was added to a release category and tagged 
+		-- with the proper talk page banner
+        --   NOTE: a revid can be obtained from timestamp via API
+        --  a wiki-format timestamp
+	
+    v_category		int unsigned default 0,
+        -- numerical representation of an article's classification 
+		-- (e.g. Natsci, Arts, EngTech)
+		-- empty values are zero by default	
+
+    primary key (v_value, v_article)
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
