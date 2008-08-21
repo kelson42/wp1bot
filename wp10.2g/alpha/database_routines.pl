@@ -135,14 +135,14 @@ sub update_project {
   $sth_qcount->execute($project);
   @row = $sth_qcount->fetchrow_array();
   my $qcount = $proj_count - $row[0];
-  print "Unassessed-Class articles: $qcount\n";
+  print "Quality-assessed articles: $qcount\n";
 
   my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
 						 . "WHERE r_project = ? AND r_importance='Unknown-Class'");
   $sth_icount->execute($project);
   @row = $sth_icount->fetchrow_array();
   my $icount = $proj_count - $row[0];
-  print "Unknown-Importance articles: $icount\n";
+  print "Importance-assessed articles: $icount\n";
 	
   my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
                          . " p_wikipage = ?, p_parent = ?, p_shortname = ?," 
