@@ -130,18 +130,32 @@ sub update_project {
   @row = $sth->fetchrow_array();
   $proj_count = $row[0];
 
+  my $sth_qcount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
+	                     . "WHERE r_project = ? AND r_quality='Unassessed-Class'");
+  $sth_qcount->execute($project);
+  @row = $sth_qcount->fetchrow_array();
+  my $qcount = $proj_count - $row[0];
+  print "Unassessed-Class articles: $qcount\n";
+
+  my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
+						 . "WHERE r_project = ? AND r_importance='Unknown-Class'");
+  $sth_icount->execute($project);
+  @row = $sth_icount->fetchrow_array();
+  my $icount = $proj_count - $row[0];
+  print "Unknown-Importance articles: $icount\n";
+	
   my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
                          . " p_wikipage = ?, p_parent = ?, p_shortname = ?," 
-                         . " p_count  = ? " 
+                         . " p_count  = ?, p_qcount = ?, p_icount  = ? "
                          . " WHERE p_project = ?" );
 
   my $count = $sth->execute($timestamp, $wikipage, $parent, 
-                            $shortname, $proj_count, $project);
+                            $shortname, $proj_count, $qcount, $icount, $project);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?)");
+    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?,?,?)");
     $count = $sth->execute($project, $timestamp, $wikipage, 
-                           $parent, $shortname, $proj_count);
+                           $parent, $shortname, $proj_count, $qcount, $icount);
   }
 
   update_category_data( $project, 'Unknown-Class', 'quality', 

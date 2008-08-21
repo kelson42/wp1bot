@@ -20,6 +20,12 @@ create table projects (
     p_count           int unsigned default 0,
         -- how many pages are assessed in project 
 
+    p_qcount          int unsigned default 0,
+        -- how many pages have quality assessments in the project
+
+    p_icount          int unsigned default 0,
+        -- how many pages have importance assessments in the project 
+
     primary key (p_project)
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
