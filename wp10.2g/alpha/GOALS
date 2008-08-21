@@ -19,8 +19,6 @@ Goals to finish before promoting to beta version:
    similar to 
 
     http://fr.wikipedia.org/wiki/Projet:Wikipédia_1.0#Projets
-
-   This will need another column in the projects table.
   
 * Figure out how to load-balance the script wrt WikiProject Biography
 
