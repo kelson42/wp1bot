@@ -49,7 +49,9 @@ print << "HERE";
 </div>
 <div class="footer">
 Please comment or file bug reports at the 
-<a href="http://en.wikipedia.org/wiki/User_talk:WP_1.0_bot/Second_generation">discussion page </a>.
+<a 
+href="http://en.wikipedia.org/wiki/User_talk:WP_1.0_bot/Second_generation">discussion page </a>.<br/>
+</div>
 </body>
 </html>
 HERE

@@ -216,7 +216,7 @@ HERE
   $queryc =~ s/WHERE\s*$//;
 
 
- print "<pre>Qs:\n$query</pre>\n";
+# print "<pre>Qs:\n$query</pre>\n";
 # print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
@@ -243,6 +243,14 @@ HERE
   <center><table class="wikitable">
   <tr>
     <th><b>Result</b></th>
+HERE
+
+    if (  ! ( $project =~ /\w|\d/ ) ) { 
+      print "    <th>Project</th>\n";
+
+    }
+
+print << "HERE";
     <th><b>Article</b></th>
     <th colspan="2"><b>Importance</b></th>
     <th colspan="2"><b>Quality</b></th>

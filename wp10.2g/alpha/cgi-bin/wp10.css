@@ -1,7 +1,7 @@
 body { 
   margin: 0px;
   padding: 0px;
-  background: #bbb;
+  background: #8f8f8f;
   font-family: sans-serif;
 }
 
@@ -35,7 +35,8 @@ div.content {
   background: #fff;
   padding: 1em 0em 1em 0em;
   border-top: 1px solid #000;
-  border-bottom: 1px solid #000;
+  border-bottom: 2px solid #000;
+  margin-bottom: .25em;
 }
 
 
@@ -146,3 +147,29 @@ table.outer td {
 table.mainform td { 
   padding-left: 0.5em !important;
 }
+
+input.submitButton { 
+  font-weight: bold;
+}
+
+div.footer { 
+  padding-left: 0.5em;
+}
+
+
+
+
+ul.wrapper     { width: 95%;
+                 background-color: black;
+                 border: 1px black solid;
+                 list-style-type: none;
+                 padding: 0px;
+                 margin: 0px;
+                 white-space: nowrap;
+               }
+
+li.fieldset  { margin: 0px;
+                 border: 0px;
+                 padding: 0px;
+               }
+
