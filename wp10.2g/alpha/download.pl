@@ -72,6 +72,11 @@ if ( defined $ARGV[0] ) {
         delete $project_details->{$project} 
          if ( $project_details->{$project}->{'p_count'} < $ARGV[2] );
       }
+    } elsif ( $ARGV[1] eq 'exclude' && defined $ARGV[2]) { 
+		foreach $project ( keys %$project_details ) { 
+			delete $project_details->{$project} 
+			if ( $project_details->{$project}->{'p_project'} eq $ARGV[2] );
+		}
     }
 
     my @projects = sort {    $project_details->{$b}->{'p_timestamp'} 
@@ -88,13 +93,14 @@ if ( defined $ARGV[0] ) {
     print << "HERE";
 
 Unknown option $ARGV[0]
-  $0                   : update all projects on wiki
-  $0 -all              : update all projects already in database
-    $0 -all under <N>  : limit -all to projects with <= N articles 
-    $0 -all over <N>   : limit -all to projects with > N articles
-  $0 -releases         : update WP 1.0 data
-  $0 -reviews          : update FA/FL/GA data
-  $0 <PROJECT>         : update PROJECT
+  $0                          : update all projects on wiki
+  $0 -all                     : update all projects already in database
+    $0 -all under <N>         : limit -all to projects with <= N articles 
+    $0 -all over <N>          : limit -all to projects with > N articles
+    $0 -all exclude <PROJECT> : update everything but <PROJECT>
+  $0 -releases                : update WP 1.0 data
+  $0 -reviews                 : update FA/FL/GA data
+  $0 <PROJECT>                : update PROJECT
 HERE
     exit;
   }

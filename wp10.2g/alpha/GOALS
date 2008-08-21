@@ -24,9 +24,10 @@ Goals to finish before promoting to beta version:
   
 * Figure out how to load-balance the script wrt WikiProject Biography
 
+** Add "read from file" functionality to download.pl (to exclude Bio and
+   daughter projects from one instance of the bot, and run another
+   thread only for them)
+
 * Do a full bot run to make sure nothing breaks horribly
 
 * Look through cgi-bin for duplicate code, move to a shared location
-
-* Fix timestamp truncation errors (all over the place)
-
