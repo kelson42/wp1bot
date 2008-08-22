@@ -108,7 +108,7 @@ sub project_index_link {
   my $line =  "<tr><td><b>$name</b></td>"
             . "<td style=\"text-align: right;\">" . 
                commify($data->{'p_count'}) . "</td>" 
-            . "<td><a href=\"$tablep\">table</a>, "
+            . "<td>&nbsp;<a href=\"$tablep\">table</a>, "
             . "<a href=\"$listp\">list</a>, "
             . "<a href=\"$logp\">log</a>";
   $line .= "</td>";

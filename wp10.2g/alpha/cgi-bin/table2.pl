@@ -2,6 +2,12 @@
 use strict;
 use Encode;
 
+
+my $regenerate_only = 0;
+if ( defined $ARGV[0] ) { 
+  $regenerate_only = 1;
+}
+
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
 
@@ -41,8 +47,6 @@ my %param = %{$cgi->Vars()};
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-my $proj = $param{'project'} || $ARGV[0];
-
 use DBI;
 require "database_www.pl";
 
@@ -52,6 +56,8 @@ layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
+
+if ( ! $regenerate_only ) { 
 print "<hr/><div class=\"navbox\">\n";
 print_header_text();
 print "</div>\n<center>\n";
@@ -61,61 +67,13 @@ print "\n";
 #print "<hr/><div class=\"indent\"><pre>";
 #print $wikicode;
 #print "</pre></div>\n";
+}
 
 layout_footer();
 
 exit;
 
 #####################################################################
-#####################################################################
-
-sub cached_ratings_table { 
-
-  print "<div class=\"indent\">\n";
-  print "<b>Debugging output</b><br/>\n";
-  print "Current time: $timestamp<br/>\n";
-
-  my $key = "TABLE:GLOBAL";
-  my $data;
-
-  if ( defined $cgi->{'purge'} ) { 
-    print "Purging cached output<br/>\n";
-  } elsif ( $cache->exists($key) ) { 
-    my $expiry = $cache->expiry($key);
-    print "Cached output expires: " 
-        . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
-        . "<br/>\n";
-
-    $data = $cache->get($key);
-    my ($c_key, $c_timestamp, $c_html, $c_wikicode) = 
-	  split /\Q$cache_sep\E/, $data, 4;
-
-  } else {
-    print "No cached output available<br/>\n";
-  }
-
-  print "Regenerating output<br/>\n";
-
-  my ($html, $wikicode) = ratings_table($proj);
-	
-  print "</div><hr/><div class=\"navbox\">\n";
-  print_header_text($proj);
-  print "</div>\n<center>\n";
-  print $html;
-  print "</center>\n";
-  print "\n";
-  print "<hr/><div class=\"indent\"><pre>";
-  print $wikicode;
-  print "</pre></div>\n";
-
-  $data = "TABLE:$proj" . $cache_sep 
-        . $timestamp . $cache_sep
-        . $html . $cache_sep 
-        . $wikicode;
-
-  $cache->set($key, $data, '1 hour');
-}
-
 #####################################################################
 
 sub ratings_table { 
@@ -293,14 +251,14 @@ sub get_categories {
   my $Unassessed_Class = "Unassessed-Class";
 
   my $sortQual = { 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
-              'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
+                   'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
               'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
-              $Assessed_Class => 20, 'Unknown-Class' => '10', $Unassessed_Class => 0};
+              $Assessed_Class => 20, 'Unknown-Class' => '10', 
+              $Unassessed_Class => 0};
 
   my $sortImp= { 'Top-Class' => 400, 'High-Class' => 300, 
-                 'Mid-Class' => 200, 'Low-Class' => 100, 'Unknown-Class' => 10,
-                 $Unassessed_Class => 0};
-
+                 'Mid-Class' => 200, 'Low-Class' => 100, 
+                 'Unknown-Class' => 10,  $Unassessed_Class => 0};
 
   my $qualityLabels = {};
   my $importanceLabels = {};
@@ -321,42 +279,6 @@ sub get_categories {
   return ($sortQual, $sortImp, $qualityLabels, $importanceLabels);
 }
 
-
-#####################################################################
-
-sub query_form {
-
-  my $projSelected = shift;
-
-  my $projects = {};
-  my @row;
-
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
-  $sth->execute();
-
-  while ( @row = $sth->fetchrow_array ) { 
-    $projects->{$row[0]} = 1;
-  }
-
-  print "<form>\n";
-  print "<select name=\"project\">\n";
-
-  my $p;
-  foreach $p ( sort { $a cmp $b} keys %$projects) { 
-    if ( $p eq $projSelected ) { 
-      print "<option value=\"" . $p . "\" selected>" . $p ."</option>\n";
-    } else {
-      print "<option value=\"" . $p . "\">" . $p . "</option>\n";
-    }
-  }
-
-  print "</select>\n";
-  print "<input type=\"submit\" value=\"Make table\"/>\n";
-  print "</form>\n";
-  print "<hr/>\n";
-
-  return $projects;
-}
 
 #####################################################################
 
@@ -398,7 +320,7 @@ sub cached_ratings_table {
   my $key = "GLOBAL:TABLE";
   my $data;
 
-  if ( $cache->exists($key) && ! defined $ARGV[0] ) { 
+  if ( $cache->exists($key) && ! $regenerate_only ) { 
     my $expiry = $cache->expiry($key);
     print "Cached output expires: " 
         . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
