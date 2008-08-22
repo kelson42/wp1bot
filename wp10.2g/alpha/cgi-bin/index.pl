@@ -37,12 +37,28 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 layout_header("Project index");
 
-print "<ul>\n";
-my $project;
-foreach $project ( sort {$a cmp $b} keys %$projects ){
-  project_index_link($project, $projects->{$project});
+
+my $table = sort_projects($projects);
+
+# Fix this
+my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/index.pl";
+
+print "<center>\n";
+my $letter;
+foreach $letter ( sort {$a cmp $b} keys %$table ) {
+  print "<a href=\"$uri#" . $letter . "\">$letter</a> ";
 }
-print "</ul>\n";
+print "</center><hr/>\n";
+
+foreach $letter ( sort {$a cmp $b} keys %$table ){
+  print "<h3>$letter</h3><a name=\"$letter\"/>\n";
+  print "<ul>\n";
+  my $project;
+  foreach $project ( sort {$a cmp $b} keys %{$table->{$letter}} ){
+    project_index_link($project, $projects->{$project});
+  }
+  print "</ul>\n";
+}
 
 layout_footer();
 exit;
@@ -87,7 +103,7 @@ sub project_index_link {
 }
 
 #####################################################################
-# TODO: figure out how the {{avancement}} template works, and
+# TODO: figure out how the [[fr:Template:Avacement]] template works, and
 # copy it to enwiki
 sub print_progress_bar {
 	my $number = shift;
@@ -103,4 +119,32 @@ sub print_progress_bar {
 	<div class="progress_bar" style="background:#$color; width:$rounded%;">
 	<div class="progress_text" style="">$rounded&#160;%</div></div></div>
 HERE
+}
+
+#####################################################################
+
+sub sort_projects { 
+  my $projects= shift;
+
+  my $table = {};
+
+  my ($p, $name, $letter);
+
+  foreach $p ( keys %$projects ) {
+    $name = $p;
+    if ( defined $projects->{$p}->{'p_shortname'} ) { 
+      $name = $projects->{$p}->{'p_shortname'};
+    }
+    $letter = substr(decode("utf8", $name), 0, 1) ;
+    $letter = encode("utf8", $letter);
+    if ( ! defined $table->{$letter} ) { 
+      $table->{$letter} = {};
+    }
+
+    $table->{$letter}->{$p} =  $projects->{$p};
+
+  }
+
+  return $table;
+
 }
