@@ -173,7 +173,7 @@ li.fieldset  { margin: 0px;
                  padding: 0px;
                }
 
-.avance_boite {
+.progress_cell {
 	background: #D3D3D3 none repeat scroll 0 0;
 	border: 1px solid gray;
 	height: 16px;
@@ -184,7 +184,7 @@ li.fieldset  { margin: 0px;
 	width: 100px;
 }
 
-.avance_barre {
+.progress_bar {
 	background: #A0A0FF none repeat scroll 0 0;
 	border: 0 none;
 	height: 100%;
@@ -195,7 +195,7 @@ li.fieldset  { margin: 0px;
 	vertical-align: middle;
 }
 
-.avance_texte {
+.progress_text {
 	border: 0 none;
 	font-size: 14px;
 	height: 100%;

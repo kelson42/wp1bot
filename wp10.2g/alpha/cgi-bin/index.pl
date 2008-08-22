@@ -75,8 +75,11 @@ sub project_index_link {
   }
 
 	if ( $data->{'p_count'} != 0 ) { 
-		print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
-		print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
+		$line .= "<table style=\"background: transparent; border: 0\"><tr><td>\nQuality:";		
+		$line .= print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
+		$line .= "</td><td>Importance:";
+		$line .= print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
+		$line .= "</td></tr></table>";
 	}
 	
   $line .= "</li>\n";
@@ -84,22 +87,20 @@ sub project_index_link {
 }
 
 #####################################################################
-# FIXME: hack hack hack 
-# Instead of making the code resemble frwiki's output, we just
-# copy it from frwiki via the API
 # TODO: figure out how the {{avancement}} template works, and
 # copy it to enwiki
 sub print_progress_bar {
 	my $number = shift;
-	my $fr_api = new Mediawiki::API;
-	$fr_api->debug_level(0); # no output at all 
-	$fr_api->base_url('http://fr.wikipedia.org/w/api.php');
+	
+	# Get the color of the bar
+	my $color = get_bar_color($number);
 	
 	# Format the input to two decimal digits
 	my $rounded = sprintf("%.2f", $number);
-	my $r =  $fr_api->parse("{{Avancement|avancement=$rounded}}");
-	my $t = $r->{'text'};
-	$t =~ s!^<p>!!;
-	my @t = split('</p>',$t);
-	print $t;
+	
+	return << "HERE";
+	<div class="progress_cell" style="">
+	<div class="progress_bar" style="background:#$color; width:$rounded%;">
+	<div class="progress_text" style="">$rounded&#160;%</div></div></div>
+HERE
 }

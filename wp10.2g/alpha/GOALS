@@ -14,11 +14,6 @@ Goals to finish before promoting to beta version:
 
 ** index.pl added, very simple list. Maybe we can break it up by
    first letter of shortname, or something like that. 
-
-** Add progress bars to keep track of % of articles that are assessed,
-   similar to 
-
-    http://fr.wikipedia.org/wiki/Projet:Wikipédia_1.0#Projets
   
 * Figure out how to load-balance the script wrt WikiProject Biography
 

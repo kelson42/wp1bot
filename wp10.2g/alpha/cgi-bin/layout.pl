@@ -59,4 +59,43 @@ HERE
 }
 
 #######################################################################
+# Generates colors for the progress bar. The two endpoints are
+# 0%: #D10000 = (209, 0, 0) and 100%: 33CC00 = (51, 204, 0).
+# There's probably a more efficient way of doing this...
+sub get_bar_color {  
+	my $percent = shift; 
+	my $color;
+	
+	if ($percent >= 0) { $color='D10000' }
+	if ($percent >= 2.5) { $color='F10000' }
+	if ($percent >= 7.5) { $color='FF1600' }
+	if ($percent >= 12.5) { $color='FF3700' }
+	if ($percent >= 17.5) { $color='FF6500' }
+	if ($percent >= 22.5) { $color='FF8F00' }
+	if ($percent >= 27.5) { $color='FFB900' }
+	if ($percent >= 32.5) { $color='FFD800' }
+	if ($percent >= 37.5) { $color='FFE500' }
+	if ($percent >= 42.5) { $color='FFF600' }
+	if ($percent >= 47.5) { $color='FCFF00' }
+	if ($percent >= 52.5) { $color='D3FF00' }
+	if ($percent >= 57.5) { $color='D3FF00' }
+	if ($percent >= 62.5) { $color='BEFF00' }
+	if ($percent >= 67.5) { $color='92FF00' }
+	if ($percent >= 72.5) { $color='99FF00' }
+	if ($percent >= 77.5) { $color='39FF00' }
+	if ($percent >= 82.5) { $color='0BFF00' }
+	if ($percent >= 87.5) { $color='16E900' }
+	if ($percent >= 92.5) { $color='33CC00' }
+	if ($percent >= 97.5) { $color='33CC00' }
+	if ($percent > 100) { $color='00000' }
+	return $color;
+}
+
+#######################################################################
+# Rounding function 
+sub round {
+	my $n = shift;
+    return int($n + .5);
+}
+
 1;
