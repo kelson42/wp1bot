@@ -3,6 +3,7 @@
 use strict;
 use DBI;
 use Encode;
+use Data::Dumper;
 
 our $Opts;
 my  $Prefix;
@@ -79,7 +80,9 @@ WHERE cl_to = ?";
   };
 
   my $sth = $dbh->prepare($query);
+  my $t = time();
   my $r = $sth->execute(@qparam);
+  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
 
   my @row;
   my @results;
@@ -114,7 +117,11 @@ WHERE cl_to = ?";
   };
 
   my $sth = $dbh->prepare($query);
+
+  my $t = time();
   my $r = $sth->execute(@qparam);
+  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
+
   my @row;
   my @results;
   my $data;
@@ -138,3 +145,4 @@ WHERE cl_to = ?";
 ######################################################################
 
 1;
+

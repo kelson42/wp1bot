@@ -3,14 +3,10 @@ Goals to finish before promoting to beta version:
 * Allow pages in any namespace to be rated (add ns column to ratings table
   and use it in list2.pl)
 
-* Figure out how to load-balance the script wrt WikiProject Biography
-
-** Add "read from file" functionality to download.pl (to exclude Bio and
-   daughter projects from one instance of the bot, and run another
-   thread only for them)
-
 * Clean up all code, move hardcoded strings to conf file
 
-* Do a full bot run to make sure nothing breaks horribly
-
 * Look through cgi-bin for duplicate code, move to a shared location
+
+* Switch download.pl and friends to use only utf-8 encoded data.
+  So data coming out of the API has to be re-encoded within in api_routines.pl
+  But then downlaod.pl and database_routines.pl will have no mention of encoding

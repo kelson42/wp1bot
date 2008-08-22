@@ -72,7 +72,7 @@ sub download_project {
     return;
   }
 
-  print "\n-- Download ratings data for $project\n";
+  print "\n-- Download ratings data for '$project'\n";
   my ($homepage, $parent, $extra, $shortname);
   
   eval {
@@ -119,13 +119,13 @@ sub get_project_quality_categories {
       $qual = $extra->{$cat}->{'title'};
       $qcats->{$qual} = $cat;
       $value = $extra->{$cat}->{'ranking'};
-      print "Cat $qual $cat $value (extra)\n";
+      print "\tCat $qual $value $cat (extra)\n";
     } elsif ( $cat =~ /\Q$Category\E:(\w+)[\- ]/) {
       $qual=$1 . '-' . $Class; # e.g., FA-Class
       next unless (defined $Quality{$qual});
       $qcats->{$qual} = $cat;
       $value = $Quality{$qual};
-      print "Cat $qual $cat $value\n";
+      print "\tCat $qual $value $cat \n";
     } else {
       next;
     }
@@ -195,10 +195,10 @@ sub download_project_quality_ratings {
   my ($cat, $tmp_arts, $qual, $art, $d);
 
   foreach $qual ( keys %$qcats ) { 
-    print "\nFetching list for quality $qual\n";
+#    print "\nFetching list for quality $qual\n";
 
     $tmp_arts = pages_in_category_detailed(encode("utf8",$qcats->{$qual}));
-
+  
     my $count = scalar @$tmp_arts;
     my $i = 0;
 
@@ -228,7 +228,7 @@ sub download_project_quality_ratings {
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
-    print "NOT SEEN (quality) '$art'\n";
+#    print "NOT SEEN (quality) '$art'\n";
     update_article_data($global_timestamp, $project, $art, 'quality', 
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art} );
@@ -254,7 +254,7 @@ sub download_project_importance_ratings {
   my ($cat, $tmp_arts, $imp, $art, $d);
 
   foreach $imp ( keys %$icats ) { 
-    print "\nFetching list for importance $imp\n";
+#    print "\nFetching list for importance $imp\n";
 
     $tmp_arts = pages_in_category_detailed(encode("utf8",$icats->{$imp}));
 
@@ -287,7 +287,7 @@ sub download_project_importance_ratings {
     # for importance only, NULL values are OK
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
     next if ( exists $seen->{$art} );    
-    print "NOT SEEN (importance) $art\n";
+#    print "NOT SEEN (importance) $art\n";
     update_article_data($global_timestamp, $project, $art, "importance",
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art});
@@ -429,7 +429,7 @@ sub download_review_data_internal {
   my ($cat, $tmp_arts, $qual, $art, $d);
 	
   foreach $qual ( keys %qcats ) { 
-    print "\nFetching list for $qual\n";
+#    print "\nFetching list for $qual\n";
     
     $tmp_arts = pages_in_category_detailed(encode("utf8",%qcats->{$qual}));
     
@@ -465,7 +465,7 @@ sub download_review_data_internal {
   # Check if every article from the old listing is available
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
-    print "NOT SEEN ($oldrating->{$art}) '$art' \n";
+#    print "NOT SEEN ($oldrating->{$art}) '$art' \n";
     remove_review_data($art, 'None', $oldrating->{$art});
   }
   return 0;
@@ -526,7 +526,7 @@ sub download_release_data_internal {
   foreach $page ( keys %$oldArts ) { 
     if ( ( ! defined $seen->{$page} )
 	 && $oldArts->{$page}->{'0.5:category'} ne 'None' ) { 
-      print "NOT SEEN: $page\n";
+#      print "NOT SEEN: $page\n";
       db_set_release_data($page, '0.5', 'None', $global_timestamp_wiki);
     }
   }

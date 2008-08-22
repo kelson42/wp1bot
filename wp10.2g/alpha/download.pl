@@ -6,6 +6,8 @@ use strict;
 use Encode;
 use Data::Dumper;
 use POSIX;
+use Getopt::Long;
+
 
 #############################################################
 # Define global variables and then load subroutines
@@ -17,102 +19,201 @@ require 'database_routines.pl';
 require 'wp10_routines.pl';
 require 'api_routines.pl';
 
+my $start_time = time();
+
 #############################################################
 
-my $project_details = db_get_project_details();
+my ($mode, $projects) = parse_argv();
 
+print "Mode: $mode\n";
+
+my $count = scalar @$projects;
+print "Will update $count projects \n";
+
+my $i = 0;
 my $project;
 
-my $new_only = 0;
-
-$ARGV[0] = decode("utf8", $ARGV[0]);
-
-if ( defined $ARGV[0] ) { 
-  if ( $ARGV[0] eq '-reviews' ) { 
-	# Don't download all the GAs and FAs unless explicitly asked to do so
-	print "\n-- First, getting all FA, FL and GA data \n";
-	download_review_data();	  
-	exit;
-  }
-
-  if ( $ARGV[0] eq '-releases' ) { 
-	download_release_data();	  
-	exit;
-  }
-
-  if ( $ARGV[0] eq '-all' ) { 
-    if ( $ARGV[1] eq 'under' && $ARGV[2] > 0 ) { 
-      foreach $project ( keys %$project_details ) { 
-        delete $project_details->{$project} 
-         if ( $project_details->{$project}->{'p_count'} >= $ARGV[2] );
-      }
-    } elsif ( $ARGV[1] eq 'over' && $ARGV[2] > 0 ) { 
-      foreach $project ( keys %$project_details ) { 
-        delete $project_details->{$project} 
-         if ( $project_details->{$project}->{'p_count'} < $ARGV[2] );
-      }
-    } elsif ( $ARGV[1] eq 'exclude' && defined $ARGV[2]) { 
-		foreach $project ( keys %$project_details ) { 
-			delete $project_details->{$project} 
-			if ( $project_details->{$project}->{'p_project'} eq $ARGV[2] );
-		}
-    }
-
-    my @projects = sort {    $project_details->{$b}->{'p_timestamp'} 
-                         <=> $project_details->{$a}->{'p_timestamp'} }
-                      keys %$project_details;
-
-    foreach $project ( @projects )  {
-      download_project(decode("utf8",$project));
-    }
-    exit;
-  }
-
-  if ( $ARGV[0] eq '-new' ) { 
-    $new_only = 1;
-    $ARGV[0] = undef;
-  }
-
-  if ( $ARGV[0] =~ /^-/ ) { 
-    print << "HERE";
-
-Unknown option $ARGV[0]
-  $0                          : update all projects on wiki
-  $0 -all                     : update all projects already in database
-    $0 -all under <N>         : limit -all to projects with <= N articles 
-    $0 -all over <N>          : limit -all to projects with > N articles
-    $0 -all exclude <PROJECT> : update everything but <PROJECT>
-  $0 -new                     : update projects on wiki not in database
-  $0 -releases                : update WP 1.0 data
-  $0 -reviews                 : update FA/FL/GA data
-  $0 <PROJECT>                : update PROJECT
-HERE
-    exit;
-  }
-
-  if ( project_exists($ARGV[0]) ) { 
-    download_project($ARGV[0]);
-    print "-- main driver done\n";
-    exit;
-  } else { 
-    if ( $new_only == 0) { 
-      print "Looking for '$ARGV[0]' on wiki\n";
-    }
-  }
-}
-
-my $projects = download_project_list();
-foreach $project ( @$projects ) { 
-  if ( $new_only ) { 
-    next if ( defined $project_details->{$project} ); 
-  } elsif ( defined $ARGV[0] ) {
-    next unless ( $project =~ m/^\Q$ARGV[0]\E$/ );
-  }
+foreach $project ( @$projects ) {
+  $i++;
+  print "\n-- $i / $count : $project\n";
+  update_status($project, $mode, $i, $count);
   download_project($project);
 }
 
 print "Done.\n";
 
 exit;
+
+#####################################################################
+
+sub update_status {
+  my $project = shift;
+  my $mode = shift;
+  my $i = shift;
+  my $count = shift;
+  open OUT, ">", "/home/cbm/wp10downloads/dl.$$";
+  print OUT "$mode\n";
+  print OUT "$i\n";
+  print OUT "$count\n";
+  print OUT $start_time . "\n";
+  print OUT time() . "\n";
+  print OUT $project . "\n";
+  close OUT;
+}
+
+#####################################################################
+
+sub parse_argv { 
+  my $opts = {};
+
+  if ( ! GetOptions($opts, 'all', 'existing', 'new', 'under=i', 
+                    'over=i','all','releases','revisions', 'exclude=s@' )) {
+    usage();
+  }
+
+  my $project;
+
+  my $includes = {};
+  while ( $project = shift @ARGV ) {
+    $includes->{decode("utf8",$project)} = 1;
+    $opts->{'includes'} = 1;
+  }
+
+  my $excludes = {};
+  while ( $project = shift @{$opts->{'exclude'}} ) {
+    $excludes->{decode("utf8",$project)} = 1;
+  }
+
+  my $mode = "none";
+
+  if ( exists $opts->{'existing'} ) {
+    if ( exists $opts->{'new'} || exists $opts->{'all'} ) {
+      usage();
+    }
+    $mode = 'existing';
+  } elsif ( exists $opts->{'all'} ) {
+    if ( exists $opts->{'new'} || exists $opts->{'existing'}) {
+      usage();
+    }
+    $mode = 'all';
+  } elsif ( exists $opts->{'new'} ) {
+    if ( exists $opts->{'existing'} || exists $opts->{'all'}) {
+      usage();
+    }
+    $mode = 'new';
+  }
+
+  if ( $mode eq 'none' && exists $opts->{'includes'} ) {
+    $mode = 'all';
+  }
+
+  if ( exists $opts->{'releases'} ) {
+    print "Download release data\n";
+    download_release_data();	
+  }
+
+  if ( exists $opts->{'reviews'} ) {
+    print "Download review data\n";
+    download_review_data();	  
+  }
+
+  my $project_details = db_get_project_details();
+  
+  my $project_list = download_project_list();
+
+  my $projects = {};
+
+  my $ts;
+
+  if ( $mode eq 'all' ) {
+    foreach $project ( @$project_list ) {
+      if ( exists $opts->{'includes'} ) {
+        next unless ( exists $includes->{$project} );
+      }
+      next if ( exists $excludes->{$project});
+      $ts = $project_details->{$project}->{'timestamp'} || 0;
+      $projects->{$project} = $ts;
+    }
+  } elsif ( $mode eq 'existing') {
+    foreach $project ( keys %$project_details ) {
+      if ( exists $opts->{'includes'} ) {
+        next unless ( exists $includes->{$project} );
+      }
+      next if ( exists $excludes->{$project});
+      if ( exists $opts->{'over'} ) {
+        next if ($project_details->{$project}->{'count'} < $opts->{'over'});
+      }
+      if ( exists $opts->{'under'} ) {
+        next if ($project_details->{$project}->{'count'} > $opts->{'under'} );
+      }
+
+      $ts = $project_details->{$project}->{'timestamp'} || 0;
+      $projects->{$project} = $ts;
+    }
+  } elsif ( $mode eq 'new') {
+    foreach $project ( @$project_list ) {
+      if ( exists $opts->{'includes'} ) {
+        next unless ( exists $includes->{$project} );
+      }
+
+      next if ( exists $excludes->{$project});
+      next if ( exists $project_details->{$project});
+
+      $ts = $project_details->{$project}->{'timestamp'} || 0;
+      $projects->{$project} = $ts;
+    }
+  } else {
+    return ("none", []);
+  }
+
+  my @list =  sort { ($projects->{$a} <=> $projects->{b}) || $a cmp $b }
+              keys %$projects;
+
+
+  if ( $mode eq 'existing' ) { 
+    if ( exists $opts->{'over'} ) { 
+      $mode .= ' over ' . $opts->{'over'};
+    }
+    if ( exists $opts->{'under'} ) { 
+      $mode .= ' under ' . $opts->{'under'};
+    }
+  }
+
+  if ( $opts->{'includes'} ) { 
+    $mode .= " from ";
+    $mode .= join " ",  keys %$includes;
+  }
+
+  if ( scalar keys %$excludes ) { 
+    $mode .= " excluding ";
+    $mode .= join " ",  keys %$excludes;
+
+  }
+
+  return ($mode, \@list);
+}
+
+#####################################################################
+
+sub usage { 
+print << "HERE";
+Usage:  
+$0 [--releases] [--review] [--all | --new | --existing] \
+   [--over N] [--under N] [--exclude PROJECT] PROJECT 
+
+  --releases     : Update data on release versions
+  --review       : Update data on article review (e.g. FA)
+
+  --all          : Update ratings data for all projects
+  --existing     : Update data only for projects already in local database
+  --new          : Update data only for projects not in local database
+
+  --exclude PROJ : Don't update PROJ. Option can be repeated 
+
+The following two options only work with --existing
+ --under N       : Only update projects with <= N articles
+ --over N        : Only update projects with >= N articles
+HERE
+}
 
 __END__

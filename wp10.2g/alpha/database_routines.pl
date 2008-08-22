@@ -22,14 +22,14 @@ sub update_article_data {
   die "Bad table: $table" 
     unless ( ($table eq 'quality') || ($table eq 'importance') );
 
-  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
+#  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
 
   $art = encode("utf8", $art);
   $project = encode("utf8", $project);
   $value = encode("utf8", $value);
   $oldvalue = encode("utf8", $oldvalue);
 
-  my $sth_insert_logging = $dbh->prepare("INSERT INTO logging " . 
+  my $sth_insert_logging = $dbh->prepare_cached("INSERT INTO logging " . 
                                          "values (?,?,?,?,?,?,?)");
 
   $sth_insert_logging->execute($project, $art, $table, $global_timestamp,
@@ -90,7 +90,7 @@ sub update_article_rating_data {
     die "Bad ratings type:  $type\n";
   }
 
-  my $sth = $dbh->prepare ("UPDATE ratings SET r_$type = ?, " 
+  my $sth = $dbh->prepare_cached ("UPDATE ratings SET r_$type = ?, " 
                          . "r_" . $type . "_timestamp = ?  " 
                          . "WHERE r_project = ? and r_article = ?");
 
@@ -311,9 +311,25 @@ sub db_list_projects {
 ###########################################################
 
 sub db_get_project_details { 
-  my $sth = $dbh->prepare("SELECT * FROM projects;");
+  my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count FROM projects;");
   $sth->execute();
-  return $sth->fetchall_hashref('p_project');
+
+  my ($proj, $count, $timestamp);
+
+  my $data ={};
+
+  my @row;
+  while( @row = $sth->fetchrow_array() ){
+    $proj = decode("utf8", $row[0]);
+    $timestamp = $row[1];
+    $count = $row[2];
+ 
+    $data->{$proj} = {};
+    $data->{$proj}->{'count'} = $count;
+    $data->{$proj}->{'timestamp'} = $timestamp;
+  }
+    
+  return $data;
 }
 
 
@@ -345,7 +361,7 @@ sub update_review_data {
 		$count = $sth->execute($value, $art, $timestamp);
 	}
 	
-	print "U:" . "$art // $value // $timestamp // was '$oldvalue'\n";
+#	print "U:" . "$art // $value // $timestamp // was '$oldvalue'\n";
 	
 }
 
@@ -368,7 +384,7 @@ sub remove_review_data {
 	# Executes the DELETE query. 
 	my $count = $sth->execute($oldvalue, $art);
 
-	print "U:" . "$art // $value // removed // was '$oldvalue'\n";
+#	print "U:" . "$art // $value // removed // was '$oldvalue'\n";
 
 }
 

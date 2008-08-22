@@ -38,14 +38,7 @@ sub pages_in_category {
   if ( $use_toolserver ) { 
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
-    print "Get: $cat\n";
-
     my $r =  toolserver_pages_in_category($cat, $ns);
-    print "See: " . scalar @$r . "\n";
-
-    print Dumper($r);
-    
-
     return $r;
   } 
 
@@ -60,11 +53,13 @@ sub pages_in_category_detailed {
   my $cat = shift;
   my $ns = shift;
 
+  print "Get: $cat '$ns'\n";
+
   if ( $use_toolserver ) { 
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
-    print "Get: $cat\n";
-    return toolserver_pages_in_category_detailed($cat, $ns);
+    my $r = toolserver_pages_in_category_detailed($cat, $ns);
+    return $r;
   } 
 
   init_api();
