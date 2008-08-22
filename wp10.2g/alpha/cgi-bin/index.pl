@@ -50,16 +50,32 @@ foreach $letter ( sort {$a cmp $b} keys %$table ) {
 }
 print "</center><hr/>\n";
 
+print "<center><table class=\"wikitable\">\n";
+
 foreach $letter ( sort {$a cmp $b} keys %$table ){
-  print "<h3>$letter</h3><a name=\"$letter\"/>\n";
-  print "<ul>\n";
+print << "HERE";
+  <tr>
+    <th colspan="5" style="text-align: center; padding-top: 1em;"">
+         &mdash;&nbsp;<B>$letter</B>&nbsp;&mdash;<a name="$letter"/>
+    </th>
+  </tr>
+  <tr>
+        <th>Project</th>
+        <th>Articles</th>
+        <th>Data</th>
+        <th>Quality<br/>ratings</th>
+        <th>Importance<br/>ratings</th>
+   </tr>
+HERE
+
   my $project;
   foreach $project ( sort {$a cmp $b} keys %{$table->{$letter}} ){
     project_index_link($project, $projects->{$project});
   }
-  print "</ul>\n";
+  print "</td></tr>\n";
 }
 
+print "</table></center>\n";
 layout_footer();
 exit;
 
@@ -74,31 +90,39 @@ sub project_index_link {
 
   my $listp = $URI . "list2.pl?projecta=" . uri_escape($project);
   my $tablep = $URI . "table.pl?project=" . uri_escape($project);
+  my $logp = $URI . "log.pl?project=" . uri_escape($project);
 
   my $name = $project;
   if ( defined $data->{'p_shortname'} ) { 
     $name = $data->{'p_shortname'};
   }
 
-  my $line =  "<li> <b>$name</b>"
-            . " (" . $data->{'p_count'} . "): " 
-            . "<a href=\"$tablep\">summary table</a>, "
-            . "<a href=\"$listp\">article list</a>";
- 
   if ( defined $data->{'p_wikipage'} ) { 
-    $line .= ", <a href=\"http://en.wikipedia.org/w/index.php?title=" 
-           . uri_escape($data->{'p_wikipage'}) . "\">homepage</a>";
+    $name =  "<a href=\"http://en.wikipedia.org/w/index.php?title=" 
+            . uri_escape($data->{'p_wikipage'}) . "\">$name</a>";
   }
 
-	if ( $data->{'p_count'} != 0 ) { 
-		$line .= "<table style=\"background: transparent; border: 0\"><tr><td>\nQuality:";		
-		$line .= print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
-		$line .= "</td><td>Importance:";
-		$line .= print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
-		$line .= "</td></tr></table>";
-	}
+  my $line =  "<tr><td><b>$name</b></td>"
+            . "<td style=\"text-align: right;\">" . 
+               commify($data->{'p_count'}) . "</td>" 
+            . "<td><a href=\"$tablep\">table</a>, "
+            . "<a href=\"$listp\">list</a>, "
+            . "<a href=\"$logp\">log</a>";
+  $line .= "</td>";
+
+  if ( $data->{'p_count'} != 0 ) { 
+#    $line .= "<table style=\"background: transparent; border: 0\">" 
+#             . "<tr><td>\nQuality:";		
+    $line .= "<td>";
+    $line .= print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
+#    $line .= "</td><td>Importance:";
+    $line .= "</td><td>";
+    $line .= print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
+#  $line .= "</td></tr></table>";
+    $line .= "</td>";
+  }
 	
-  $line .= "</li>\n";
+  $line .= "</tr>\n";
   print $line;
 }
 
@@ -148,3 +172,12 @@ sub sort_projects {
   return $table;
 
 }
+
+#####################################################################
+sub commify {
+	# commify a number. Perl Cookbook, 2.17, p. 64
+	my $text = reverse $_[0];
+	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+	return scalar reverse $text;
+}
+#####################################################################
