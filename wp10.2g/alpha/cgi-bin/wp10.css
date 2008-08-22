@@ -173,3 +173,38 @@ li.fieldset  { margin: 0px;
                  padding: 0px;
                }
 
+.avance_boite {
+	background: #D3D3D3 none repeat scroll 0 0;
+	border: 1px solid gray;
+	height: 16px;
+	line-height: 1.5em;
+	margin: 0;
+	padding: 0;
+	position: relative;
+	width: 100px;
+}
+
+.avance_barre {
+	background: #A0A0FF none repeat scroll 0 0;
+	border: 0 none;
+	height: 100%;
+	line-height: 1.5em;
+	margin: 0;
+	padding: 0;
+	position: relative;
+	vertical-align: middle;
+}
+
+.avance_texte {
+	border: 0 none;
+	font-size: 14px;
+	height: 100%;
+	left: 0;
+	line-height: 1em;
+	margin: -0.5em 0 0;
+	padding: 0;
+	position: absolute;
+	text-align: center;
+	top: 50%;
+	width: 100px;
+}
