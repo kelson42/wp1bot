@@ -10,39 +10,20 @@ use POSIX;
 #############################################################
 # Define global variables and then load subroutines
 
-our $api;
-
-my $t = time();
-our $global_timestamp = strftime("%Y%m%d%H%M%S", gmtime($t));
-our $global_timestamp_wiki = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($t));
-
 require 'read_conf.pl';
 our $Opts = read_conf(); # Also initializes library paths
 
 require 'database_routines.pl';
 require 'wp10_routines.pl';
+require 'api_routines.pl';
 
 #############################################################
-# Create and initalize API object
 
-require Mediawiki::API;
-
-$api = new Mediawiki::API;  # global object 
-
-$api->maxlag(-1);
-$api->max_retries(20);
-
-$api->base_url('http://en.wikipedia.org/w/api.php');
-$api->debug_level(3);
-
-if ( defined $Opts->{'api-credentials'} ) { 
-#  $api->login_from_file($Opts->{'api-credentials'});
-}
-
-
-#############################################################
+my $project_details = db_get_project_details();
 
 my $project;
+
+my $new_only = 0;
 
 $ARGV[0] = decode("utf8", $ARGV[0]);
 
@@ -58,8 +39,6 @@ if ( defined $ARGV[0] ) {
 	download_release_data();	  
 	exit;
   }
-
-  my $project_details = db_get_project_details();
 
   if ( $ARGV[0] eq '-all' ) { 
     if ( $ARGV[1] eq 'under' && $ARGV[2] > 0 ) { 
@@ -89,6 +68,11 @@ if ( defined $ARGV[0] ) {
     exit;
   }
 
+  if ( $ARGV[0] eq '-new' ) { 
+    $new_only = 1;
+    $ARGV[0] = undef;
+  }
+
   if ( $ARGV[0] =~ /^-/ ) { 
     print << "HERE";
 
@@ -110,13 +94,17 @@ HERE
     print "-- main driver done\n";
     exit;
   } else { 
-    print "Looking for '$ARGV[0]' on wiki\n";
+    if ( $new_only == 0) { 
+      print "Looking for '$ARGV[0]' on wiki\n";
+    }
   }
 }
 
 my $projects = download_project_list();
 foreach $project ( @$projects ) { 
-  if ( defined $ARGV[0] ) {
+  if ( $new_only ) { 
+    next if ( defined $project_details->{$project} ); 
+  } elsif ( defined $ARGV[0] ) {
     next unless ( $project =~ m/^\Q$ARGV[0]\E$/ );
   }
   download_project($project);
