@@ -82,6 +82,7 @@ Unknown option $ARGV[0]
     $0 -all under <N>         : limit -all to projects with <= N articles 
     $0 -all over <N>          : limit -all to projects with > N articles
     $0 -all exclude <PROJECT> : update everything but <PROJECT>
+  $0 -new                     : update projects on wiki not in database
   $0 -releases                : update WP 1.0 data
   $0 -reviews                 : update FA/FL/GA data
   $0 <PROJECT>                : update PROJECT
