@@ -681,7 +681,7 @@ sub query_form {
      <input type="checkbox" $intersect_checked  name="intersect"  rel="release"/>
      <b>Filter release / review data</b><br/>
      <table class=\"subform\" rel="release">
-       <tr><td>Test</td></tr>
+       <tr><td>Not yet implemented</td></tr>
       </table>
   </td></tr>
   </table>

@@ -103,9 +103,9 @@ sub cached_ratings_table {
 	  print $c_html;
       print "</center>\n";
       print "\n";
-      print "<hr/><div class=\"indent\"><pre>";
-      print $c_wikicode;
-      print "</pre></div>\n";
+#      print "<hr/><div class=\"indent\"><pre>";
+#      print $c_wikicode;
+#      print "</pre></div>\n";
 
       return;
     } else {
@@ -375,8 +375,11 @@ sub query_form {
     $projects->{$row[0]} = 1;
   }
 
-  print "<form>\n";
-  print "<select name=\"project\">\n";
+  print "<form>\n"; 
+  print "<fieldset style=\"display: inline;\">\n";
+  print "<legend>Generate table</legend>\n";
+  print "<label for=\"project\">Project:</label>\n";
+  print "<select name=\"project\" id=\"project\">\n";
 
   my $p;
   foreach $p ( sort { $a cmp $b} keys %$projects) { 
@@ -389,7 +392,7 @@ sub query_form {
 
   print "</select>\n";
   print "<input type=\"submit\" value=\"Make table\"/>\n";
-  print "</form>\n";
+  print "</fieldset></form>\n";
   print "\n";
 
   return $projects;

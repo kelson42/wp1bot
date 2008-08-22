@@ -37,17 +37,20 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 layout_header("Project index");
 
-
 my $table = sort_projects($projects);
 
+my $project_count = scalar keys %$projects;
+
 # Fix this
-my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/index.pl";
+my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
 
 print "<center>\n";
+print "<b>$project_count</b> projects: \n";
 my $letter;
 foreach $letter ( sort {$a cmp $b} keys %$table ) {
   print "<a href=\"$uri#" . $letter . "\">$letter</a> ";
 }
+print "<br/><a href=\"$uri/table2.pl\">Overall ratings table</a>\n"; 
 print "</center><hr/>\n";
 
 print "<center><table class=\"wikitable\">\n";
@@ -130,18 +133,23 @@ sub project_index_link {
 # TODO: figure out how the [[fr:Template:Avacement]] template works, and
 # copy it to enwiki
 sub print_progress_bar {
-	my $number = shift;
+  my $number = shift;
+
+  # Special case: if none at all are assessed, that means the project
+  # just doesn't do that sort of assessment (particularly with 
+  # importance ratings)
+  if ( $number == 0 ) { return "";}
+		
+  # Get the color of the bar
+  my $color = get_bar_color($number);
 	
-	# Get the color of the bar
-	my $color = get_bar_color($number);
-	
-	# Format the input to two decimal digits
-	my $rounded = sprintf("%.2f", $number);
-	
-	return << "HERE";
-	<div class="progress_cell" style="">
-	<div class="progress_bar" style="background:#$color; width:$rounded%;">
-	<div class="progress_text" style="">$rounded&#160;%</div></div></div>
+  # Format the input to two decimal digits
+  my $rounded = sprintf("%.2f", $number);
+		
+  return << "HERE";
+    <div class="progress_cell" style="">
+    <div class="progress_bar" style="background:#$color; width:$rounded%;">
+    <div class="progress_text" style="">$rounded&#160;%</div></div></div>
 HERE
 }
 
@@ -161,6 +169,15 @@ sub sort_projects {
     }
     $letter = substr(decode("utf8", $name), 0, 1) ;
     $letter = encode("utf8", $letter);
+
+    if ( ! ( $letter =~ /[A-Z]/ ) ) { 
+      if ( $letter =~ /[0-9]/ ) { 
+        $letter = '0&ndash;9';
+      } else { 
+        $letter = "[Other]";
+      }
+    }
+
     if ( ! defined $table->{$letter} ) { 
       $table->{$letter} = {};
     }

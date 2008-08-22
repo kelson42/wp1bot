@@ -52,15 +52,15 @@ layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
-print "</div><hr/><div class=\"navbox\">\n";
+print "<hr/><div class=\"navbox\">\n";
 print_header_text();
 print "</div>\n<center>\n";
 print $html;
 print "</center>\n";
 print "\n";
-print "<hr/><div class=\"indent\"><pre>";
-print $wikicode;
-print "</pre></div>\n";
+#print "<hr/><div class=\"indent\"><pre>";
+#print $wikicode;
+#print "</pre></div>\n";
 
 layout_footer();
 
@@ -411,7 +411,7 @@ sub cached_ratings_table {
     return ($c_html, $c_wikicode);
   }
 
-  print "No cached output, regenerating\n";
+  print "No cached output, regenerating<br/>\n";
   my $ts = time();
   
   my ($html, $wikicode) = ratings_table();
