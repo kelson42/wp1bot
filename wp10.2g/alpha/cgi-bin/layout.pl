@@ -87,7 +87,7 @@ sub get_bar_color {
 	if ($percent >= 87.5) { $color='16E900' }
 	if ($percent >= 92.5) { $color='33CC00' }
 	if ($percent >= 97.5) { $color='33CC00' }
-	if ($percent > 100) { $color='00000' }
+	if ($percent > 100) { $color='000000' }
 	return $color;
 }
 
