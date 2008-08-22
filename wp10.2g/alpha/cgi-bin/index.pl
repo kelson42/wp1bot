@@ -94,6 +94,9 @@ sub project_index_link {
   my $listp = $URI . "list2.pl?projecta=" . uri_escape($project);
   my $tablep = $URI . "table.pl?project=" . uri_escape($project);
   my $logp = $URI . "log.pl?project=" . uri_escape($project);
+  my $catp = "/wiki/Category:" . uri_escape($project)
+             . " articles by quality";
+  
 
   my $name = $project;
   if ( defined $data->{'p_shortname'} ) { 
@@ -110,7 +113,8 @@ sub project_index_link {
                commify($data->{'p_count'}) . "</td>" 
             . "<td>&nbsp;<a href=\"$tablep\">table</a>, "
             . "<a href=\"$listp\">list</a>, "
-            . "<a href=\"$logp\">log</a>";
+            . "<a href=\"$logp\">log</a>, "
+            . "<a href=\"$catp\">cat</a>";
   $line .= "</td>";
 
   if ( $data->{'p_count'} != 0 ) { 
