@@ -192,7 +192,7 @@ sub ratings_table {
                    '[' . $script_url 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
-                    . $data->{$qual}->{$prio} . "]");
+                    . commify($data->{$qual}->{$prio}) . "]");
       } else { 
          $table->data($qual, $prio, "");
       }
@@ -212,28 +212,28 @@ sub ratings_table {
     $table->data($qual, "Total", "'''[" 
                    . $script_url 
                     . "&quality=" . uri_escape($qual)  . ' ' 
-                    . $qualcounts->{$qual} . "]'''");
+                    . commify($qualcounts->{$qual}) . "]'''");
   }
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
                 "'''[" . $script_url 
                     . "&importance=" . uri_escape($prio) 
-                   . ' ' . $priocounts->{$prio} . "]'''");
+                   . ' ' . commify($priocounts->{$prio}) . "]'''");
 
     $table->data("Assessed", $prio, 
                 "'''[" . $script_url 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
-                   . ' ' . $totalAssessed->{$prio} . "]'''" );
+                   . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . $script_url        . ' ' . $total . "]'''");
+                   . commify($script_url )  . ' ' . $total . "]'''");
 
   $table->data("Assessed", "Total", 
                 "'''[" . $script_url . "&quality=Assessed" 
-                   . ' ' . $totalAssessed->{'Total'} . "]'''" );
+                   . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
 
   my $code = $table->wikicode();
 
@@ -353,3 +353,10 @@ sub cached_ratings_table {
 }
 
 #####################################################################
+
+sub commify {
+	# commify a number. Perl Cookbook, 2.17, p. 64
+	my $text = reverse $_[0];
+	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+	return scalar reverse $text;
+}

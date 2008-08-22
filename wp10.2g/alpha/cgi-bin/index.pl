@@ -42,13 +42,13 @@ my $table = sort_projects($projects);
 my $project_count = scalar keys %$projects;
 
 # Fix this
-my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
+my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin";
 
 print "<center>\n";
 print "<b>$project_count</b> projects: \n";
 my $letter;
 foreach $letter ( sort {$a cmp $b} keys %$table ) {
-  print "<a href=\"$uri#" . $letter . "\">$letter</a> ";
+  print "<a href=\"$uri/index.pl#" . $letter . "\">$letter</a> ";
 }
 print "<br/><a href=\"$uri/table2.pl\">Overall ratings table</a>\n"; 
 print "</center><hr/>\n";

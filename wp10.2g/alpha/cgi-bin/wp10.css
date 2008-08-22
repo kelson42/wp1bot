@@ -91,6 +91,10 @@ table.wikitable td {
   border: 1px solid #aaa;
 }
 
+table.wikitable th { 
+  background: #fff;
+}
+
 #poweredbyicon {
   border: 0 none;
   float: right;
@@ -158,20 +162,6 @@ div.footer {
 
 
 
-
-ul.wrapper     { width: 95%;
-                 background-color: black;
-                 border: 1px black solid;
-                 list-style-type: none;
-                 padding: 0px;
-                 margin: 0px;
-                 white-space: nowrap;
-               }
-
-li.fieldset  { margin: 0px;
-                 border: 0px;
-                 padding: 0px;
-               }
 
 .progress_cell {
 	background: #D3D3D3 none repeat scroll 0 0;

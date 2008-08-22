@@ -249,7 +249,7 @@ sub ratings_table {
                    '[' . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
-                    . $data->{$qual}->{$prio} . "]");
+                    . commify($data->{$qual}->{$prio}) . "]");
       } else { 
          $table->data($qual, $prio, "");
       }
@@ -270,7 +270,7 @@ sub ratings_table {
                    . $script_url . "projecta=" . uri_escape($proj) 
 #                    . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
-                    . $qualcounts->{$qual} . "]'''");
+                    . commify($qualcounts->{$qual}) . "]'''");
   }
 
   foreach $prio ( @PriorityRatings ) { 
@@ -278,23 +278,23 @@ sub ratings_table {
                 "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
 #                    . "&quality=" . uri_escape($qual)  
-                   . ' ' . $priocounts->{$prio} . "]'''");
+                   . ' ' . commify($priocounts->{$prio}) . "]'''");
 
     $table->data("Assessed", $prio, 
                 "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
-                   . ' ' . $totalAssessed->{$prio} . "]'''" );
+                   . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
                    . $script_url . "projecta=" . uri_escape($proj) 
-                   . ' ' . $total . "]'''");
+                   . ' ' . commify($total) . "]'''");
 
   $table->data("Assessed", "Total", 
                 "'''[" . $script_url . "projecta=" . uri_escape($proj) 
                     . "&quality=Assessed" 
-                   . ' ' . $totalAssessed->{'Total'} . "]'''" );
+                   . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
 
   my $code = $table->wikicode();
   my $r =  $api->parse($code);
@@ -441,4 +441,11 @@ sub get_link_from_api {
     $t = @t[0] . "\"" . $baseURL .  @t[1];
 	
 	return $t;
+}
+
+sub commify {
+	# commify a number. Perl Cookbook, 2.17, p. 64
+	my $text = reverse $_[0];
+	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+	return scalar reverse $text;
 }
