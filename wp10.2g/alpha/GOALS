@@ -3,3 +3,7 @@ Goals to finish before promoting to beta version:
 * Clean up all code, move hardcoded strings to conf file
 
 * Look through cgi-bin for duplicate code, move to a shared location
+
+* Detect when articles have been renamed, and log this appropriately
+  rather than claiming the old name was removed and the new name was
+  added.
