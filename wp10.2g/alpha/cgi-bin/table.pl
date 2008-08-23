@@ -406,7 +406,7 @@ sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
 	my $listURL = $script_url;
-	$listURL = $listURL . "projecta=" . $project . "&limit=50&entry=yes";
+	$listURL = $listURL . "projecta=" . $project . "&limit=50";
 	
 	($project, $timestamp, $wikipage, $parent, $shortname) = 
 	get_project_data($project);

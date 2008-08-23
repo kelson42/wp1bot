@@ -81,17 +81,18 @@ sub ratings_table {
 
   # Step 1: fetch totals from DB and load them into the $data hash
 
-  my $sth = $dbh->prepare(
-  "select count(distinct r_article), cq.c_replacement, ci.c_replacement
-     from ratings 
-     join categories as cq 
-       on r_project = cq.c_project and cq.c_type = 'quality' 
-                                  and cq.c_rating = r_quality
-    join categories as ci
-       on r_project = ci.c_project and ci.c_type = 'importance' 
-                                   and ci.c_rating = r_importance
-    group by cq.c_replacement, ci.c_replacement");
+  my $query = <<"  HERE";
+select count(distinct a_article), grq.gr_rating, gri.gr_rating
+from global_articles
+join global_rankings as grq 
+  on grq.gr_type = 'quality' and grq.gr_ranking= a_quality
+join global_rankings as gri 
+  on gri.gr_type = 'importance' and gri.gr_ranking= a_importance
+group by grq.gr_rating, gri.gr_rating
+  HERE
 
+  my $sth = $dbh->prepare($query);
+  
   $sth->execute();
 
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
@@ -229,7 +230,7 @@ sub ratings_table {
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . commify($script_url )  . ' ' . $total . "]'''");
+                   . $script_url  . ' ' . commify($total) . "]'''");
 
   $table->data("Assessed", "Total", 
                 "'''[" . $script_url . "&quality=Assessed" 
@@ -302,12 +303,12 @@ sub get_link_from_api {
 #####################################################################
 
 sub print_header_text {
-	my $project = shift;
-	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = $script_url . "&entry=yes";
-
-        print "Overall ratings data " 
-           . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
+  my $project = shift;
+  my ($timestamp, $wikipage, $parent, $shortname);
+  my $listURL = $script_url;
+  
+  print "Overall ratings data " 
+      . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
 }
 
 #####################################################################
@@ -346,7 +347,7 @@ sub cached_ratings_table {
         . $html . $cache_sep 
         . $wikicode;
 
-  $cache->set($key, $data, '1 hour');
+  $cache->set($key, $data, '1 week');
 
 
   return ($html, $wikicode);

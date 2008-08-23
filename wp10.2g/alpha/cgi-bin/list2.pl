@@ -75,12 +75,15 @@ layout_header("Article lists");
 my $projects = list_projects();
 query_form(\%param, $projects);
 
-if ( ! defined $param{'entry'} ) { 
+
+if ( defined $param{'run'} ) { 
   ratings_table(\%param, $projects);
 }
 
 layout_footer();
 
+
+exit;
 ###########################################################################
 ###########################################################################
 
@@ -614,6 +617,8 @@ sub query_form {
 
   print << "HERE";
 <form>
+<input type="hidden" name="run" value="yes"/>
+
 
 <table class="outer">
 <tr><td>
