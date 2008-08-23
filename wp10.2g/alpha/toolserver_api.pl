@@ -19,6 +19,8 @@ my  $Prefix;
  
 =cut
 
+my $dbh = toolserver_connect($Opts);
+
 #####################################################################
 
 =item B<toolserver_connect>(OPTIONS )
