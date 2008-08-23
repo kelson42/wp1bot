@@ -5,7 +5,7 @@ our $global_timestamp_wiki;
 
 =head1 SYNOPSIS
 
-Routines to update the local databse from informati on the wiki
+Routines to update the local database from information on the wiki
 
 =head1 FUNCTIONS
 
