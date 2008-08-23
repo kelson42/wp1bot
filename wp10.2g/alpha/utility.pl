@@ -32,6 +32,7 @@ print "Count: $count\n";
 my $i = 0;
 my $t;
 foreach $project ( sort {$a cmp $b} keys %$project_details ) {
+  next unless ( $project =~ /\Q$ARGV[0]\E/);
     $i++;
     print "$i / $count $project\n";
     $t = time();

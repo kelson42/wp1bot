@@ -3,6 +3,30 @@ use Data::Dumper;
 our $global_timestamp;
 our $global_timestamp_wiki;
 
+=head1 SYNOPSIS
+
+Routines to update the local databse from informati on the wiki
+
+=head1 FUNCTIONS
+
+=over 
+
+=item Standard parameters:
+
+=over 
+
+=item PROJECT
+
+The name of a rated project
+
+=item EXTRA
+
+The hash ref returned by B<get_extra_assessments>()
+
+=back
+
+=cut
+
 ######################################################################
 # i18n
 
@@ -38,7 +62,13 @@ my @Months=("January", "February", "March", "April", "May", "June",
             "December");
 
 ######################################################################
-# Download list of projects based on $Root_category
+
+=item B<download_project_list>()
+
+Download list of all participating projects from wiki
+
+Returns array ref 
+=cut
 
 sub download_project_list {
   my ($projects, $res, $cat);
@@ -62,7 +92,11 @@ sub download_project_list {
 }
 
 #################################################################
-# Download data for one project
+=item B<download_project>(PROJECT)
+
+Update assessment data for PROJECT
+
+=cut
 
 sub download_project {
   my $project = shift;
@@ -98,9 +132,16 @@ sub download_project {
 }
 
 #################################################################
-# Make list of categories storing quality data for project
-# Return hash ref:  name => category
-# name guaranteed to be a key in %Quality or a value in $extra
+
+=item B<get_project_quality_categories>(PROJECT, EXTRA)
+
+Make list of categories storing quality data for project
+
+Each returned rating is a key in %Quality or a value in EXTRA
+
+Returns hash ref: C<rating> => C<category>
+
+=cut
 
 sub get_project_quality_categories {
   my $project = shift;
@@ -136,9 +177,16 @@ sub get_project_quality_categories {
 }
 
 #################################################################
-# Make list of categories storing importance data for project
-# Return hash ref:  name => category
-# name guaranteed to be a key in %Importance or a value in $extra
+
+=item B<get_project_importance_categories>(PROJECT, EXTRA)
+
+Make list of categories storing importance data for project
+
+Each returned rating is a key in %Importance or a value in EXTRA
+
+Returns hash ref: C<rating> => C<category>
+
+=cut
 
 sub get_project_importance_categories {
   my $project = shift;
@@ -179,7 +227,12 @@ sub get_project_importance_categories {
 }
 
 #################################################################
-# Download quality assessments for project, update database
+
+=item B<download_project_quality_ratings>(PROJECT, EXTRA)
+
+Download quality assessments for project, update database
+
+=cut
 
 sub download_project_quality_ratings { 
   my $project = shift;
@@ -238,7 +291,12 @@ sub download_project_quality_ratings {
 }
 
 #################################################################
-# Download importance assessments for project, update database
+
+=item B<download_project_importance_ratings>(PROJECT, EXTRA)
+
+Download importance assessments for project, update database
+
+=cut
 
 sub download_project_importance_ratings { 
   my $project = shift;
@@ -296,8 +354,13 @@ sub download_project_importance_ratings {
 }
 
 ###################################################################
-# Parse the ReleaseVersionParameters from the main
-# category page for the project
+
+=item B<get_extra_assessments>(PROJECT)
+
+Parse the ReleaseVersionParameters template from the main
+category page for PROJECT
+
+=cut
 
 sub get_extra_assessments { 
   my $project = shift;
@@ -403,8 +466,13 @@ sub get_extra_assessments {
 
 #######################################################################
 
-sub download_review_data { 
+=item B<download_review_data>()
 
+Download review data from wiki, which concerns FA, GA, etc. Update database.
+
+=cut
+
+sub download_review_data { 
   eval {
     download_review_data_internal();
     db_commit();
@@ -417,6 +485,13 @@ sub download_review_data {
 }
 
 #######################################################################
+
+=item B<download_review_data_internal>()
+
+Download review data from database. This function does not commit the
+database.
+
+=cut
 
 sub download_review_data_internal {
   my (%rating);
@@ -465,15 +540,22 @@ sub download_review_data_internal {
   # Check if every article from the old listing is available
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
-#    print "NOT SEEN ($oldrating->{$art}) '$art' \n";
+#   print "NOT SEEN ($oldrating->{$art}) '$art' \n";
     remove_review_data($art, 'None', $oldrating->{$art});
   }
   return 0;
 }
 
 #######################################################################
-sub download_release_data { 
 
+=item B<download_release_data>()
+
+Download release data from wiki, which is about release
+versions such as WP 0.5. Update database.
+
+=cut
+
+sub download_release_data { 
   eval {
     download_release_data_internal();
     db_cleanup_releases();
@@ -487,6 +569,13 @@ sub download_release_data {
 }
 
 #######################################################################
+
+=item B<download_release_data_internal>()
+
+Download release data from the database. This function does not
+commit the database.
+
+=cut
 
 sub download_release_data_internal {
 
@@ -534,13 +623,19 @@ sub download_release_data_internal {
 }
 #######################################################################
 
+=item B<update_timestamps>( )
+
+Update the internal timestamp variables to the current time.
+
+=cut
+
 sub update_timestamps {
   my $t = time();
   $global_timestamp = strftime("%Y%m%d%H%M%S", gmtime($t));
   $global_timestamp_wiki = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($t));
 }
 
-
+#######################################################################
 
 # Load successfully
 1;
