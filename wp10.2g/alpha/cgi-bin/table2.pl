@@ -2,12 +2,6 @@
 use strict;
 use Encode;
 
-
-my $regenerate_only = 0;
-if ( defined $ARGV[0] ) { 
-  $regenerate_only = 1;
-}
-
 # WP 1.0 bot - second generation
 # CGI to display table of ratings information
 
@@ -52,12 +46,17 @@ require "database_www.pl";
 
 our $dbh = db_connect($Opts);
 
+
+if ( defined $ARGV[0] ) { 
+  cached_ratings_table(1);
+  exit;
+}
+
 layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
 
-if ( ! $regenerate_only ) { 
 print "<hr/><div class=\"navbox\">\n";
 print_header_text();
 print "</div>\n<center>\n";
@@ -67,7 +66,6 @@ print "\n";
 #print "<hr/><div class=\"indent\"><pre>";
 #print $wikicode;
 #print "</pre></div>\n";
-}
 
 layout_footer();
 
@@ -314,14 +312,17 @@ sub print_header_text {
 #####################################################################
 
 sub cached_ratings_table { 
-  print "<div class=\"indent\">\n";
-  print "<b>Debugging output</b><br/>\n";
-  print "Current time: $timestamp<br/>\n";
+  my $force_regenerate = shift || 0;
+
 
   my $key = "GLOBAL:TABLE";
   my $data;
 
-  if ( $cache->exists($key) && ! $regenerate_only ) { 
+  if ( $cache->exists($key) && ! $force_regenerate ) { 
+    print "<div class=\"indent\">\n";
+    print "<b>Debugging output</b><br/>\n";
+    print "Current time: $timestamp<br/>\n";
+
     my $expiry = $cache->expiry($key);
     print "Cached output expires: " 
         . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
@@ -334,14 +335,19 @@ sub cached_ratings_table {
     return ($c_html, $c_wikicode);
   }
 
-  print "No cached output, regenerating<br/>\n";
+  if ( ! $force_regenerate ) { 
+    print "Cannot regenerate table over CGI request.<br/>\n";
+    return;
+  }
+
+  print "Current time: $timestamp<br/>\n";
+  print "Regenerating table:<br/>\n";
   my $ts = time();
   
   my ($html, $wikicode) = ratings_table();
 
   $ts = time() - $ts;
-  print "Done; $ts seconds elapsed.</div>\n";
-  sleep 4;
+  print "Regenerated in $ts seconds</div>\n";
 
   $data = "GLOBAL:TABLE" . $cache_sep 
         . $html . $cache_sep 
