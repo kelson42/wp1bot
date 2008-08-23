@@ -29,9 +29,9 @@ my %Quality=( 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425,
               'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
               $Assessed_Class => 20, $Unassessed_Class => 0);
 
-my %Importance=( 'Top-Class' => 400, 'High-Class' => 300, 
-                 'Mid-Class' => 200, 'Low-Class' => 100, 
-                 $Unassessed_Class => 0); 
+my %Importance=( 'Top-Class' => 400, 'High-Class' => 300,
+                 'Mid-Class' => 200, 'Low-Class' => 100,
+                 $Unassessed_Class => 0);
 
 my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
@@ -82,7 +82,7 @@ sub download_project {
 	download_project_quality_ratings($project, $extra);
 	download_project_importance_ratings($project, $extra);
 	db_cleanup_project($project);
-	update_project($project, $global_timestamp, $homepage, 
+	update_project($project, $global_timestamp, $homepage,
                        $parent, $shortname);
     db_commit();
 	};

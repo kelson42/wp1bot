@@ -1,6 +1,6 @@
 -- The project table stores a list of participating wikiprojects
 
-create table projects ( 
+create table if not exists projects ( 
 
     p_project         varchar(63) not null,
         -- project name
@@ -34,7 +34,7 @@ create table projects (
 -- The ratings table stores the ratings data. Each article will
 -- be listed once per project that assessed it. 
 
-create table ratings ( 
+create table if not exists ratings ( 
 
     r_project               varchar(63)  not null,
         -- project name
@@ -66,7 +66,7 @@ create table ratings (
 -- The categories table stores a list of all ratings 
 -- assigned by a particular project
 
-create table categories ( 
+create table if not exists categories ( 
 
     c_project         varchar(63)  not null,
         -- project name
@@ -97,7 +97,7 @@ create table categories (
 -- The logging table has one log entry for each change of an article. 
 -- Changing both quality and importance will create two log entries. 
 
-create table logging ( 
+create table if not exists logging ( 
     l_project        varchar(63)  not null,   
        -- project name
 
@@ -124,7 +124,8 @@ create table logging (
        -- timestamp when page was edited
        -- a wiki-format timestamp
 
-    key (l_project, l_article, l_action, l_timestamp)
+    key (l_project, l_article, l_action, l_timestamp),
+    key (l_article)
 ) default charset 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
@@ -133,7 +134,7 @@ create table logging (
 -- Featured and Good Articles. Each article will be included at 
 -- most once, marked either GA or FA. 
 
-create table reviews ( 
+create table if not exists reviews ( 
 
     rev_value               varchar(10)  not null,
         -- whether an article is FA or GA
@@ -156,7 +157,7 @@ create table reviews (
 -- The releases table stores static release information for all pages  
 -- under WP:1.0's scope. 
 
-create table releases ( 
+create table if not exists releases ( 
 
     rel_article             varchar(255) not null,
         -- article title
@@ -174,3 +175,86 @@ create table releases (
 
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
+
+
+-- The global_articles table stores the higest quality and 
+-- highest importance assigned to each article. It is used to 
+-- generate global statistics 
+
+create table if not exists global_articles ( 
+
+    a_article             varchar(255) not null,
+        -- article title
+
+    a_quality             varchar(63) not null,
+        -- The Wikipedia 0.5 category (Arts, Language, etc.)
+
+    a_importance          varchar(63) not null,
+        -- The Wikipedia 0.5 category (Arts, Language, etc.)
+
+    primary key (a_article)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+
+-- the release table stores data about released versions
+-- (currently limited to WP 0.5)
+
+create table if not exists releases ( 
+
+    rel_article             varchar(255) not null,
+        -- article title
+
+    rel_0p5_category        varchar(63) not null,
+        -- The Wikipedia 0.5 category (Arts, Language, etc.)
+
+    rel_0p5_timestamp       binary(16),
+        -- time when article was added to a 0.5 release category
+        -- NOTE: a revid can be obtained from timestamp via API
+        -- a wiki-format timestamp
+	
+    primary key (rel_article),
+    key         (rel_0p5_category)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+
+-- the global_rankings table determines which
+-- quality and importance ratings appear in the
+-- global table
+
+create table if not exists global_rankings (
+
+    gr_type	      varchar(16)  not null,
+        -- what type of rating - 'quality' or 'importance'
+
+    gr_rating          varchar(63)  not null,
+        -- name of the rating (e.g. B-Class)
+
+    gr_ranking        int unsigned  not null,
+        -- integer sortkey for the rating
+
+   primary key (gr_type,gr_rating),
+   key (gr_type, gr_ranking)
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+replace into global_rankings values 
+   ('quality', 'FA-Class',       500),
+   ('quality', 'FL-Class',       480), 
+   ('quality', 'A-Class',        425), 
+   ('quality', 'GA-Class',       400), 
+   ('quality', 'B-Class',        300), 
+   ('quality', 'C-Class',        225), 
+   ('quality', 'Start-Class',    150),
+   ('quality', 'Stub-Class',     100), 
+   ('quality', 'List-Class',      80),              
+   ('quality', 'Assessed-Class',  20),
+   ('quality', 'Unassessed-Class' ,0),
+   ('importance', 'Top-Class',      400),
+   ('importance', 'High-Class',     300),                
+   ('importance', 'Mid-Class',      200), 
+   ('importance', 'Low-Class',      100),
+   ('importance', 'Unassessed-Class', 0);

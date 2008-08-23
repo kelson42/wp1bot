@@ -1,6 +1,50 @@
 use strict vars;
 use Data::Dumper;
 
+=head1 SYNOPSIS
+
+Routines to connect, query, and commit to the database
+
+Note that autocommit is turned off, so C<db_commit()> must
+be called to finish each transaction.
+
+=head1 FUNCTIONS
+
+=over 
+
+=item Standard parameters:
+
+=over 
+
+=item TIMESTAMP
+
+Current time
+
+=item PROJECT
+
+The name of a rated project
+
+=item ARTICLE
+
+The name of an article
+
+=item RTYPE
+
+Either 'quality' or 'importance'
+
+=item RATING
+
+A quality or importance rating name, e.g. Start-Class, Top-Class
+
+=item REV_TIMESTAMP
+
+A timestamp used to describe a particular revision of an article; used in 
+conjunction with the ARTICLE parameter
+
+=back
+
+=cut
+
 $Data::Dumper::Sortkeys = 1;
 
 our $Opts;
@@ -9,6 +53,24 @@ use DBI;
 my $dbh = db_connect($Opts);
 
 #######################################################################
+
+=item B<update_article_data>(TIMESTAMP, PROJECT, ARTICLE, RTYPE, RATING, 
+REV_TIMESTAMP, PREVIOUS_RATING)
+
+Top-level routine for updating data for a single article. Updates the
+I<ratings> table and I<logging> table. 
+
+Parameters:
+
+=over
+
+=item PREVIOUS_RATING
+
+Previous rating value, used for I<logging>
+
+=back
+
+=cut
 
 sub update_article_data {
   my $global_timestamp = shift;
@@ -41,6 +103,31 @@ sub update_article_data {
 
 #######################################################################
 
+=item B<update_category_data>
+(PROJECT, RATING, RTYPE, CATEGORY, RANKING, REPLACEMENT)
+
+Update information about a rating for a project
+
+=over
+
+=item CATEGORY
+
+The wikipedia category listing these articles.
+e.g. C<Category:B-Class mathematics articles>
+
+=item RANKING
+
+A numeric sort ranking used to sort tables
+
+=item REPLACEMENT
+
+A standard rating (e.g. B-Class) used to replcae this rating in
+global statistics
+
+=back
+
+=cut
+
 sub update_category_data { 
   my $project = shift;
   my $rating = shift;
@@ -60,8 +147,8 @@ sub update_category_data {
   $replacement = encode("utf8", $replacement);
 
   my $sth = $dbh->prepare (
-       "UPDATE categories SET c_category = ?, c_ranking = ?, c_replacement = ? " .
-       "WHERE c_project = ? and c_rating= ? and c_type = ? "
+       "UPDATE categories SET c_category = ?, c_ranking = ?, c_replacement = ?
+        WHERE c_project = ? and c_rating= ? and c_type = ? "
      );
 
   my $count = $sth->execute($category, $ranking, $replacement, 
@@ -78,6 +165,12 @@ sub update_category_data {
 ######################################################################
 ## Internal function to update the ratings table when article is 
 ## reassessed
+
+=item B<update_article_rating_data>(PROJECT, ARTICLE, RTYPE, RATING, REV_TIMESTAMP)
+
+Update I<ratings> table for a single article
+
+=cut
 
 sub update_article_rating_data { 
   my $project = shift;
@@ -114,6 +207,74 @@ sub update_article_rating_data {
 
 ############################################################
 
+=item B<update_articles_table>(PROJECT)
+
+Update I<articles> table, which stores the highest quality and
+importance assigned to an article. Must be run after updating
+a project's data, to keep database coherent.
+
+=cut
+
+sub update_articles_table { 
+  my $project = shift;
+  $project = encode("utf8", $project);
+
+  my $query = <<"HERE";
+SELECT r_article, max(qual.gr_ranking), max(qual.gr_ranking) 
+FROM ratings 
+JOIN categories as ci
+   ON r_project = ci.c_project AND ci.c_type = 'importance'      
+      AND r_importance = ci.c_rating 
+JOIN categories as cq
+   ON r_project = cq.c_project AND cq.c_type = 'quality'      
+      AND r_quality = cq.c_rating
+JOIN global_rankings AS qual 
+  ON qual.gr_type = 'quality' AND qual.gr_rating = cq.c_replacement  
+JOIN global_rankings AS imp 
+  ON imp.gr_type = 'importance' AND imp.gr_rating = ci.c_replacement 
+WHERE r_project = ? 
+GROUP BY r_article
+HERE
+
+  my $sth = $dbh->prepare($query);
+
+  print "Updating articles table for $project\n";
+  my $start = time();
+  my $r = $sth->execute($project);
+  print "Result: $r rows in "  .(time() - $start) . " seconds\n";
+  return;
+}
+
+############################################################
+
+=item B<update_project>(PROJECT, TIMESTAMP, WIKIPAGE, PARENT, SHORTNAME)
+
+Update the project table with data for PROJECT
+
+Parameters:
+
+=over
+
+=item TIMESTAMP
+
+when PROJECT was last updated
+
+=item WIKIPAGE
+
+wikipeida homepage for PROJECT
+
+=item PARENT
+
+Parent project, or undef
+
+=item SHORTNAME
+
+Abbreviated name to display for PROJECT
+
+=back
+
+=cut
+
 sub update_project { 
   my $project = shift;
   my $timestamp = shift;
@@ -131,15 +292,16 @@ sub update_project {
   $proj_count = $row[0];
 
   my $sth_qcount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	                     . "WHERE r_project = ? AND r_quality='Unassessed-Class'");
+	        . "WHERE r_project = ? AND r_quality='Unassessed-Class'");
   $sth_qcount->execute($project);
   @row = $sth_qcount->fetchrow_array();
   my $qcount = $proj_count - $row[0];
   print "Quality-assessed articles: $qcount\n";
 
   my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-						 . "WHERE r_project = ? AND r_importance='Unknown-Class'");
+	       . "WHERE r_project = ? AND r_importance='Unknown-Class'");
   $sth_icount->execute($project);
+
   @row = $sth_icount->fetchrow_array();
   my $icount = $proj_count - $row[0];
   print "Importance-assessed articles: $icount\n";
@@ -150,7 +312,8 @@ sub update_project {
                          . " WHERE p_project = ?" );
 
   my $count = $sth->execute($timestamp, $wikipage, $parent, 
-                            $shortname, $proj_count, $qcount, $icount, $project);
+                            $shortname, $proj_count, $qcount, 
+			    $icount, $project);
 
   if ( $count eq '0E0' ) { 
     $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?,?,?)");
@@ -168,6 +331,12 @@ sub update_project {
 ############################################################
 ## Query project table for a particular project
 
+=item B<project_exists>(PROJECT)
+
+Returns true if PROJECT exists in the I<projects> table, false otherwise
+
+=cut
+
 sub project_exists {
   my $project = shift;
   $project = encode("utf8", $project);
@@ -179,6 +348,14 @@ sub project_exists {
 }
 
 ############################################################
+
+=item B<get_project_ratings>(PROJECT, TYPE)
+
+Fetch assessments of TYPE for PROJECT. 
+
+Returns a hash: C<article> => C<rating>
+
+=cut
 
 sub get_project_ratings {
   my $project = shift;
@@ -208,6 +385,12 @@ sub get_project_ratings {
 
 ###########################################################
 
+=item B<db_commit>()
+
+Commit current DB transaction
+
+=cut
+
 sub db_commit { 
   print "Commit database\n";
   $dbh->commit();
@@ -216,6 +399,12 @@ sub db_commit {
 
 ############################################################
 
+=item B<db_rollback>()
+
+Rollback current DB transaction
+
+=cut
+
 sub db_rollback { 
   print "Rollback database\n";
   $dbh->rollback();
@@ -223,6 +412,18 @@ sub db_rollback {
 }
 
 ############################################################
+
+=item B<db_cleanup_project>(PROJECT)
+
+Deletes data forr articles that were once assessed but aren't
+anymore. Also gets rid of NULL values in I<ratings> table.
+
+First, delete rows from I<ratings> table for PROJECT where
+quality and importance are both C<Unknown-Class>. Then
+replace any NULL I<ratings> quality or importance values
+with C<Unknown-Class>.
+
+=cut
 
 sub db_cleanup_project {
   my $proj = shift;
@@ -260,6 +461,22 @@ sub db_cleanup_project {
 
 ############################################################
 
+=item B<db_connect>()
+
+Connect to DB. Runs automatically when file is loaded.
+
+Parameters:
+
+=over
+
+=item OPTS
+
+The options hash returned by read_conf()
+
+=back
+
+=cut
+
 sub db_connect {
   my $opts = shift;
 
@@ -293,6 +510,13 @@ sub db_connect {
 
 ############################################################
 
+=item B<db_list_projects>()
+
+Returns an array ref containing all projects names in
+I<projects> table
+
+=cut
+
 sub db_list_projects { 
   my $projects = [];
 
@@ -309,6 +533,15 @@ sub db_list_projects {
 }
 
 ###########################################################
+
+=item B<db_get_project_details>()
+
+Returns a hash reference:
+
+ PROJECT => { 'count' => COUNT, 
+              'timestamp' => TIMESTAMP }
+
+=cut
 
 sub db_get_project_details { 
   my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count FROM projects;");
@@ -334,6 +567,13 @@ sub db_get_project_details {
 
 
 ############################################################
+
+=item B<update_review_data>(TIMESTAMP, ARTICLE, RATING, REV_TIMESTAMP,
+PREVIOUS_RATING)
+
+Update review status (FA, FL, GA) for ARTICLE.
+
+=cut
 
 sub update_review_data {
 	# Process all the parameters
@@ -368,6 +608,12 @@ sub update_review_data {
 ############################################################
 ## Probably needs to be merged with update_review_data()
 
+=item B<remove_review_data>(ARTICLE, RATING, PREVIOUS_RATING)
+
+Removes ARTICLE from I<reviews> table. Asserts RATING='None'.
+
+=cut
+
 sub remove_review_data {
 	# Process all the parameters
 	my $art = shift;
@@ -389,6 +635,14 @@ sub remove_review_data {
 }
 
 ############################################################
+
+=item B<get_review_data>(RATING)
+
+Fetch articles with review status RATING
+
+Returns a hash ref ARTICLE => RATING
+
+=cut
 
 sub get_review_data {
   my $value = shift;
@@ -417,8 +671,18 @@ sub get_review_data {
 
 ############################################################
 
+=item B<db_get_release_data>()
+
+Get data about released articles from I<releases>
+
+Returns a hash reference:
+
+ PROJECT => { '0.5:category' => CAT,
+              '0.5:timestamp' => TIMESTAMP }
+
+=cut
+
 sub db_get_release_data {
-  my $value = shift;
   my $sth;
 
   $sth = $dbh->prepare ("SELECT * FROM releases");
@@ -442,6 +706,25 @@ sub db_get_release_data {
 
 ############################################################
 
+=item B<db_set_release_data>(ARTICLE, RELEASE, CATEGORY, REV_TIMESTAMP)
+
+<description>
+
+Parameters:
+
+=over
+
+=item RELEASE
+
+The name of the relase. Only C<0.5> is supported.
+
+=item CATEGORY
+
+The release category - C<Arts> etc.
+
+=back
+
+=cut
 
 sub db_set_release_data { 
     my $art = shift;
@@ -470,6 +753,12 @@ sub db_set_release_data {
 
 ############################################################
 
+=item B<db_cleanup_releases>()
+
+Remove articles from I<releases> table that are no longer 
+included in any release versions.
+
+=cut
 
 sub db_cleanup_releases { 
     my $sth = $dbh->prepare("DELETE FROM releases 
@@ -482,6 +771,14 @@ sub db_cleanup_releases {
 
 ############################################################
 
+=item B<db_lock>(LOCKNAME)
+
+Gets an advisory lock from the database. Does not block.
+
+Returns true if the lock wa acquired, false otherwise.
+
+=cut
+
 sub db_lock {
   my $lock = shift;
 
@@ -490,6 +787,12 @@ sub db_lock {
   my @row = $sth->fetchrow_array();
   return $row[0];
 }
+
+=item B<db_unlock>(LOCKNAME)
+
+Release an advisory lock 
+
+=cut
 
 sub db_unlock {
   my $lock = shift;
@@ -501,9 +804,7 @@ sub db_unlock {
 
 ############################################################
 
-
 # Load successfully
 1;
-
 
 __END__

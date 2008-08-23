@@ -126,6 +126,7 @@ WHERE cl_to = ?";
   my @results;
   my $data;
   my $title;
+  my $ts;
   while (@row = $sth->fetchrow_array) { 
       $data = {};
       $data->{'ns'} = $row[0];
@@ -136,7 +137,13 @@ WHERE cl_to = ?";
       $data->{'title'} = $title;
       $data->{'pageid'} = $row[2];
       $data->{'sortkey'} = $row[3];
-      $data->{'timestamp'} = $row[4];
+
+      $ts = $row[4];
+      $ts =~ s/ /T/;
+      $ts = $ts . "Z";
+      print "T '$row[4]' '$ts'\n";
+
+      $data->{'timestamp'} = $ts;
       push @results, $data;
   }    
   return \@results;
