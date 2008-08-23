@@ -602,9 +602,11 @@ Returns a reference to an array of hashes.
 sub log_events { 
   my $self = shift;
   my $pageTitle = shift;
+  my $type  = shift;
 
   $self->print(1,"A Fetching log events for $pageTitle");
  
+
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'logevents', 
                            'lelimit' => $self->{'querylimit'},
@@ -614,6 +616,10 @@ sub log_events {
   if ( $self->is_bot) { 
     $queryParameters{'lelimit'} = $self->{'botlimit'}
   } 
+
+  if ( defined $type ) { 
+    $queryParameters{'letype'} = $type;
+  }
 
   my $results 
     = $self->fetchWithContinuation(\%queryParameters, 
@@ -625,7 +631,7 @@ sub log_events {
   return $results;
 }
 
-#############################################################3
+#############################################################
 
 =item $list = $api->image_embedded($imageName);
 
@@ -784,7 +790,7 @@ sub revisions {
                                        'rvprop' => $what,
                                        'rvlimit' => $count,
                                        'titles' => encode("utf8", $title)  ], 
-                                     [ 'page' ]);
+                                     [ 'page', 'rev' ]);
 
   my $t = $self->child_data_if_defined($data, ['query','pages','page']);
   return $self->child_data_if_defined(${$t}[0], ['revisions', 'rev']);
@@ -1167,6 +1173,7 @@ sub makeXMLrequest {
     $self->print(2,"E APR response indicates error");
     $self->print(3, "Err: " . $xml->{'error'} ->{'code'});
     $self->print(4, "Info: " . $xml->{'error'} ->{'info'});
+    $self->print(5, "Details: " . Dumper($xml) . "\n");
     sleep $edelay;
   }
 
