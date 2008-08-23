@@ -90,7 +90,7 @@ sub log_table {
    $oldrating = $params->{'oldrating'} || "";
    $newrating = $params->{'newrating'} || "";
    $pagenameWC = $params->{'pagenameWC'} || 0;
-   $offset = $params->{'offset'} || 0;
+   $offset = $params->{'offset'} || 1;
    $limit = $params->{'limit'} || 1000;
   
    if ( $offset > 0) { $offset--; }
@@ -257,7 +257,35 @@ HERE
   }
   print "</table>\n</center>\n";
 
+	my $p;
+	my $params_enc;
+	foreach $p ( keys %$params ) { 
+		next if ( $p eq 'offset' ) ;
+		$params_enc .= "$p=" . uri_escape($params->{$p}) . "&";   
+	}
 
+	# For display purposes - whether we use a pipe between "previous" and "next"
+	# depends on whether "previous" is defined or not 
+	my $prev = 0;
+	if (($offset - $limit + 1) > 0) {
+		my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+		. "offset=" . ($offset - $limit + 1);	  
+		
+		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+		$prev = 1;
+	}
+	
+	if ($limit + $offset < $total){ 
+		if ($prev == 1) {
+			print " | ";
+		}
+		my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+		. "&offset=" . ($offset + $limit + 1);	  
+		
+		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+	}
+	print "\n";	
+	
 }
 
 
@@ -285,7 +313,7 @@ sub query_form {
   my $oldrating = $params->{'oldrating'} || "";
   my $newrating = $params->{'newrating'} || "";
 
-  my $limit = $params->{'limit'} || "100";
+  my $limit = $params->{'limit'} || "1000";
   my $offset = $params->{'offset'} || "1";
 
   my $pagename = $params->{'pagename'} || "";
