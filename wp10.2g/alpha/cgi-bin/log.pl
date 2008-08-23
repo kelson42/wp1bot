@@ -435,7 +435,7 @@ sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
   my $tableURL = $ENV{"SCRIPT_URI"};
-  my @t = split('list2.pl',$tableURL);
+  my @t = split('log.pl',$tableURL);
   $tableURL = @t[0] . "table.pl";
 
   if ( $project =~ /\w|\d/ ) { 
