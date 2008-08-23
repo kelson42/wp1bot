@@ -39,9 +39,9 @@ my $By_importance = 'by importance';
 
 my $Lang = 'en';
 my $Root_category = 'Category:Wikipedia 1.0 assessments';
-my $goodCat = "$Category:Wikipedia good articles";
-my $featuredCat = "$Category:Wikipedia featured articles";
-my $listCat = "$Category:Wikipedia featured lists";
+my $GA_category = "$Category:Wikipedia good articles";
+my $FA_category = "$Category:Wikipedia featured articles";
+my $FL_category = "$Category:Wikipedia featured lists";
 
 my $Class = 'Class';
 my $No_Class = 'No-Class';
@@ -152,7 +152,8 @@ sub get_project_quality_categories {
   print "--- Get project categories for $project by quality\n";
 
   my $cat = "Category:$project articles $By_quality";
-  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
+#  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
+  my $cats = pages_in_category($cat, $categoryNS);
   my $value;
 
   foreach $cat ( @$cats ) { 
@@ -197,13 +198,15 @@ sub get_project_importance_categories {
   print "--- Get project categories for $project by importance\n";
 
   my $cat = "Category:$project articles $By_importance";
-  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
+  my $cats = pages_in_category($cat, $categoryNS);
+#  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   my $value;
 
   if ( 0 == scalar @$cats ) { 
     print "Fall back to 'priority' naming\n";
     $cat = "Category:$project articles by priority";
-    $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
+    $cats = pages_in_category($cat, $categoryNS);
+#    $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   }
 
   foreach $cat ( @$cats ) { 
@@ -250,21 +253,22 @@ sub download_project_quality_ratings {
   foreach $qual ( keys %$qcats ) { 
 #    print "\nFetching list for quality $qual\n";
 
-    $tmp_arts = pages_in_category_detailed(encode("utf8",$qcats->{$qual}));
-  
+    $tmp_arts = pages_in_category_detailed($qcats->{$qual});
+
     my $count = scalar @$tmp_arts;
     my $i = 0;
 
     foreach $d ( @$tmp_arts ) {
        $i++;
-       $art = $d->{'title'};
-       next unless ( $art =~ /^Talk:/);
-
-       $art =~ s/^Talk://;
+       next if ( ($d->{'ns'} < 0) || ($d->{'ns'} == 3) 
+		 || ( 0 == $d->{'ns'} % 2));
+       $d->{'ns'}--;
+       $art = $d->{'ns'} . ":" . $d->{'title'};
        $seen->{$art} = 1;
 
        if ( ! defined $oldrating->{$art} ) { 
-         update_article_data($global_timestamp, $project, $art, "quality", 
+         update_article_data($global_timestamp, $project,
+			     $d->{'ns'}, $d->{'title'}, "quality",
                              $qual, $d->{'timestamp'}, 'Unknown-Class');
          next;
        }
@@ -272,17 +276,22 @@ sub download_project_quality_ratings {
        if ( $oldrating->{$art} eq $qual ) {
          # No change
        } else {
-         update_article_data($global_timestamp, $project, $art, 'quality', 
+         update_article_data($global_timestamp, $project,
+			     $d->{'ns'}, $d->{'title'}, 'quality',
                              $qual, $d->{'timestamp'}, $oldrating->{$art} );
        } 
     }
   } 
 
+  my ($ns, $title);
+
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
 #    print "NOT SEEN (quality) '$art'\n";
-    update_article_data($global_timestamp, $project, $art, 'quality', 
+    ($ns, $title) = split /:/, $art, 2;
+    update_article_data($global_timestamp, $project, 
+			$ns, $title, 'quality', 
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art} );
   }
@@ -314,20 +323,22 @@ sub download_project_importance_ratings {
   foreach $imp ( keys %$icats ) { 
 #    print "\nFetching list for importance $imp\n";
 
-    $tmp_arts = pages_in_category_detailed(encode("utf8",$icats->{$imp}));
+    $tmp_arts = pages_in_category_detailed($icats->{$imp});
 
     my $count = scalar @$tmp_arts;
     my $i = 0;
 
     foreach $d ( @$tmp_arts ) {
        $i++;
-       $art = $d->{'title'};
-       next unless ( $art =~ /^Talk:/);
-       $art =~ s/^Talk://;
+       next if ( ($d->{'ns'} < 0) || ($d->{'ns'} == 3) 
+		 || ( 0 == $d->{'ns'} % 2));
+       $d->{'ns'}--;
+       $art = $d->{'ns'} . ":" . $d->{'title'};
        $seen->{$art} = 1;
 
        if ( ! defined $oldrating->{$art} ) { 
-         update_article_data($global_timestamp, $project, $art, "importance", 
+         update_article_data($global_timestamp, $project, 
+			     $d->{'ns'}, $d->{'title'}, "importance", 
                              $imp, $d->{'timestamp'}, 'Unknown-Class');
          next;
        }
@@ -335,18 +346,22 @@ sub download_project_importance_ratings {
        if ( $oldrating->{$art} eq $imp ) { 
          # No change
        } else {
-         update_article_data($global_timestamp, $project, $art, "importance",
+         update_article_data($global_timestamp, $project, 
+			     $d->{'ns'}, $d->{'title'}, "importance",
                              $imp, $d->{'timestamp'}, $oldrating->{$art} );
        } 
     }
   } 
 
+  my ($title, $ns);
   foreach $art ( keys %$oldrating ) { 
     # for importance only, NULL values are OK
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
     next if ( exists $seen->{$art} );    
+    ($ns, $title) = split /:/, $art, 2;
 #    print "NOT SEEN (importance) $art\n";
-    update_article_data($global_timestamp, $project, $art, "importance",
+    update_article_data($global_timestamp, $project, 
+			$ns, $title, "importance",
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art});
   }
@@ -366,7 +381,7 @@ sub get_extra_assessments {
   my $project = shift;
 
   my $cat = "Category:$project articles $By_quality";
-  my $txt = content_section(encode("utf8", $cat), 0);
+  my $txt = content_section($cat, 0);
   my @lines = split /\n+/, $txt;
 
   my $Starter = '{{ReleaseVersionParameters';
@@ -500,13 +515,16 @@ sub download_review_data_internal {
   my ($oldrating) = get_review_data();
 	
   my $seen = {};
-  my %qcats = ('GA', $goodCat, 'FA', $featuredCat, 'FL', $listCat);
+  my $qcats = {'GA' => $GA_category,
+               'FA' => $FA_category, 
+               'FL' => $FL_category };
+
   my ($cat, $tmp_arts, $qual, $art, $d);
 	
-  foreach $qual ( keys %qcats ) { 
+  foreach $qual ( keys %$qcats ) { 
 #    print "\nFetching list for $qual\n";
     
-    $tmp_arts = pages_in_category_detailed(encode("utf8",%qcats->{$qual}));
+    $tmp_arts = pages_in_category_detailed($qcats->{$qual});
     
     my $count = scalar @$tmp_arts;
     my $i = 0;
@@ -514,16 +532,13 @@ sub download_review_data_internal {
     foreach $d ( @$tmp_arts ) {
       $i++;
       $art = $d->{'title'};
-      next unless ( $art =~ /^Talk:/);
-      
-      $art =~ s/^Talk://;
+      next unless ( $d->{'ns'} == $talkNS );
       $seen->{$art} = 1;
       
       # New entry
       if ( ! defined %$oldrating->{$art} ) { 
 	update_review_data($global_timestamp, $art, $qual, 
 			   $d->{'timestamp'}, 'None');
-
 	next;
       }
       
@@ -578,7 +593,6 @@ commit the database.
 =cut
 
 sub download_release_data_internal {
-
   my $cat = "Version 0.5 articles by category";
   my $suffix = " Version 0.5 articles";
 
@@ -600,7 +614,6 @@ sub download_release_data_internal {
     foreach $r ( @$res ) {
       next unless ( $r->{'ns'} == $talkNS);
       $page = $r->{'title'};
-      $page =~ s/^Talk://;
 
       if ( defined $oldArts->{$page}
 	   && $oldArts->{$page}->{'0.5:category'} eq $type ) {

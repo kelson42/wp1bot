@@ -1,9 +1,7 @@
 #!/usr/bin/perl
 
-binmode STDOUT, ":utf8";
 
 use strict;
-use Encode;
 use Data::Dumper;
 use POSIX;
 use Getopt::Long;
@@ -67,7 +65,8 @@ sub parse_argv {
   my $opts = {};
 
   if ( ! GetOptions($opts, 'all', 'existing', 'new', 'under=i', 
-                    'over=i','all','releases','revisions', 'exclude=s@' )) {
+                    'over=i','all','releases','reviews',
+                    'exclude=s@' )) {
     usage();
   }
 
@@ -75,13 +74,13 @@ sub parse_argv {
 
   my $includes = {};
   while ( $project = shift @ARGV ) {
-    $includes->{decode("utf8",$project)} = 1;
+    $includes->{$project} = 1;
     $opts->{'includes'} = 1;
   }
 
   my $excludes = {};
   while ( $project = shift @{$opts->{'exclude'}} ) {
-    $excludes->{decode("utf8",$project)} = 1;
+    $excludes->{$project} = 1;
   }
 
   my $mode = "none";

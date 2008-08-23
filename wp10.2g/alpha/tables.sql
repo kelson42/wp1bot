@@ -39,6 +39,9 @@ create table if not exists ratings (
     r_project               varchar(63)  not null,
         -- project name
 
+    r_namespace             int unsigned not null,
+        -- article namespace
+
     r_article               varchar(255) not null,
         -- article title
 
@@ -57,10 +60,9 @@ create table if not exists ratings (
         -- time when importance rating was assigned
         -- a wiki-style timestamp
 
-    primary key (r_project, r_article)
+    primary key (r_project, r_namespace, r_article)
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
-
 
 
 -- The categories table stores a list of all ratings 
@@ -101,6 +103,9 @@ create table if not exists logging (
     l_project        varchar(63)  not null,   
        -- project name
 
+    l_namespace      int unsigned not null,
+      -- article namespace
+
     l_article        varchar(255) not null,
        -- article name
 
@@ -124,8 +129,8 @@ create table if not exists logging (
        -- timestamp when page was edited
        -- a wiki-format timestamp
 
-    key (l_project, l_article, l_action, l_timestamp),
-    key (l_article)
+    key (l_project, l_namespace, l_article, l_action, l_timestamp),
+    key (l_namespace, l_article)
 ) default charset 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
@@ -133,6 +138,8 @@ create table if not exists logging (
 -- The review table stores the data for community-wide reviews:
 -- Featured and Good Articles. Each article will be included at 
 -- most once, marked either GA or FA. 
+
+-- This table implicitly has rev_namespace = 0
 
 create table if not exists reviews ( 
 
@@ -154,32 +161,13 @@ create table if not exists reviews (
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
--- The releases table stores static release information for all pages  
--- under WP:1.0's scope. 
-
-create table if not exists releases ( 
-
-    rel_article             varchar(255) not null,
-        -- article title
-
-    rel_0p5_category        varchar(63) not null,
-        -- The Wikipedia 0.5 category (Arts, Language, etc.)
-
-    rel_0p5_timestamp       binary(16),
-        -- time when article was added to a 0.5 release category
-        -- NOTE: a revid can be obtained from timestamp via API
-        -- a wiki-format timestamp
-	
-    primary key (rel_article),
-    key         (rel_0p5_category)
-
-) default character set 'utf8' collate 'utf8_bin'
-  engine = InnoDB;
 
 
 -- The global_articles table stores the higest quality and 
 -- highest importance assigned to each article. It is used to 
 -- generate global statistics 
+
+-- This table implicitly has a_namespace = 0
 
 create table if not exists global_articles ( 
 
@@ -200,6 +188,8 @@ create table if not exists global_articles (
 
 -- the release table stores data about released versions
 -- (currently limited to WP 0.5)
+
+-- This table implicitly has rel_namespace = 0
 
 create table if not exists releases ( 
 

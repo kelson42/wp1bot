@@ -15,7 +15,7 @@ my $dbh = toolserver_connect($Opts);
 sub toolserver_connect {
   my $opts = shift;
 
-  die "No database given in database conf file\n"
+  die "No 'database_wiki_ts' given in database conf file\n"
   unless ( defined $opts->{'database_wiki_ts'} );
 	
   my $connect = "DBI:mysql"
@@ -54,11 +54,10 @@ sub get_prefixes {
   my $db = shift;
 	#my $cred = '/home/cbm/.my.cnf';
 
-	die "No database given in database conf file\n"
-	unless ( defined $opts->{'database_toolserver'} );
+	die "No 'database_ts' given in database conf file\n"
+	unless ( defined $opts->{'database_ts'} );
 	
-	my $connect = "DBI:mysql"
-    . ":database=" . $opts->{'database_toolserver'};
+	my $connect = "DBI:mysql" . ":database=" . $opts->{'database_ts'};
 	
 	if ( defined $opts->{'host_ts'} ) {
 		$connect .= ":host="     . $opts->{'host_ts'} ;
@@ -92,6 +91,8 @@ sub get_prefixes {
     }
     $Prefix->{$row[0]} = $row[1];
   }
+
+  $dbt->disconnect();
 }
 
 ######################################################################
@@ -123,7 +124,7 @@ WHERE cl_to = ?";
   my $title;
   while (@row = $sth->fetchrow_array) { 
     $title = $Prefix->{$row[0]} . $row[1];
-    $title = decode("utf8", $title);
+#    $title = decode("utf8", $title);
     $title =~ s/_/ /g;
     push @results, $title;
   }                             
@@ -164,18 +165,21 @@ WHERE cl_to = ?";
   while (@row = $sth->fetchrow_array) { 
       $data = {};
       $data->{'ns'} = $row[0];
-      $title =  $Prefix->{$row[0]} . $row[1];
-      $title = decode("utf8", $title);
-      $title =~ s/_/ /g;
+# obselete behavior
+#      $title =  $Prefix->{$row[0]} . $row[1];
+#      $title = decode("utf8", $title);
 
+      $title = $row[1];
+      $title =~ s/_/ /g;
       $data->{'title'} = $title;
+
       $data->{'pageid'} = $row[2];
       $data->{'sortkey'} = $row[3];
 
       $ts = $row[4];
       $ts =~ s/ /T/;
       $ts = $ts . "Z";
-      print "T '$row[4]' '$ts'\n";
+#      print "T '$row[4]' '$ts'\n";
 
       $data->{'timestamp'} = $ts;
       push @results, $data;

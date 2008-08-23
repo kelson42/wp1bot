@@ -24,6 +24,10 @@ Current time
 
 The name of a rated project
 
+=item NAMESPACE
+
+The namespace of ARTICLE
+
 =item ARTICLE
 
 The name of an article
@@ -54,8 +58,8 @@ my $dbh = db_connect($Opts);
 
 #######################################################################
 
-=item B<update_article_data>(TIMESTAMP, PROJECT, ARTICLE, RTYPE, RATING, 
-REV_TIMESTAMP, PREVIOUS_RATING)
+=item B<update_article_data>(TIMESTAMP, PROJECT, NAMESPACE,
+ARTICLE, RTYPE, RATING, REV_TIMESTAMP, PREVIOUS_RATING)
 
 Top-level routine for updating data for a single article. Updates the
 I<ratings> table and I<logging> table. 
@@ -75,6 +79,7 @@ Previous rating value, used for I<logging>
 sub update_article_data {
   my $global_timestamp = shift;
   my $project = shift;
+  my $ns = shift;
   my $art = shift;
   my $table = shift;
   my $value = shift;
@@ -86,19 +91,22 @@ sub update_article_data {
 
 #  print "U:" . "$project // $art // $timestamp // $value // was '$oldvalue'\n";
 
-  $art = encode("utf8", $art);
-  $project = encode("utf8", $project);
-  $value = encode("utf8", $value);
-  $oldvalue = encode("utf8", $oldvalue);
+#  $art = encode("utf8", $art);
+#  $project = encode("utf8", $project);
+#  $value = encode("utf8", $value);
+#  $oldvalue = encode("utf8", $oldvalue);
 
   my $sth_insert_logging = $dbh->prepare_cached("INSERT INTO logging " . 
-                                         "values (?,?,?,?,?,?,?)");
+                                         "values (?,?,?,?,?,?,?,?)");
 
-  $sth_insert_logging->execute($project, $art, $table, $global_timestamp,
+
+#  print "U: '$project' '$art' '$ns' '$table'\n";
+
+  $sth_insert_logging->execute($project, $ns, $art, $table, $global_timestamp,
                                $oldvalue, $value, $timestamp);
 
-  
-update_article_rating_data($project, $art, $table, $value, $timestamp);
+
+  update_article_rating_data($project, $ns, $art, $table, $value, $timestamp);
 }
 
 
@@ -140,12 +148,6 @@ sub update_category_data {
   if ( ! defined $replacement ) { 
     $replacement = $rating;
   }
-  
-  $project = encode("utf8", $project);
-  $rating = encode("utf8", $rating);
-  $type = encode("utf8", $type);
-  $category = encode("utf8", $category);
-  $replacement = encode("utf8", $replacement);
 
   my $sth = $dbh->prepare (
        "UPDATE categories SET c_category = ?, c_ranking = ?, c_replacement = ?
@@ -175,6 +177,7 @@ Update I<ratings> table for a single article
 
 sub update_article_rating_data { 
   my $project = shift;
+  my $ns = shift;
   my $article = shift;
   my $type = shift;
   my $rating = shift;
@@ -184,11 +187,14 @@ sub update_article_rating_data {
     die "Bad ratings type:  $type\n";
   }
 
-  my $sth = $dbh->prepare_cached ("UPDATE ratings SET r_$type = ?, " 
-                         . "r_" . $type . "_timestamp = ?  " 
-                         . "WHERE r_project = ? and r_article = ?");
+  my $query = "UPDATE ratings SET r_$type = ?, "
+            . "r_" . $type . "_timestamp = ?  " 
+	    . "WHERE r_project = ? and r_namespace = ? and r_article = ?";
 
-  my $count = $sth->execute($rating, $rating_timestamp, $project, $article);
+  my $sth = $dbh->prepare_cached($query);
+
+  my $count = $sth->execute($rating, $rating_timestamp,
+			    $project, $ns, $article);
 
   if ( $count eq '0E0' ) { 
     my ($quality, $importance, $qualityTS, $importanceTS);
@@ -200,8 +206,8 @@ sub update_article_rating_data {
       $importance = $rating; 
       $importanceTS = $rating_timestamp;
     }
-    $sth = $dbh->prepare ("INSERT INTO ratings VALUES (?,?,?,?,?,?)");
-    $count = $sth->execute($project, $article, $quality, 
+    $sth = $dbh->prepare ("INSERT INTO ratings VALUES (?,?,?,?,?,?,?)");
+    $count = $sth->execute($project, $ns, $article, $quality, 
                            $qualityTS, $importance, $importanceTS);
   }
 }
@@ -212,18 +218,17 @@ sub update_article_rating_data {
 
 Update I<articles> table, which stores the highest quality and
 importance assigned to an article. Must be run after updating
-a project's data, to keep database coherent.
+a project, to keep database coherent. 
 
 =cut
 
 sub update_articles_table { 
   my $project = shift;
-  $project = encode("utf8", $project);
 
   my $query = <<"HERE";
 REPLACE INTO global_articles
 SELECT r_article, max(qual.gr_ranking), max(imp.gr_ranking) 
-FROM ratings 
+FROM ratings
 JOIN categories as ci
    ON r_project = ci.c_project AND ci.c_type = 'importance'      
       AND r_importance = ci.c_rating 
@@ -234,7 +239,7 @@ JOIN global_rankings AS qual
   ON qual.gr_type = 'quality' AND qual.gr_rating = cq.c_replacement  
 JOIN global_rankings AS imp 
   ON imp.gr_type = 'importance' AND imp.gr_rating = ci.c_replacement 
-WHERE r_project = ? 
+WHERE r_namespace = 0 and r_project = ? 
 GROUP BY r_article
 HERE
 
@@ -263,7 +268,7 @@ when PROJECT was last updated
 
 =item WIKIPAGE
 
-wikipeida homepage for PROJECT
+wikipedia homepage for PROJECT
 
 =item PARENT
 
@@ -341,7 +346,7 @@ Returns true if PROJECT exists in the I<projects> table, false otherwise
 
 sub project_exists {
   my $project = shift;
-  $project = encode("utf8", $project);
+#  $project = encode("utf8", $project);
 
   my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?");
   my $r = $sth->execute($project);
@@ -355,7 +360,7 @@ sub project_exists {
 
 Fetch assessments of TYPE for PROJECT. 
 
-Returns a hash: C<article> => C<rating>
+Returns a hash: C<namespace:article> => C<rating>
 
 =cut
 
@@ -369,17 +374,18 @@ sub get_project_ratings {
 
   print "Getting $type ratings for $project from database\n";
 
-  $project = encode("utf8", $project);
+#  $project = encode("utf8", $project);
 
-  my $sth = $dbh->prepare("SELECT r_article, r_$type " 
+  my $sth = $dbh->prepare("SELECT r_namespace, r_article, r_$type " 
                         . "FROM ratings WHERE r_project = ?");
   $sth->execute($project);
 
   my $ratings = {};
   my @row;
+  my $art;
   while ( @row = $sth->fetchrow_array() ) {
-    $row[0] = decode("utf8", $row[0]);
-    $ratings->{$row[0]} = $row[1];
+    $art = $row[0] . ":" . $row[1];
+    $ratings->{$art} = $row[2];
   }
 
   return $ratings;
@@ -546,7 +552,8 @@ Returns a hash reference:
 =cut
 
 sub db_get_project_details { 
-  my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count FROM projects;");
+  my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count 
+                           FROM projects;");
   $sth->execute();
 
   my ($proj, $count, $timestamp);
@@ -555,15 +562,14 @@ sub db_get_project_details {
 
   my @row;
   while( @row = $sth->fetchrow_array() ){
-    $proj = decode("utf8", $row[0]);
     $timestamp = $row[1];
     $count = $row[2];
- 
+
     $data->{$proj} = {};
     $data->{$proj}->{'count'} = $count;
     $data->{$proj}->{'timestamp'} = $timestamp;
   }
-    
+
   return $data;
 }
 
@@ -625,7 +631,7 @@ sub remove_review_data {
 	unless ( ($value eq 'None') ) {
 		print "Unrecognized review state: $value \n"; 
 		return -1;
-	}	
+	}
 
 	my $sth = $dbh->prepare ("DELETE FROM reviews
                                   WHERE rev_value = ? AND rev_article = ?");
@@ -664,11 +670,10 @@ sub get_review_data {
   my $ratings = {};
   my @row;
   while ( @row = $sth->fetchrow_array() ) {
-    $row[0] = decode("utf8", $row[0]);
     $ratings->{$row[0]} = $row[1];
   }
 
-  return $ratings;	
+  return $ratings;
 }
 
 ############################################################
@@ -695,15 +700,13 @@ sub db_get_release_data {
   my ($art, $cat, $timestamp);
 
   while ( @row = $sth->fetchrow_array() ) {
-    $art = decode("utf8", $row[0]);
-    $cat = decode("utf8", $row[1]);
     $timestamp = $row[2];
     $data->{$art} = {};
     $data->{$art}->{'0.5:category'} = $cat;
     $data->{$art}->{'0.5:timestamp'} = $timestamp;
   }
 
-  return $data;	
+  return $data;
 }
 
 ############################################################
@@ -733,9 +736,6 @@ sub db_set_release_data {
     my $type = shift;
     my $cat = shift;
     my $timestamp = shift;
-
-    $art = encode("utf8", $art);
-    $cat = encode("utf8", $cat);
 
     if ( $type ne '0.5' ) { 
 	die "Bad type: $type\n";

@@ -1,4 +1,21 @@
 #!/usr/bin/perl
+use strict;
+use Encode;
+
+
+=head1 SYNOPSIS
+
+Routines for fetching content from the wiki. This library
+is a wrapper that abstracts Mediawiki::API and toolserver_api.pl
+into a common interface and output format. 
+
+=over
+
+=cut
+
+use lib '/home/cbm/veblen/VeblenBot';
+
+use Data::Dumper;
 
 our $Opts;
 
@@ -6,10 +23,17 @@ require Mediawiki::API;
 require "toolserver_api.pl";
 
 my $api;
+my $namespaces;
 
 my $use_toolserver = 1;
 
 #####################################################################
+
+=item B<init_api>()
+
+Initialize an internal Mediawiki::API object.
+
+=cut
 
 sub init_api() { 
   return if ( defined $api );
@@ -22,12 +46,37 @@ sub init_api() {
   $api->debug_level(3);
 
   if ( defined $Opts->{'api-credentials'} ) { 
-    $api->login_from_file($Opts->{'api-credentials'});
+#    $api->login_from_file($Opts->{'api-credentials'});
+  }
+
+  # Initialize hash of namespace prefixes
+  my $r = $api->site_info();
+  $r = $r->{'namespaces'}->{'ns'};
+
+  $namespaces ={};
+  my $n;
+  foreach $n ( keys %$r ) { 
+    $namespaces->{$n}= $r->{$n}->{'content'} . ":";
   }
 }
 
-
 #####################################################################
+
+=item B<pages_in_category>(CATEGORY, [NS])
+
+Returns an array reference listing pages in CATEGORY
+
+CATEGORY _must_ be UTF-8 encoded
+
+The NS parmater, optional, is a numeric namespace for 
+filtering the results.
+
+The pages in the rsulting array _do_ have the namespace
+prefix attached (for example C<Talk:Foo> and C<Wikipedia:Bar>)
+
+The titles returned are UTF-8 encoded
+
+=cut
 
 sub pages_in_category {
   my $cat = shift;
@@ -40,14 +89,45 @@ sub pages_in_category {
     $cat =~ s/ /_/g;
     my $r =  toolserver_pages_in_category($cat, $ns);
     return $r;
-  } 
+  }
 
   init_api();
 
-  return $api->pages_in_category($cat, $ns);
+  my $r = $api->pages_in_category($cat, $ns);
+  my @encoded = map { encode("utf8", $_) } @$r;
+  return \@encoded;
 }
 
 #####################################################################
+
+=item B<pages_in_category_detailed>(CATEGORY, [NS])
+
+Returns a reference to an array of hashes, 
+one for each page in CATEGORY.
+
+The output format is
+
+  {  'ns'        => NAMESPACE, 
+     'title'     => TITLE,
+     'pageid'    => PAGEID,
+     'sortkey'   => SORTKEY,
+     'timestamp' => TIMESTAMP }
+
+CATEGORY _must_ be UTF-8 encoded. 
+
+The NS parmater, optional, is a numeric namespace for 
+filtering the results.
+
+The page titles in the resulting array _do_not_ have the namespace
+prefix attached (for example, the page C<Talk:Foo> will show
+
+  { 'ns' => '1',
+    'title' => 'Foo',
+     ...  }
+
+The data returned is all UTF-8 encoded.
+
+=cut
 
 sub pages_in_category_detailed {
   my $cat = shift;
@@ -60,14 +140,34 @@ sub pages_in_category_detailed {
     $cat =~ s/ /_/g;
     my $r = toolserver_pages_in_category_detailed($cat, $ns);
     return $r;
-  } 
+  }
 
   init_api();
 
-  return $api->pages_in_category_detailed($cat, $ns);
+  my $results = $api->pages_in_category_detailed($cat, $ns);
+
+  my $r;
+
+  foreach $r ( @$results ) { 
+    $r->{'title'} =~ s/^\Q$namespaces->{$r->{'ns'}}\E//;
+    $r->{'title'} = encode("utf8", $r->{'title'});
+    $r->{'sortkey'} = encode("utf8", $r->{'sortkey'});
+  }
+
+  return $results;
+
 }
 
 #####################################################################
+
+=item B<content_section>(PAGE, SECTION) 
+
+Fetch the source code of section number SECTION in PAGE. The lede is
+section 0.
+
+The returned text is UTF-8 encoded.
+
+=cut
 
 sub content_section {
   my $art = shift;
@@ -75,10 +175,21 @@ sub content_section {
 
   init_api();
 
-  return $api->content_section($art, $sect);
+  return encode("utf8", $api->content_section($art, $sect));
+
 }
 
 #####################################################################
+
+=item B<api_namespaces>() 
+
+Fetch a hash reference mapping namespace number to namespace prefix.
+
+=cut
+
+sub api_namespaces {
+    return $namespaces;
+}
 
 #Load successfuly
 1;

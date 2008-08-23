@@ -30,6 +30,8 @@ POSIX->import('strftime');
 my $cacheFile = init_cache();
 my $cacheMem = {};
 
+my $Namespaces;
+
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
@@ -121,7 +123,7 @@ sub ratings_table {
   $queryc = "SELECT count(r_article) FROM ratings";
 
   $query = << "HERE";
-SELECT r_project, r_article, r_importance, 
+SELECT r_project, r_namespace, r_article, r_importance, 
        r_importance_timestamp, r_quality, 
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
@@ -133,8 +135,10 @@ HERE
   my $sortb = $params->{'sortb'};
   $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
 
-  $query .= " LEFT JOIN releases ON r_article = rel_article ";
-  $query .= " \n   LEFT JOIN reviews ON r_article = rev_article ";
+  $query .= " LEFT JOIN releases ON r_namespace = 0 
+                     AND r_article = rel_article ";
+  $query .= " \n   LEFT JOIN reviews ON r_namespace = 0 
+                      AND r_article = rev_article ";
 
   $query .= " \nWHERE";
   $queryc .= " \nWHERE";
@@ -201,7 +205,7 @@ HERE
   $query .= ", ";
   $query .= sort_key($sortb, "b", "");
 
-  $query .= ", r_article";
+  $query .= ", r_namespace, r_article";
 
   $query .= " LIMIT ?";
   push @qparam, $limit;
@@ -217,7 +221,6 @@ HERE
   $queryc =~ s/WHERE\s*ORDER/ORDER/;
 
   $queryc =~ s/WHERE\s*$//;
-
 
 # print "<pre>Qs:\n$query</pre>\n";
 # print join "<br/>", @qparam;
@@ -271,21 +274,21 @@ HERE
       print "    <td>" . $row[0] . "</td>\n";
     }
 
-    print "    <td>" . make_article_link($row[1]) . "</td>\n";
-    print "    " . get_cached_td_background($row[2]) . "\n";
-    print "    <td>" . make_history_link($row[1],$row[3]) . "</td>\n";
-    print "    " . get_cached_td_background($row[4]) . "\n";
-    print "    <td>" . make_history_link($row[1],$row[5]) . "</td>";
+    print "    <td>" . make_article_link($row[1], $row[2]) . "</td>\n";
+    print "    " . get_cached_td_background($row[3]) . "\n";
+    print "    <td>" . make_history_link($row[1],$row[2],$row[4]) . "</td>\n";
+    print "    " . get_cached_td_background($row[5]) . "\n";
+    print "    <td>" . make_history_link($row[1],$row[2],$row[6]) . "</td>";
 
 
-    if ( defined $row[7] ) { 
-      print make_review_link($row[7]) ;
+    if ( defined $row[8] ) { 
+      print make_review_link($row[8]) ;
     } else { 
       print "<td></td>\n"; 
     }
 
-    if ( defined $row[6] ) { 
-      print "<td>" . make_wp05_link($row[6]) . "</td>\n";
+    if ( defined $row[7] ) { 
+      print "<td>" . make_wp05_link($row[7]) . "</td>\n";
     } else { 
       print "<td></td>\n"; 
     }
@@ -336,7 +339,6 @@ sub ratings_table_intersect {
 
   my $projectb = $params->{'projectb'};
 
-
   return if ( ! defined $projectb);
 
   if ( ! defined $projects->{$projecta}) { 
@@ -360,7 +362,9 @@ sub ratings_table_intersect {
   my $query;
 
   my $queryc = "SELECT count(ra.r_article) 
-                FROM ratings as ra join ratings as rb on rb.r_article = ra.r_article
+                FROM ratings as ra 
+                JOIN ratings as rb on rb.r_article = ra.r_article
+                              AND ra.r_namespace = rb.r_namespace
                 WHERE ra.r_project = ? AND rb.r_project = ?";
 
   my @qparam = ($projecta, $projectb);
@@ -368,21 +372,24 @@ sub ratings_table_intersect {
 
 
   $query = << "HERE";
-SELECT ra.r_article, ra.r_importance, ra.r_quality,
+SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
        rb.r_importance, rb.r_quality, rel_0p5_category,
        rev_value, ISNULL(rel_0p5_category) as null_rel,
        ISNULL(rev_value) as null_rev
 FROM ratings as ra
- JOIN ratings as rb on rb.r_article = ra.r_article 
+  JOIN ratings as rb ON rb.r_article = ra.r_article 
+                    AND ra.r_namespace = rb.r_namespace  
 HERE
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
-  $query .= sort_sql($sort, "a", "ra") . " " . sort_sql($sortb, "b", "ra") ." ";
+  $query .= sort_sql($sort, "a", "ra") . " " 
+      . sort_sql($sortb, "b", "ra") ." ";
 
-
-  $query .= " LEFT JOIN releases ON ra.r_article = rel_article ";
-  $query .= " \n   LEFT JOIN reviews ON ra.r_article = rev_article ";
+  $query .= " LEFT JOIN releases ON ra.r_namespace = 0 
+                  AND ra.r_article = rel_article ";
+  $query .= " \n   LEFT JOIN reviews ON ra.r_namespace = 0 
+                     AND ra.r_article = rev_article ";
 
   $query .= " \nWHERE ra.r_project = ? AND rb.r_project = ?";
 
@@ -448,7 +455,7 @@ HERE
   $query .= ", ";
   $query .= sort_key($sortb, "b", "");
 
-  $query .= ", ra.r_article";
+  $query .= ", ra.r_namespace, ra.r_article";
 
   $query .= " LIMIT ?";
   push @qparam, $limit;
@@ -495,21 +502,21 @@ HERE
     $i++;
 
      print "<tr><td>$i</td>\n";
-    print "    <td>" . make_article_link($row[0]) . "</td>\n";
-    print "    " . get_cached_td_background($row[1]) . "\n";
+    print "    <td>" . make_article_link($row[0], $row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
+    print "    " . get_cached_td_background($row[5]) . "\n";
 
 
-    if ( defined $row[6] ) { 
-      print make_review_link($row[6]) ;
+    if ( defined $row[7] ) { 
+      print make_review_link($row[7]) ;
     } else { 
       print "<td></td>\n"; 
     }
 
-    if ( defined $row[5] ) { 
-      print "<td>" . make_wp05_link($row[5]) . "</td>\n";
+    if ( defined $row[6] ) { 
+      print "<td>" . make_wp05_link($row[6]) . "</td>\n";
     } else { 
       print "<td></td>\n"; 
     }
@@ -807,9 +814,19 @@ sub print_header_text {
 
 sub make_article_link {
   my $server_uri = "http://en.wikipedia.org/w/index.php";
-  my $a = shift;
+  my $ns = shift;
+  my $title = shift;
+
+  if ( ! defined $Namespaces ) { 
+      $Namespaces = init_namespaces();
+  }
+
+  my $a = $Namespaces->{$ns} . $title;
+  my $b = $Namespaces->{$ns+1} . $title;
+
+
   return "<a href=\"$server_uri?title=" . uri_escape($a) . "\">$a</a>"
-         . " (<a href=\"$server_uri?title=Talk:" . uri_escape($a) 
+         . " (<a href=\"$server_uri?title=" . uri_escape($b) 
          . "\">t</a> &middot; "
          . "<a href=\"$server_uri?title=" . uri_escape($a) 
          . "&action=history\">h</a>)";
@@ -818,8 +835,15 @@ sub make_article_link {
 ###########################################################################
 
 sub make_history_link { 
+  my $ns = shift;
   my $art = shift;
   my $ts = shift;
+
+  if ( ! defined $Namespaces ) { 
+      $Namespaces = init_namespaces();
+  }
+
+  my $art = $Namespaces->{$ns} . $art;
 
   my $d = $ts;
   $d =~ s/T.*//;
@@ -945,4 +969,26 @@ sub sort_sql {
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
   }
   return $query;
+}
+
+##########################################################################
+
+sub init_namespaces {
+
+  # Initialize hash of namespace prefixes
+  my $r = $api->site_info();
+  $r = $r->{'namespaces'}->{'ns'};
+  
+  my $namespaces ={};
+  my $n;
+  foreach $n ( keys %$r ) { 
+    if (  $r->{$n}->{'content'} ne "" ) { 
+      $namespaces->{$n}= $r->{$n}->{'content'} . ":";
+    } else { 
+      $namespaces->{$n} = "";
+    }
+  }
+  
+  return $namespaces;
+
 }

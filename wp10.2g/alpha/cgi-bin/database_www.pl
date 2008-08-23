@@ -1,5 +1,21 @@
+=head1 SYNOPSIS
+
+Routines for the CGI programs to connect to the database
+
+=over
+
+=cut
+
 use Data::Dumper;
 use Encode;
+
+#####################################################################
+
+=item B<db_connect>(OPTS)
+
+Connect to the database, uses the readonly credentials
+
+=cut
 
 sub db_connect {
   my $opts = shift;
@@ -28,30 +44,43 @@ sub db_connect {
   return $db;
 }
 
-###########################################################
+#####################################################################
+
+=item B<get_project_data>(PROJECT)
+
+Return data from the I<projects> table for PROJECT
+
+=cut
 
 sub get_project_data {
-	my $project = shift;
+  my $project = shift;
 	
-	my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?");
-	$sth->execute($project);
+  my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?"); 
+  $sth->execute($project);
 	
-	my @row;
-	# There really shouldn't be more than one row here,
-	# so a while loop is not needed
-	@row = $sth->fetchrow_array();
-	
-	my $p_project = $row[0];
-	my $p_timestamp =  $row[1];
-	my $p_wikipage =  $row[2];
-	my $p_parent =  $row[3];
-	my $p_shortname =  $row[4];
-	
-	return ( $p_project, $p_timestamp, $p_wikipage, $p_parent, $p_shortname );
-	
+  my @row;
+  # There really shouldn't be more than one row here,
+  # so a while loop is not needed
+  @row = $sth->fetchrow_array();
+
+  my $p_project = $row[0];
+  my $p_timestamp =  $row[1];
+  my $p_wikipage =  $row[2];
+  my $p_parent =  $row[3];
+  my $p_shortname =  $row[4];
+
+  return ( $p_project, $p_timestamp, $p_wikipage, $p_parent, $p_shortname );
 }
 
 ###########################################################
+
+=item B<db_get_project_details>()
+
+Get all information from the I<projects> table. 
+
+Returns hash ref indexed by project name.
+
+=cut
 
 sub db_get_project_details { 
   my $sth = $dbh->prepare("SELECT * FROM projects;");
