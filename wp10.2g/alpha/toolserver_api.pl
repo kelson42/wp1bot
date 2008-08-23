@@ -15,19 +15,34 @@ my $dbh = toolserver_connect($Opts);
 sub toolserver_connect {
   my $opts = shift;
 
-  my $host = 'sql-s1';
-  my $database = 'enwiki_p';
-  my $cred = '/home/cbm/.my.cnf';
-
+  die "No database given in database conf file\n"
+  unless ( defined $opts->{'database_wiki_ts'} );
+	
   my $connect = "DBI:mysql"
-           . ":database=" . $database;
-  $connect .= ":host="  . $host ;
-  $connect .= ":mysql_read_default_file=$cred" ;
-  
-  my $db = DBI->connect($connect, "", "", {'RaiseError' => 1} ) 
-     or die "Couldn't connect to database: " . DBI->errstr;
- 
-  get_prefixes($opts, $database);
+    . ":database=" . $opts->{'database_wiki_ts'};
+
+	# For the enwiki_p db, this should be sql-s1
+  if ( defined $opts->{'host_wiki_ts'} ) {
+		$connect .= ":host="     . $opts->{'host_wiki_ts'} ;
+  }
+
+
+  if ( defined $opts->{'credentials-toolserver'} ) {
+		$opts->{'password'} = $opts->{'password'} || "";
+		$opts->{'username'} = $opts->{'username'} || "";
+		
+		$connect .= ":mysql_read_default_file=" 
+		. $opts->{'credentials-toolserver'};
+  }
+
+  my $db = DBI->connect($connect, 
+  $opts->{'username'}, 
+  $opts->{'password'},
+  {'RaiseError' => 1, 
+  'AutoCommit' => 0} )
+  or die "Couldn't connect to database: " . DBI->errstr;
+	
+  get_prefixes($opts, $opts->{'database_wiki_ts'});
   
   return $db;
 }
@@ -35,16 +50,35 @@ sub toolserver_connect {
 #####################################################################
 
 sub get_prefixes { 
-  my $Opts = shift;
+  my $opts = shift;
   my $db = shift;
-  my $cred = '/home/cbm/.my.cnf';
+	#my $cred = '/home/cbm/.my.cnf';
 
-  my $connect = "DBI:mysql:database=toolserver:host=sql";
-  $connect   .= ":mysql_read_default_file=$cred" ;
-
-  my $dbt = DBI->connect($connect, "", "", {'RaiseError'=>1})
-     or die "Couldn't connect to database: " . DBI->errstr;
-
+	die "No database given in database conf file\n"
+	unless ( defined $opts->{'database_toolserver'} );
+	
+	my $connect = "DBI:mysql"
+    . ":database=" . $opts->{'database_toolserver'};
+	
+	if ( defined $opts->{'host_ts'} ) {
+		$connect .= ":host="     . $opts->{'host_ts'} ;
+	}
+	
+	if ( defined $opts->{'credentials-toolserver'} ) {
+		$opts->{'password'} = $opts->{'password'} || "";
+		$opts->{'username'} = $opts->{'username'} || "";
+		
+		$connect .= ":mysql_read_default_file=" 
+		. $opts->{'credentials-toolserver'};
+  }
+	
+  my $dbt = DBI->connect($connect, 
+  $opts->{'username'}, 
+  $opts->{'password'},
+  {'RaiseError' => 1, 
+  'AutoCommit' => 0} )
+  or die "Couldn't connect to database: " . DBI->errstr;
+	
   my $query = "SELECT ns_id, ns_name FROM namespace WHERE dbname = ?";
 
   my $sth = $dbt->prepare($query);

@@ -14,9 +14,14 @@ list2-url    http://localhost/~veblen/cgi-bin/list2.pl
 
 # Database info and credentials
 database                wp10
-#host                    localhost
+host                    localhost
+database_wiki_ts        enwiki_p
+host_wiki_ts            sql-s1
+database_ts             toolserver
+host_ts                 sql
 credentials-readwrite   /home/veblen/.my.cnf.wp10
 credentials-readonly    /home/veblen/.my.cnf.wp10
+credentials-toolserver  /home/veblen/.my.cnf.wp10
 
 
 # API login information
