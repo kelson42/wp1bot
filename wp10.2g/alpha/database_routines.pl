@@ -97,7 +97,8 @@ sub update_article_data {
   $sth_insert_logging->execute($project, $art, $table, $global_timestamp,
                                $oldvalue, $value, $timestamp);
 
-  update_article_rating_data($project, $art, $table, $value, $timestamp);
+  
+update_article_rating_data($project, $art, $table, $value, $timestamp);
 }
 
 
@@ -220,7 +221,8 @@ sub update_articles_table {
   $project = encode("utf8", $project);
 
   my $query = <<"HERE";
-SELECT r_article, max(qual.gr_ranking), max(qual.gr_ranking) 
+REPLACE INTO global_articles
+SELECT r_article, max(qual.gr_ranking), max(imp.gr_ranking) 
 FROM ratings 
 JOIN categories as ci
    ON r_project = ci.c_project AND ci.c_type = 'importance'      
