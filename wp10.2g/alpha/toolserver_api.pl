@@ -7,7 +7,7 @@ use Data::Dumper;
 use POSIX 'strftime';
 
 require  'read_conf.pl';
-our $Opts = read_conf();
+our $Opts;
 my  $Prefix;
 my  $PrefixRev;
 
