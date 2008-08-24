@@ -1,35 +1,56 @@
-# Example configuration file
-# This must be copied to $HOME/.wp10.conf and customized
+# Example WP 1.0 bot configuration file
+#
+# LOCATION: the default location is $HOME/.wp10.conf
+#   An alternate location can be specified in the 
+#   environment variable WP10_CREDENTIALS
+#
+# SYNTAX: this file will be evaluated as a Perl statement to
+#   declare a hash. In particular, 
+#    * Options and values are separated by => 
+#    * Options and values are quoted in single quotes
+#    * Each declaration ends in a a comma
+#    * The # character makes comments to the end of line
+#    * Whitespace outside quotes is ignored
 
 # Library directories for required modules
-lib             /home/veblen/VeblenBot
+'lib' =>        [ '/home/veblen/VeblenBot' ],
 
 # Read/write directory for web cache
-cachedir        /home/veblen/wp10cache
+'cachedir' =>     '/home/veblen/wp10cache',
 
 # URLs for support files
-wp10.css        http://localhost/~veblen/wp10.css
-usableforms.js  http://localhost/~veblen/usableforms.js
-list2-url    http://localhost/~veblen/cgi-bin/list2.pl
+'wp10.css' =>     'http://localhost/~veblen/wp10.css',
+'usableforms.js' =>  'http://localhost/~veblen/usableforms.js',
+'list2-url' =>  'http://localhost/~veblen/cgi-bin/list2.pl',
 
 # Database info and credentials
-database                wp10
-host                    localhost
-database_wiki_ts        enwiki_p
-host_wiki_ts            sql-s1
-database_ts             toolserver
-host_ts                 sql
-credentials-readwrite   /home/veblen/.my.cnf.wp10
-credentials-readonly    /home/veblen/.my.cnf.wp10
-credentials-toolserver  /home/veblen/.my.cnf.wp10
+'database'               =>  'wp10',
+'host'                   =>  'localhost',
+'database_wiki_ts'       =>  'enwiki_p',
+'host_wiki_ts'           =>  'sql-s1',
+'database_ts'            =>  'toolserver',
+'host_ts'                =>  'sql',
+'credentials-readwrite'  =>  '/home/veblen/.my.cnf.wp10',
+'credentials-readonly'   =>  '/home/veblen/.my.cnf.wp10',
+'credentials-toolserver' =>  '/home/veblen/.my.cnf.wp10',
 
 # API login information
-api-credentials         /home/cbm/veblen/api.credentials
+'api-credentials'        => '/home/cbm/veblen/api.credentials',
 
 # Default quality classes
-class                   'Class'
-no_class                'No-Class'
-Unassessed_Class        'Unassessed-Class'
-Assessed_Class          'Assessed-Class'
+'class'                  => 'Class',
+'no_class'               => 'No-Class',
+'Unassessed_Class'       => 'Unassessed-Class',
+'Assessed_Class'         => 'Assessed-Class',
 
-quality                 {'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 'Assessed-Class' => 20, 'Unassessed-Class' => 0}
+'quality'  =>     { 'FA-Class'    => 500, 
+                    'FL-Class'    => 480, 
+                    'A-Class'     => 425, 
+                    'GA-Class'    => 400, 
+                    'B-Class'     => 300, 
+                    'C-Class'     => 225, 
+                    'Start-Class' => 150, 
+                    'Stub-Class'  => 100, 
+                    'List-Class'  =>  80, 
+                    'Assessed-Class'   => 20, 
+                    'Unassessed-Class' => 0   },
