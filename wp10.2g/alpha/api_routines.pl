@@ -56,7 +56,11 @@ sub init_api() {
   $namespaces ={};
   my $n;
   foreach $n ( keys %$r ) { 
-    $namespaces->{$n}= $r->{$n}->{'content'} . ":";
+    if ( $r->{$n}->{'content'} ne "" ) { 
+      $namespaces->{$n}= $r->{$n}->{'content'} . ":";
+    } else { 
+      $namespaces->{$n}= $r->{$n}->{'content'} . "";
+    }
   }
 }
 
@@ -188,8 +192,91 @@ Fetch a hash reference mapping namespace number to namespace prefix.
 =cut
 
 sub api_namespaces {
+    init_api(); 
+ 
     return $namespaces;
 }
+
+#####################################################################
+=item B<api_resolve_redirect>(NS, TITLE) 
+
+Find the redirect target for NS:TITLE.
+
+Return undef if NS:TITLE is not a redirect, otherwise return
+(DEST_NS, DEST_TITLE)
+
+=cut
+
+sub api_resolve_redirect {
+  my $ns = shift;
+  my $title = shift;
+
+  if ($use_toolserver == 1) { 
+    return toolserver_resolve_redirect($ns, $title);
+  }
+
+  init_api();
+
+  $title = $namespaces->{$ns} . $title;  
+
+  print "T '$title'\n";
+
+  my $data = $api->makeXMLrequest(['action'=>'query',
+                                    'titles'=>$title,
+                                    'redirects'=>'1',
+                                    'format'=>'xml']);
+
+  my $c = $data->{'query'}->{'redirects'}->{'r'}->{'to'};
+
+  if ( defined $c) { 
+    my $ns = $data->{'query'}->{'pages'}->{'page'}->{'ns'};
+    my $title = $data->{'query'}->{'pages'}->{'page'}->{'title'};
+    $title =~ s/^\Q$namespaces->{$ns}\E//;
+    return $ns, $title;
+  } else { 
+    return undef;
+  }        
+}
+
+#####################################################################
+=item B<api_get_move_log>(NS, TITLE) 
+
+Download a list of move log entries for NS:TITLE
+
+Returns a reference to an array of hashes
+
+=cut
+
+sub api_get_move_log {
+  my $ns = shift;
+  my $title = shift;
+
+  if (0 && $use_toolserver == 1) { 
+    return toolserver_get_move_log($ns, $title);
+  }
+
+  init_api();
+
+  $title = $namespaces->{$ns} . $title;  
+
+  my $data = $api->log_events($title, 'move');
+
+  my $output = [];
+  my $d;
+
+  foreach $d ( @$data ) { 
+    $d->{'user'} = encode('utf8', $d->{'user'});
+    $d->{'title'} = encode('utf8', $d->{'title'});
+    $d->{'comment'} = encode('utf8', $d->{'comment'});
+    $d->{'dest-ns'} =$d->{'move'}->{'new_ns'};
+    $d->{'dest-title'} = encode('utf8',$d->{'move'}->{'new_title'});
+
+    push @$output, $d;
+  }
+
+ return $output;
+}
+
 
 #Load successfuly
 1;
