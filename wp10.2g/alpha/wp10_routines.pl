@@ -29,28 +29,27 @@ The hash ref returned by B<get_extra_assessments>()
 ######################################################################
 # i18n
 
+# These two really should never change, regardless of which wiki it is
 my $categoryNS = 14;
 my $talkNS = 1;
-my $Category = 'Category';
-my $Articles = 'articles';   
-my $By_quality = 'by quality';
-my $By_importance = 'by importance';
 
-my $Lang = 'en';
-my $Root_category = 'Category:Wikipedia 1.0 assessments';
-my $GA_category = "$Category:Wikipedia good articles";
-my $FA_category = "$Category:Wikipedia featured articles";
-my $FL_category = "$Category:Wikipedia featured lists";
-read_conf();
-my $Class = 'Class';
-my $No_Class = 'No-Class';
-my $Unassessed_Class = get_conf('Unassessed_Class');
-my $Assessed_Class = 'Assessed-Class';
+my $Category = get_conf('category_ns');
+my $Articles = get_conf('articles_label');
+my $By_quality = get_conf('by_quality');
+my $By_importance = get_conf('by_importance');
+my $By_importance_alt = get_conf(by_importance_alt);
 
-my %Quality=get_conf('quality');
-my %Importance=( 'Top-Class' => 400, 'High-Class' => 300,
-                 'Mid-Class' => 200, 'Low-Class' => 100,
-                 $Unassessed_Class => 0);
+my $Lang = get_conf('language');
+my $Root_category = get_conf('root_cat');
+
+my $Class = get_conf('class');
+my $No_Class = get_conf('no_class');
+my $Unassessed_Class = get_conf('unassessed_class');
+my $Assessed_Class = get_conf('assessed_class');
+
+my %Quality=%{get_conf('quality')};
+my %Importance=%{get_conf('importance')};
+my $ReviewCats=get_conf('review');
 
 my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
@@ -146,7 +145,10 @@ sub get_project_quality_categories {
 
   print "--- Get project categories for $project by quality\n";
 
-  my $cat = "Category:$project articles $By_quality";
+  # This line may need to be modified, depending on the naming convention
+  # adopted by a particular wiki
+  my $cat = "$Category:$project $Articles $By_quality";
+
 #  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   my $cats = pages_in_category($cat, $categoryNS);
   my $value;
@@ -192,14 +194,16 @@ sub get_project_importance_categories {
 
   print "--- Get project categories for $project by importance\n";
 
-  my $cat = "Category:$project articles $By_importance";
+  my $cat = "$Category:$project $Articles $By_importance";
   my $cats = pages_in_category($cat, $categoryNS);
 #  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   my $value;
 
+  # If 'by importance' is empty, the category tree might be under 
+  # 'by priority', so we need to check there
   if ( 0 == scalar @$cats ) { 
     print "Fall back to 'priority' naming\n";
-    $cat = "Category:$project articles by priority";
+    $cat = "$Category:$project $Articles $By_importance_alt";
     $cats = pages_in_category($cat, $categoryNS);
 #    $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   }
@@ -375,12 +379,12 @@ category page for PROJECT
 sub get_extra_assessments { 
   my $project = shift;
 
-  my $cat = "Category:$project articles $By_quality";
+  my $cat = "$Category:$project $Articles $By_quality";
   my $txt = content_section($cat, 0);
   my @lines = split /\n+/, $txt;
 
-  my $Starter = '{{ReleaseVersionParameters';
-  my $Ender = '}}';
+  my $Starter = get_conf('template_start');	
+  my $Ender = get_conf('template_end');
 
   my ($homepage, $parent, $shortname, $line, $param, $num, $left, $right);
   my $extras = {};
@@ -437,7 +441,7 @@ sub get_extra_assessments {
     }
   }
 
-  print "--\nWikiProject information from ReleaseVersionParameters template\n";
+  print "--\nWikiProject information from $Starter$Ender\n";
 
   if ( defined $homepage) { 
     print "Homepage: '$homepage'\n";
@@ -510,9 +514,7 @@ sub download_review_data_internal {
   my ($oldrating) = get_review_data();
 	
   my $seen = {};
-  my $qcats = {'GA' => $GA_category,
-               'FA' => $FA_category, 
-               'FL' => $FL_category };
+  my $qcats = $ReviewCats;
 
   my ($cat, $tmp_arts, $qual, $art, $d);
 	

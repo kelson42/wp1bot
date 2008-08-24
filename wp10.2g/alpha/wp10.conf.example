@@ -37,11 +37,25 @@
 # API login information
 'api-credentials'        => '/home/cbm/veblen/api.credentials',
 
+# Site information
+'base_url'               => 'http://en.wikipedia.org',
+'api_url'                => 'http://en.wikipedia.org/w/api.php',
+'root_cat'               => 'Category:Wikipedia 1.0 assessments',
+'language'               => 'en',
+'category_ns'            => 'Category',
+'articles_label'         => 'articles',
+'by_quality'             => 'by quality',
+'by_importance'          => 'by importance',
+'by_importance_alt'      => 'by priority',
+
+'template_start'         => '{{ReleaseVersionParameters',
+'template_end'           => '}}',
+
 # Default quality classes
 'class'                  => 'Class',
 'no_class'               => 'No-Class',
-'Unassessed_Class'       => 'Unassessed-Class',
-'Assessed_Class'         => 'Assessed-Class',
+'unassessed_class'       => 'Unassessed-Class',
+'assessed_class'         => 'Assessed-Class',
 
 'quality'  =>     { 'FA-Class'    => 500, 
                     'FL-Class'    => 480, 
@@ -54,3 +68,16 @@
                     'List-Class'  =>  80, 
                     'Assessed-Class'   => 20, 
                     'Unassessed-Class' => 0   },
+
+# Default importance categories
+'importance'  =>   {'Top-Class' => 400,
+                    'High-Class' => 300,
+					'Mid-Class' => 200,
+                    'Low-Class' => 100, 
+					'Unassessed-Class' => 0},
+
+# Community review categories to be crawled
+'review'  =>     { 'GA' => 'Category:Wikipedia good articles', 
+                   'FA' => 'Category:Wikipedia featured articles',
+                   'FL' => 'Category:Wikipedia featured lists'    },
+				   
