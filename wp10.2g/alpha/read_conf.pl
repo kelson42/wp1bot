@@ -43,18 +43,56 @@ sub read_conf {
 
 sub get_conf() { 
   my $var = shift;
-  my $val;
+  my ($hash, $val, $key, $left, $right);
 		
   if ( defined $settings->{$var})
   {
     $val = $settings->{$var};
 	# print "$var found in settings; value = $val\n";
+	  
+	  if ($val =~ /^\{/ && $val =~ /\}$/)
+		  {
+			  # Assume that this is a hash variable
+
+			  # Remove the { and } that are wrapping the hash
+			  $val = substr($val, 1, length($val) - 2);
+			  
+			  my $vars;
+			  
+			  # Split along the commas
+			  my @keys = split(/,/, $val);
+			  			  
+			  # Loop around each key/value pair
+			  foreach $key (@keys) {
+				  # Parse around the '=>'
+				  next unless ( $key =~ /^\s*(\S*)\s*\=>\s*(\S*)\s*$/ ); 
+				  $left = $1;
+				  $right = $2;
+				  # Remove the quotes surrounding key/value pairs, if necessary
+				  if ($left =~ /^\'/ && $left =~ /\'$/)
+				  {
+					  $left = substr($left, 1, length($left) - 2);
+				  }
+				  if ( $right =~ /^\'/ && $right =~ /\'$/)
+				  {
+					  $right = substr($right, 1, length($right) - 2);
+				  }
+				  # Assign the key/value pair to the associative array hash
+				  $vars->{$left} = $right;   
+			  }
+			  return $vars;
+		  }
+		  else
+		  {
+			  # Not a hash variable
+			  return $val;
+		  }
   }
   else
   {
     print "$var not found in settings\n";
+	  die();
   }
-  return $val;	
 }
 
 
