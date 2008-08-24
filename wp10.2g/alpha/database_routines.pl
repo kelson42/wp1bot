@@ -562,6 +562,7 @@ sub db_get_project_details {
 
   my @row;
   while( @row = $sth->fetchrow_array() ){
+    $proj = $row[0];
     $timestamp = $row[1];
     $count = $row[2];
 
