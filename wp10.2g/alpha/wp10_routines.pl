@@ -2,7 +2,6 @@ use strict vars;
 use Data::Dumper;
 our $global_timestamp;
 our $global_timestamp_wiki;
-
 =head1 SYNOPSIS
 
 Routines to update the local database from information on the wiki
@@ -42,17 +41,13 @@ my $Root_category = 'Category:Wikipedia 1.0 assessments';
 my $GA_category = "$Category:Wikipedia good articles";
 my $FA_category = "$Category:Wikipedia featured articles";
 my $FL_category = "$Category:Wikipedia featured lists";
-
+read_conf();
 my $Class = 'Class';
 my $No_Class = 'No-Class';
-my $Unassessed_Class = 'Unassessed-Class';
+my $Unassessed_Class = get_conf('Unassessed_Class');
 my $Assessed_Class = 'Assessed-Class';
 
-my %Quality=( 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
-              'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
-              'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
-              $Assessed_Class => 20, $Unassessed_Class => 0);
-
+my %Quality=get_conf('quality');
 my %Importance=( 'Top-Class' => 400, 'High-Class' => 300,
                  'Mid-Class' => 200, 'Low-Class' => 100,
                  $Unassessed_Class => 0);

@@ -13,6 +13,7 @@ use Getopt::Long;
 require 'read_conf.pl';
 our $Opts = read_conf(); # Also initializes library paths
 
+#print Dumper (get_conf('quality'));
 require 'database_routines.pl';
 require 'wp10_routines.pl';
 require 'api_routines.pl';
