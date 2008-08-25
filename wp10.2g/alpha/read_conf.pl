@@ -18,7 +18,9 @@ sub read_conf {
   die "Can't open configuration file '$filename'\n"
     unless -r $filename;
 
-  print "Reading configuration file '$filename'\n";
+  if ( $ARGV[0] eq '--debug' ) { 
+    print "Reading configuration file '$filename'\n";
+  }
 
   open CONF, "<", $filename 
     or die "Can't open configuration file '$filename': $!\n";
@@ -43,15 +45,17 @@ sub read_conf {
   }
 
 
-  local $Data::Dumper::Terse = 1;
-  local $Data::Dumper::Sortkeys = 1;
-  print "Configuration settings: \n";
-  print Dumper($settings);
+  if ( $ARGV[0] eq '--debug' ) { 
 
-  print "Include path (\@INC):\n\t";
-  print (join "\n\t", @INC) . "\n";
+    local $Data::Dumper::Terse = 1;
+    local $Data::Dumper::Sortkeys = 1;
+    print "Configuration settings: \n";
+    print Dumper($settings);
 
-
+    print "Include path (INC):\n\t";
+    print (join "\n\t", @INC);
+    print  "\n--\n";
+  }
 
   return $settings;
 
