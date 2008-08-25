@@ -881,6 +881,7 @@ sub make_wp05_link {
 sub make_review_link { 
   my $type = shift;
 
+	#return get_cached_review_icon($type);
   return get_cached_td_background($type . "-Class") ;
 }
 
@@ -992,3 +993,57 @@ sub init_namespaces {
   return $namespaces;
 
 }
+
+###########################################################################
+
+sub get_cached_review_icon { 
+	my $class = shift;
+	
+	if ( defined $cacheMem->{$class . "-icon"} ) { 
+		print " <!-- hit {$class}-icon in memory cache --> ";
+		return $cacheMem->{$class . "-icon"};
+	}
+	
+	my $key = "CLASS:" . $class . "-icon";
+	my $data;
+	
+	if ( $cacheFile->exists($key) ) { 
+		print " <!-- hit {$class}-icon in file cache, expires " 
+		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
+		. " --> ";
+		$data = $cacheFile->get($key);
+		$cacheMem->{$class} = $data;
+		return $data;
+	}
+	
+	$data = get_review_icon($class);
+	
+	$cacheFile->set($key, $data, '12 hours');
+	$cacheMem->{$class . "-icon"} = $data;
+	return $data;
+}
+
+###########################################################################
+
+sub get_review_icon { 
+	my $class = shift;
+	my $r =  $api->parse('{{' . $class . '-Class}}');
+	my $t = $r->{'text'};
+	my $f =  $api->parse('{{' . $class . '-classicon}}');
+	my $g = $f->{'text'};
+	
+	$t =~ s/\|.*//s;
+	$t =~ s!^<p>!!;
+	$g =~ s/<\/p.*//;
+	$g =~ s!^<p>!!;
+	# Perl doesn't want to get rid of the rest of the lines in the 
+	# multi-line string, so remove them the hard way
+	my @str = split(/\n/,$g);
+	$g = @str[0];
+	undef(@str);
+	$class =~ s/-Class//;
+	$t = "<td $t><b>$g&nbsp;$class</b></td>";
+	
+	return $t;
+}
+
