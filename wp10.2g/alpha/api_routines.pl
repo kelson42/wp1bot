@@ -42,7 +42,7 @@ sub init_api() {
   $api->maxlag(-1);
   $api->max_retries(20);
 
-  $api->base_url('http://en.wikipedia.org/w/api.php');
+  $api->base_url(get_conf('api_url'));
   $api->debug_level(3);
 
   if ( defined $Opts->{'api-credentials'} ) { 
