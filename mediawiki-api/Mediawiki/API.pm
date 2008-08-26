@@ -365,11 +365,13 @@ sub cookie_jar {
 
 =item $api->edit_page($pageTitle, $pageContent, $editSummary, $params);
 
-Overwrite a page with new content. Currently doesn't work because
-the editing features of the API are not implemented in Mediawiki.
+Edit a page. 
 
 The array reference $params allows configuration. Valid parameters listed
 at http://www.mediawiki.org/wiki/API:Edit_-_Create%26Edit_pages#Token
+
+Returns undef on success. 
+Returns the API.php result hash on error.
 
 =back
 
@@ -760,9 +762,14 @@ sub content_single {
 }
 #########################################################
 
+=item $text = $api->content_section($pageTitle, $secNum);
+
+Fetch the content (wikitext) of a particular section of a page.
+The lede section is #0. 
+
+=cut
 
 sub content_section { 
-
   my $self = shift;
   my $pageTitle = shift;
   my $section = shift;
@@ -789,6 +796,11 @@ sub content_section {
 
 ###################################################
 
+=item $text = $api->revisions($pageTitle, $count);
+
+Fetch the most recent $count revisions of a page.
+
+=cut
 
 sub revisions {
   my $self = shift;
@@ -919,7 +931,7 @@ sub user_contribs {
 
   $self->add_maxlag_param(\%queryParameters);
 
-  my $res  = $self->makeHTMLrequest([ %queryParameters ]);
+  my $res  = $self->makeHTTPrequest([ %queryParameters ]);
   
   my $xml = $self->parse_xml($res);
 
@@ -933,7 +945,7 @@ sub user_contribs {
 
     $self->print(3, "I Continue from: " . $xml->{'query-continue'}->{'usercontribs'}->{'ucstart'} );
 
-    $res  = $self->makeHTMLrequest([%queryParameters]);
+    $res  = $self->makeHTTPrequest([%queryParameters]);
 
     $xml = $self->parse_xml($res);
 
@@ -947,6 +959,12 @@ sub user_contribs {
 
 ######################3
 
+=item $api->parse( $wikitext ) 
+
+Parse a chunk of wiki code and return the HTML result. 
+
+=cut
+
 sub parse { 
   my $self = shift;
   my $content = shift;
@@ -957,7 +975,6 @@ sub parse {
 
   return $self->child_data($r, ['parse']);
 }                                  
-
 
 
 #############################################################3
@@ -1119,8 +1136,10 @@ sub user_is_bot {
 =item $api->makeXMLrequest($queryArgs [ , $arrayNames])
 
 Makes a request to the server, parses the result, and
-attempts to detect errors from the API and retry. $arrayNames,
-optional, is used for the 'ForceArray' parameter of XML::Simple.
+attempts to detect errors from the API and retry. 
+
+Optional parameter $arrayNames is used for the 'ForceArray' 
+parameter of XML::Simple.
 
 =cut
 
@@ -1143,7 +1162,7 @@ sub makeXMLrequest {
     }
    
 
-    $res = $self->makeHTMLrequest($args);
+    $res = $self->makeHTTPrequest($args);
   
     $self->print(7, "Got result\n$res\n---\n");
 
@@ -1200,19 +1219,19 @@ return $xml;
 
 ######################################
 
-=item $api->makeHTMLrequest($args)
+=item $api->makeHTTPrequest($args)
 
-Makes an HTML request and returns the resulting content. This is the 
+Makes an HTTP request and returns the resulting content. This is the 
 most low-level access to the server. It provides error detection and 
 automatically retries failed attempts as appropriate. Most queries will 
 use a more specific method.
 
-The $args parameter must be an array reference to an array of 
-KEY => VALUE pairs. These are passed directly to the HTTP POST request.
+The $args parameter must be a reference to an array of KEY => VALUE 
+pairs. These are passed directly to the HTTP POST request.
 
 =cut
 
-sub makeHTMLrequest {
+sub makeHTTPrequest {
   my $self = shift;
   my $args = shift;
 
@@ -1232,7 +1251,7 @@ sub makeHTMLrequest {
       my $k = 0;
       while ( $k < scalar @{$args}) { 
         $self->print(5, "I\t" . ${$args}[$k] . " => '" 
-                       . Dumper(${$args}[$k+1]) . "'");
+                       . ${$args}[$k+1] . "'");
         $k += 2;
       }
 
