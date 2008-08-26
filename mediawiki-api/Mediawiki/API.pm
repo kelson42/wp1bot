@@ -1227,11 +1227,12 @@ sub makeHTMLrequest {
     $self->{'requestCount'}++;
 
     if ( $retryCount == 0) { 
-      $self->print(2, "A  Making HTML request (" . $self->{'requestCount'} . ")");
+      $self->print(2, "A  Making HTTP request (" . $self->{'requestCount'} . ")");
       $self->print(5, "I  Base URL: " . $self->{'baseurl'});
       my $k = 0;
       while ( $k < scalar @{$args}) { 
-        $self->print(5, "I\t" . ${$args}[$k] . " => " . Dumper(${$args}[$k+1]));
+        $self->print(5, "I\t" . ${$args}[$k] . " => '" 
+                       . Dumper(${$args}[$k+1]) . "'");
         $k += 2;
       }
 
