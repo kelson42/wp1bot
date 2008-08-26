@@ -42,15 +42,21 @@ my $table = sort_projects($projects);
 my $project_count = scalar keys %$projects;
 
 # Fix this
-my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin";
+# my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin";
+my $indexURL = get_conf('index-url');
+my $listURL = get_conf('list2-url');
+my $tableURL = get_conf('table-url');
+my $table2URL = get_conf('table2_url');
+my $logURL = get_conf('log-url');
+my $serverURL = get_conf('server_url');
 
 print "<center>\n";
 print "<b>$project_count</b> projects: \n";
 my $letter;
 foreach $letter ( sort {$a cmp $b} keys %$table ) {
-  print "<a href=\"$uri/index.pl#" . $letter . "\">$letter</a> ";
+  print "<a href=\"$indexURL#" . $letter . "\">$letter</a> ";
 }
-print "<br/><a href=\"$uri/table2.pl\">Overall ratings table</a>\n"; 
+print "<br/><a href=\"$table2URL\">Overall ratings table</a>\n"; 
 print "</center><hr/>\n";
 
 print "<center><table class=\"wikitable\">\n";
@@ -91,11 +97,11 @@ sub project_index_link {
   my $URI = $ENV{'SCRIPT_URI'};
   $URI =~ s/index.pl//;
 
-  my $listp = $URI . "list2.pl?projecta=" . uri_escape($project);
-  my $tablep = $URI . "table.pl?project=" . uri_escape($project);
-  my $logp = $URI . "log.pl?project=" . uri_escape($project);
-  my $catp = "/wiki/Category:" . uri_escape($project)
-             . " articles by quality";
+  my $listp = $listURL ."projecta=" . uri_escape($project);
+  my $tablep = $tableURL ."project=" . uri_escape($project);
+  my $logp = $logURL . "project=" . uri_escape($project);
+  my $catp = $serverURL . "?title=" . get_conf('category_ns') .":" . uri_escape($project)
+             . " " . get_conf('articles_label') . " " . get_conf('by_quality');
   
 
   my $name = $project;
@@ -104,7 +110,7 @@ sub project_index_link {
   }
 
   if ( defined $data->{'p_wikipage'} ) { 
-    $name =  "<a href=\"http://en.wikipedia.org/w/index.php?title=" 
+    $name =  "<a href=\"" . $serverURL . "?title=" 
             . uri_escape($data->{'p_wikipage'}) . "\">$name</a>";
   }
 
@@ -144,7 +150,7 @@ sub print_progress_bar {
   # importance ratings)
   if ( $number == 0 ) { return "";}
 		
-  # Get the color of the bar
+  # Get the color of the bar's background
   my $color = get_bar_color($number);
 	
   # Format the input to two decimal digits
