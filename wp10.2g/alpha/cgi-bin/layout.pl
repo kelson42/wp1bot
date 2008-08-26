@@ -35,6 +35,8 @@ $App
 </div>
 <div class="subhead">
 $subtitle
+</div><div class="linkback">
+<a href="$indexURL">Return to the project index ↵</a>
 </div>
 
 <div class="content">
@@ -45,6 +47,7 @@ HERE
 #######################################################################
 
 sub layout_footer {
+	my $indexURL = get_conf('index_url');
 print << "HERE";
 </div>
 <div class="footer">

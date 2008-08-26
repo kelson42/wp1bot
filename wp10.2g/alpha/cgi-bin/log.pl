@@ -17,7 +17,7 @@ require 'init_cache.pl';
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
+$api->base_url(get_conf('api_url'));
 
 my $cacheFile = init_cache();
 my $cacheMem = {};
@@ -47,7 +47,7 @@ foreach $p ( keys %param ) {
   $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
 }
 
-
+# FIXME: Use get_conf instead of Opts
 if ( defined $Opts->{'log-dir'} 
      && -d $Opts->{'log-dir'} ) { 
   open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
@@ -61,7 +61,12 @@ our $dbh = db_connect($Opts);
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-layout_header("Assessment logs");
+if (defined $param{'project'}) {
+  layout_header("Assessment logs: " . $proj . " " . get_conf('pages_label'));
+} else {
+  layout_header("Assessment logs");
+}
+
 
 my $projects = list_projects();
 query_form(\%param, $projects);
@@ -85,7 +90,7 @@ sub log_table {
    my ($project, $pagename, $oldrating, $newrating , 
        $pagenameWC, $offset, $limit);
   
-   $project = $params->{'project'} || "Mathematics";
+   $project = $params->{'project'} || "";
    $pagename = $params->{'pagename'} || "";
    $oldrating = $params->{'oldrating'} || "";
    $newrating = $params->{'newrating'} || "";
@@ -95,6 +100,8 @@ sub log_table {
   
    if ( $offset > 0) { $offset--; }
    if ( $limit > 1000 ) { $limit = 1000; } 
+   # FIXME: use get_conf('class-suffix'); not sure how that would work 
+   # with the /-Class/ regexp below
    if ( $oldrating =~ /\w|\d/ && ! $oldrating =~ /-Class/) { 
      $oldrating .= "-Class";
    }
@@ -404,6 +411,7 @@ sub get_td_background {
 
   $t =~ s/\|.*//s;
   $t =~ s!^<p>!!;
+  # FIXME: use get_conf('class-suffix') instead;
   $class =~ s/-Class//;
   $t = "<td $t><b>$class</b></td>";
 
@@ -417,8 +425,7 @@ sub get_link_from_api {
   my $r =  $api->parse($text);
   my $t = $r->{'text'};
 
-  # TODO: internationalize this bare URL
-  my $baseURL = "http://en.wikipedia.org";
+  my $baseURL = get_conf('base_url');
   $t =~ s!^<p>!!;
   my @t = split('</p>',$t);
   $t = @t[0];
@@ -434,12 +441,13 @@ sub get_link_from_api {
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL = $ENV{"SCRIPT_URI"};
-  my @t = split('log.pl',$tableURL);
-  $tableURL = @t[0] . "table.pl";
+  my $tableURL = get_conf('table-url');
+  my $listURL = get_conf('list2-url');
 
+  # If the project is defined, show the project's navbar
   if ( $project =~ /\w|\d/ ) { 
-    $tableURL = $tableURL . "?project=" . $project;
+    $tableURL = $tableURL . "project=" . $project;
+    $listURL = $listURL . "projecta=" . $project . "&limit=50";
 
     ($project, $timestamp, $wikipage, $parent, $shortname) = 
       get_project_data($project);
@@ -455,8 +463,8 @@ sub print_header_text {
     print " Data for all projects ";
   }
 
-  print "(<b>list</b> \| <a href=\"" . $tableURL 
-        . "\">summary table</a>)\n";
+  print "(<a href=\"" . $listURL . "\">list</a> \| <a href=\"" . $tableURL 
+        . "\">summary table</a> | <b>assessment log</b>)\n";
 }
 
 

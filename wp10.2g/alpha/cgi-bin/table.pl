@@ -11,7 +11,7 @@ our $Opts = read_conf();
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
+$api->base_url(get_conf('api_url'));
 
 use Data::Dumper;
 use URI::Escape;
@@ -23,7 +23,7 @@ require 'layout.pl';
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
-my $script_url = $Opts->{'list2-url'} 
+my $script_url = get_conf('list2-url') 
  or die "No 'list2-url' specified in configuration.\n";
 
 
@@ -50,8 +50,11 @@ require "database_www.pl";
 
 our $dbh = db_connect($Opts);
 
-
-layout_header('Summary tables');
+if (defined $param{'project'}) {
+	layout_header("Summary tables: " . $proj . " " . get_conf('pages_label'));
+} else {
+	layout_header("Summary tables: ");
+}
 my $projects = query_form($proj);
 
 if ( defined $proj && defined $projects->{$proj} ) {
@@ -400,13 +403,13 @@ sub query_form {
 
 #####################################################################
 
-
-
 sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = $script_url;
+	my $listURL = get_conf('list-url');
+	my $logURL = get_conf('log-url');
 	$listURL = $listURL . "projecta=" . $project . "&limit=50";
+	$logURL = $logURL . "project=" . $project;
 	
 	($project, $timestamp, $wikipage, $parent, $shortname) = 
 	get_project_data($project);
@@ -422,8 +425,8 @@ sub print_header_text {
 	{
 		print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> "; 		
 	}
-	print "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
-	
+	print "(<a href=\"" . $listURL . "\">list</a> \| <b>summary table</b> | <a href=\"" 
+			. $logURL . "\">assessment log</a>)\n";	
 }
 
 sub get_link_from_api { 
@@ -432,7 +435,7 @@ sub get_link_from_api {
 	my $t = $r->{'text'};
 	
 	# TODO: internationalize this bare URL
-	my $baseURL = "http://en.wikipedia.org";
+	my $baseURL = get_conf('base_url');
 	$t =~ s!^<p>!!;
 	my @t = split('</p>',$t);
 	$t = @t[0];

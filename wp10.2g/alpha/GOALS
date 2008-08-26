@@ -7,3 +7,5 @@ Goals to finish before promoting to beta version:
 * Detect when articles have been renamed, and log this appropriately
   rather than claiming the old name was removed and the new name was
   added.
+
+* Move all the get_link_from_api routines to api_routines.pl?

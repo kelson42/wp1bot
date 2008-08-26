@@ -21,7 +21,12 @@
 # URLs for support files
 'wp10.css' =>     'http://localhost/~veblen/wp10.css',
 'usableforms.js' =>  'http://localhost/~veblen/usableforms.js',
-'list2-url' =>  'http://localhost/~veblen/cgi-bin/list2.pl',
+'list2-url' =>  'http://localhost/~veblen/cgi-bin/list2.pl?',
+'table-url' =>  'http://localhost/~veblen/cgi-bin/table.pl?',
+'table2-url' =>  'http://localhost/~veblen/cgi-bin/table2.pl?',
+'log-url' =>  'http://localhost/~veblen/cgi-bin/log.pl?',
+'index-url' =>  'http://localhost/~veblen/cgi-bin/index.pl',
+'loadversion-url' =>  'http://localhost/~veblen/cgi-bin/loadVersion.pl',
 
 # Database info and credentials
 'database'               =>  'wp10',
@@ -39,17 +44,22 @@
 
 # Site information
 'base_url'               => 'http://en.wikipedia.org',
+'server_url'             => 'http://en.wikipedia.org/w/index.php',
 'api_url'                => 'http://en.wikipedia.org/w/api.php',
 'root_cat'               => 'Category:Wikipedia 1.0 assessments',
 'language'               => 'en',
 'category_ns'            => 'Category',
 'articles_label'         => 'articles',
+'pages_label'            => 'pages',
 'by_quality'             => 'by quality',
 'by_importance'          => 'by importance',
 'by_importance_alt'      => 'by priority',
 
+# Template information
 'template_start'         => '{{ReleaseVersionParameters',
 'template_end'           => '}}',
+'class-suffix'			 => '-Class'
+'icon-suffix'            => '-classicon'
 
 # Default quality classes
 'class'                  => 'Class',

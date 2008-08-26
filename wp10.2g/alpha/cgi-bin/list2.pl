@@ -17,7 +17,7 @@ require 'init_cache.pl';
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
+$api->base_url(get_conf('api_url'));
 
 require CGI;
 require CGI::Carp; 
@@ -57,7 +57,7 @@ foreach $p ( keys %param ) {
   $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
 }
 
-
+# FIXME: Use get_conf instead of Opts
 if ( defined $Opts->{'log-dir'} 
      && -d $Opts->{'log-dir'} ) { 
   open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
@@ -65,14 +65,17 @@ if ( defined $Opts->{'log-dir'}
   close LOG;
 }
 
-
-my $proj = $param{'project'} || $ARGV[0];
+my $proj = $param{'projecta'} || $ARGV[0];
 
 our $dbh = db_connect($Opts);
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-layout_header("Article lists");
+if (defined $param{'projecta'}) {
+	layout_header("Article lists: " . $proj . " " . get_conf('pages_label'));
+} else {
+	layout_header("Article lists");
+}
 
 my $projects = list_projects();
 query_form(\%param, $projects);
@@ -94,6 +97,7 @@ sub ratings_table {
   my $projects = shift;
 
   my $p;
+  # FIXME: use get_conf('class-suffix') instead of "-Class";
   foreach $p ( ( 'importance', 'importanceb', 'quality', 'qualityb' ) ) { 
     if ( (defined $params->{$p}) 
          && ! ($params->{$p} =~/^\s*$/ )
@@ -754,6 +758,7 @@ sub get_td_background {
 
   $t =~ s/\|.*//s;
   $t =~ s!^<p>!!;
+  # FIXME: use get_conf('class-suffix'); 
   $class =~ s/-Class//;
   $t = "<td $t><b>$class</b></td>";
 
@@ -768,7 +773,7 @@ sub get_link_from_api {
   my $t = $r->{'text'};
 
   # TODO: internationalize this bare URL
-  my $baseURL = "http://en.wikipedia.org";
+  my $baseURL = get_conf('base_url');
   $t =~ s!^<p>!!;
   my @t = split('</p>',$t);
   $t = @t[0];
@@ -784,16 +789,17 @@ sub get_link_from_api {
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL = $ENV{"SCRIPT_URI"};
-  my @t = split('list2.pl',$tableURL);
-  $tableURL = @t[0] . "table.pl";
+  my $tableURL = get_conf('table-url');
+  my $logURL = get_conf('log-url');
 
   if ( $project =~ /\w|\d/ ) { 
-    $tableURL = $tableURL . "?project=" . $project;
+    $tableURL = $tableURL . "project=" . $project;
+    $logURL = $logURL . "project=" . $project;
 
     ($project, $timestamp, $wikipage, $parent, $shortname) = 
       get_project_data($project);
 
+	# If the project is defined, show the project's navbar
     if ( ! defined $wikipage) {
       print "Data for <b>$project</b> "; 	
     } elsif ( ! defined $shortname) {
@@ -806,14 +812,13 @@ sub print_header_text {
   }
 
   print "(<b>list</b> \| <a href=\"" . $tableURL 
-        . "\">summary table</a>)\n";
+        . "\">summary table</a> | <a href=\"" . $logURL . "\">assessment log</a>)\n";
 }
-
 
 ###########################################################################
 
 sub make_article_link {
-  my $server_uri = "http://en.wikipedia.org/w/index.php";
+  my $server_uri = get_conf('server-url');
   my $ns = shift;
   my $title = shift;
 
@@ -822,7 +827,7 @@ sub make_article_link {
   }
 
   my $a = $Namespaces->{$ns} . $title;
-  my $b = $Namespaces->{$ns+1} . $title;
+  my $b = $Namespaces->{$ns+1} . $title;		# talk page namespace
 
 
   return "<a href=\"$server_uri?title=" . uri_escape($a) . "\">$a</a>"
@@ -838,6 +843,7 @@ sub make_history_link {
   my $ns = shift;
   my $art = shift;
   my $ts = shift;
+  my $loadversionURL = get_conf('loadversion-url');
 
   if ( ! defined $Namespaces ) { 
       $Namespaces = init_namespaces();
@@ -848,13 +854,12 @@ sub make_history_link {
   my $d = $ts;
   $d =~ s/T.*//;
 
-  my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
-  return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
+  return "<a href=\"" . $loadversionURL . "?article=" . uri_escape($art) 
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
 }
 
 ###########################################################################
-
+# TODO: i18n
 sub make_wp05_link { 
   my $cat = shift;
   my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
@@ -881,8 +886,8 @@ sub make_wp05_link {
 sub make_review_link { 
   my $type = shift;
 
-	#return get_cached_review_icon($type);
-  return get_cached_td_background($type . "-Class") ;
+  return get_cached_review_icon($type);
+	#return get_cached_td_background($type . get_conf('class-suffix')) ;
 }
 
 ###########################################################################
@@ -1027,9 +1032,9 @@ sub get_cached_review_icon {
 
 sub get_review_icon { 
 	my $class = shift;
-	my $r =  $api->parse('{{' . $class . '-Class}}');
+	my $r =  $api->parse('{{' . $class . get_conf('class_suffix') . '}}');
 	my $t = $r->{'text'};
-	my $f =  $api->parse('{{' . $class . '-classicon}}');
+	my $f =  $api->parse('{{' . $class . get_conf('icon_suffix') . '}}');
 	my $g = $f->{'text'};
 	
 	$t =~ s/\|.*//s;
@@ -1041,6 +1046,7 @@ sub get_review_icon {
 	my @str = split(/\n/,$g);
 	$g = @str[0];
 	undef(@str);
+	# FIXME: use get_conf('class-suffix') here again
 	$class =~ s/-Class//;
 	$t = "<td $t><b>$g&nbsp;$class</b></td>";
 	
