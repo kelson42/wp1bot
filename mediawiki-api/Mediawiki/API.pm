@@ -74,6 +74,8 @@ sub new {
   $self->{'xmlretrydelay'} = 10;   # pause after XML level failure 
   $self->{'xmlretrylimit'} = 10;   # retries at XML level
 
+  $self->{'throttledelay'} = 90;   # delay on login throttle
+
   bless($self);
   return $self;
 }
@@ -289,7 +291,14 @@ sub login {
   }
 
   if ( ! ( $xml->{'login'}->{'result'} eq 'Success') ) {
-    die( "Login error. Message was: " . $xml->{'login'}->{'result'} . "\n");
+    if ( $xml->{'login'}->{'result'} eq 'Throttled') {   
+      $self->print(3, "Throttled, sleeping " 
+                      . $self->{'throttledelay'} . " seconds\n");
+      sleep $self->{'throttledelay'};
+      return $self->login($userName, $userPassword);
+    }
+ 
+    die( "Login error. Message was: '" . $xml->{'login'}->{'result'} . "'\n");
   }
 
   $self->print(1,"R Login successful");
@@ -371,7 +380,7 @@ sub edit_page {
   my $pageTitle = shift;
   my $pageContent = shift;
   my $editSummary = shift;
-  my $params = shift;
+  my $params = shift || [];
 
   $self->print(1,"A Editing $pageTitle");
 
