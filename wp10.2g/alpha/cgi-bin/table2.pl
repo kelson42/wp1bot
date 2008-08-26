@@ -52,7 +52,7 @@ if ( defined $ARGV[0] ) {
   exit;
 }
 
-layout_header('Overall summary table');
+layout_header('Overall summary table', 1);
 
 my ($html, $wikicode) = cached_ratings_table();
 

@@ -51,9 +51,9 @@ require "database_www.pl";
 our $dbh = db_connect($Opts);
 
 if (defined $param{'project'}) {
-	layout_header("Summary tables: " . $proj . " " . get_conf('pages_label'));
+	layout_header("Summary tables: " . $proj . " " . get_conf('pages_label'), 1);
 } else {
-	layout_header("Summary tables: ");
+	layout_header("Summary tables: ", 1);
 }
 my $projects = query_form($proj);
 

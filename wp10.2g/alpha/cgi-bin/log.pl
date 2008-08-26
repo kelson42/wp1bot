@@ -62,9 +62,9 @@ our $dbh = db_connect($Opts);
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
 if (defined $param{'project'}) {
-  layout_header("Assessment logs: " . $proj . " " . get_conf('pages_label'));
+  layout_header("Assessment logs: " . $proj . " " . get_conf('pages_label'), 1);
 } else {
-  layout_header("Assessment logs");
+  layout_header("Assessment logs", 1);
 }
 
 

@@ -4,9 +4,11 @@ my $App = "Wikipedia Release Version Data";
 
 our $Opts;
 
+my $indexURL = $Opts->{'index-url'};
+
 sub layout_header {
   my $subtitle = shift;
-
+  my $indexLink = shift; 
   my $stylesheet = $Opts->{'wp10.css'}
     or die "Must specify configuration value for 'wp10.css'\n";
 
@@ -35,19 +37,21 @@ $App
 </div>
 <div class="subhead">
 $subtitle
-</div><div class="linkback">
-<a href="$indexURL">Return to the project index ↵</a>
 </div>
-
-<div class="content">
 HERE
+	
+if (defined($indexLink)) {
+  print "<div class=\"linkback\">\n" .
+  "<a href=\"$indexURL\">Return to the project index ↵</a>\n" .
+  "</div>\n";
+}
 
+print "<div class=\"content\">";
 }
 
 #######################################################################
 
 sub layout_footer {
-	my $indexURL = get_conf('index_url');
 print << "HERE";
 </div>
 <div class="footer">

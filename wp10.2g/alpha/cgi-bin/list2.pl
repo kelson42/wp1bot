@@ -72,9 +72,9 @@ our $dbh = db_connect($Opts);
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
 if (defined $param{'projecta'}) {
-	layout_header("Article lists: " . $proj . " " . get_conf('pages_label'));
+	layout_header("Article lists: " . $proj . " " . get_conf('pages_label'), 1);
 } else {
-	layout_header("Article lists");
+	layout_header("Article lists", 1);
 }
 
 my $projects = list_projects();
