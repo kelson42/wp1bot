@@ -9,3 +9,5 @@ Goals to finish before promoting to beta version:
   added.
 
 * Move all the get_link_from_api routines to api_routines.pl?
+
+* Put license statements in the file headers (GPL v2?)
