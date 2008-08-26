@@ -29,7 +29,7 @@ $Revision: 1.32 $
  $api = Mediawiki::API->new();
  $api->base_url($newurl);
  @list = @{$api->pages_in_category($categoryTitle)};
- $api->overwrite_page($pageTitle, $pageContent, $editSummary);
+ $api->edit_page($pageTitle, $pageContent, $editSummary);
 
 =cut
 
@@ -354,24 +354,26 @@ sub cookie_jar {
 
 =over
 
-=item $api->overwrite_page($pageTitle, $pageContent, $editSummary);
+=item $api->edit_page($pageTitle, $pageContent, $editSummary, $params);
 
 Overwrite a page with new content. Currently doesn't work because
 the editing features of the API are not implemented in Mediawiki.
+
+The array reference $params allows configuration. Valid parameters listed
+at http://www.mediawiki.org/wiki/API:Edit_-_Create%26Edit_pages#Token
 
 =back
 
 =cut
 
-sub overwrite_page { 
+sub edit_page { 
   my $self = shift;
   my $pageTitle = shift;
   my $pageContent = shift;
   my $editSummary = shift;
+  my $params = shift;
 
-  $self->print(1,"A Overwriting $pageTitle");
-
-  $pageContent = $pageContent . " " . strftime('%Y-%m-%dT%H:%M:00Z', gmtime(time()));
+  $self->print(1,"A Editing $pageTitle");
 
   my $xml  = $self->makeXMLrequest(
                   [ 'action' => 'query', 
@@ -379,8 +381,6 @@ sub overwrite_page {
                     'titles' => $pageTitle,
                     'intoken' => 'edit',
                     'format' => 'xml']);
-
-  print Dumper($xml);
 
   if ( ! defined $xml->{'query'}
        || ! defined $xml->{'query'}->{'pages'}
@@ -392,17 +392,25 @@ sub overwrite_page {
   my $editToken= $xml->{'query'}->{'pages'}->{'page'}->{'edittoken'};
   $self->print(5, "R edit token: ... $editToken ...");
 
-  my $res  = $self->makeHTMLrequest(
-                  [ 'action' => 'edit',
-                    'epedittoken' => $editToken,
-                    'epsummary' => $editSummary,
-                    'eptext' => $pageContent,
-                    'eptitle' => $pageTitle,
-                    'format' => 'xml'  ]);
+  my $query = 
+      [ 'action' => 'edit',
+	'token' => $editToken,
+	'summary' => $editSummary,
+	'text' => $pageContent,
+	'title' => $pageTitle,
+	'format' => 'xml',
+       @$params  ];
+  
 
-  print Dumper($res);
+  my $res  = $self->makeXMLrequest($query);
 
-  return;
+  $self->print(5, 'R editing response: ' . Dumper($res));
+
+  if ( $res->{'edit'}->{'result'} eq 'Success' ) { 
+      return "";
+  } else { 
+      return $res;
+  }
 
 }
 
@@ -1173,7 +1181,7 @@ sub makeXMLrequest {
     $self->print(2,"E APR response indicates error");
     $self->print(3, "Err: " . $xml->{'error'} ->{'code'});
     $self->print(4, "Info: " . $xml->{'error'} ->{'info'});
-    $self->print(5, "Details: " . Dumper($xml) . "\n");
+    $self->print(4, "Details: " . Dumper($xml) . "\n");
     sleep $edelay;
   }
 
