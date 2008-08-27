@@ -46,7 +46,7 @@ my $project_count = scalar keys %$projects;
 my $indexURL = get_conf('index-url');
 my $listURL = get_conf('list2-url');
 my $tableURL = get_conf('table-url');
-my $table2URL = get_conf('table2_url');
+my $table2URL = get_conf('table2-url');
 my $logURL = get_conf('log-url');
 my $serverURL = get_conf('server_url');
 
