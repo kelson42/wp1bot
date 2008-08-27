@@ -55,6 +55,8 @@ my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
             "December");
 
+# my $Moved = {};
+
 ######################################################################
 
 =item B<download_project_list>()
@@ -101,15 +103,17 @@ sub download_project {
   }
 
   print "\n-- Download ratings data for '$project'\n";
-  my ($homepage, $parent, $extra, $shortname);
+  my ($homepage, $parent, $extra, $shortname, $timestamp);
   
   eval {
         update_timestamps();
 	($homepage, $parent, $extra, $shortname) = 
-          get_extra_assessments($project); 
-	download_project_quality_ratings($project, $extra);
-	download_project_importance_ratings($project, $extra);
+          get_extra_assessments($project);
+        $timestamp = db_get_project_timestamp($project);
+	download_project_quality_ratings($project, $extra, $timestamp);
+	download_project_importance_ratings($project, $extra, $timestamp);
 	db_cleanup_project($project);
+        update_articles_table($project);
 	update_project($project, $global_timestamp, $homepage,
                        $parent, $shortname);
     db_commit();
@@ -239,6 +243,7 @@ Download quality assessments for project, update database
 sub download_project_quality_ratings { 
   my $project = shift;
   my $extra = shift;
+  my $timestamp = shift;
 
   print "Get stored quality ratings for $project\n";
 
@@ -287,12 +292,25 @@ sub download_project_quality_ratings {
   foreach $art ( keys %$oldrating ) { 
     next if ( exists $seen->{$art} );   
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
-#    print "NOT SEEN (quality) '$art'\n";
+    print "NOT SEEN (quality) '$art'\n";
     ($ns, $title) = split /:/, $art, 2;
+
+#    my ($new_ns, $new_title, $new_timestamp)
+#                        = get_new_name($ns, $title, $timestamp);
+#    if ( defined $new_ns ) { 
+#      print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
+#      update_article_moved($global_timestamp, $project, $ns, $title, 
+#                              $new_ns, $new_title, $new_timestamp);
+#
+#      $Moved->{$art} = 1;
+#      next;
+#    }
+
     update_article_data($global_timestamp, $project, 
-			$ns, $title, 'quality', 
+			$ns, $title, "quality",
                         'Unknown-Class', $global_timestamp_wiki, 
-                        $oldrating->{$art} );
+                        $oldrating->{$art});
+
   }
 
   return 0;
@@ -358,7 +376,17 @@ sub download_project_importance_ratings {
     next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
     next if ( exists $seen->{$art} );    
     ($ns, $title) = split /:/, $art, 2;
-#    print "NOT SEEN (importance) $art\n";
+    print "NOT SEEN (importance) $art\n";
+
+
+#    # This may not be seen because the update_moved function
+#    # may erase the article before the importance update even 
+#    # sees it. 
+#    if ( defined $Moved->{$art} ) { 
+#      print "Was moved\n";
+#      next;
+#    }
+
     update_article_data($global_timestamp, $project, 
 			$ns, $title, "importance",
                         'Unknown-Class', $global_timestamp_wiki, 
@@ -509,36 +537,36 @@ database.
 
 sub download_review_data_internal {
   my (%rating);
-  
+
   # Get older featured and good article data from database
   my ($oldrating) = get_review_data();
-	
+
   my $seen = {};
   my $qcats = $ReviewCats;
 
   my ($cat, $tmp_arts, $qual, $art, $d);
-	
+
   foreach $qual ( keys %$qcats ) { 
 #    print "\nFetching list for $qual\n";
-    
+
     $tmp_arts = pages_in_category_detailed($qcats->{$qual});
-    
+
     my $count = scalar @$tmp_arts;
     my $i = 0;
-    
+
     foreach $d ( @$tmp_arts ) {
       $i++;
       $art = $d->{'title'};
       next unless ( $d->{'ns'} == $talkNS );
       $seen->{$art} = 1;
-      
+
       # New entry
       if ( ! defined %$oldrating->{$art} ) { 
 	update_review_data($global_timestamp, $art, $qual, 
 			   $d->{'timestamp'}, 'None');
 	next;
       }
-      
+
       # Old entry, although it could have been updated, so we need to check
       if ( %$oldrating->{$art} eq $qual ) {
 	# No change
@@ -646,6 +674,44 @@ sub update_timestamps {
 }
 
 #######################################################################
+
+=item B<get_new_name>(NS, TITLE, TIMESTAMP) 
+
+Tryto get the current location of NS:TITLE, as if it 
+has been moved or has become a redirect. Ignores any
+moves before TIMESTAMP.
+
+=cut
+
+sub get_new_name { 
+
+  my $ns = shift;
+  my $title = shift;
+  my $timestamp = shift;
+
+  # First try to use move log
+  my $moves = api_get_move_log($ns, $title);
+  my $move;
+  my $m_timestamp;
+  foreach $move ( @$moves ) { 
+    print Dumper($move);
+
+    $m_timestamp = $move->{'timestamp'};
+    $m_timestamp =~ s/[-T:Z]//g;
+    if ( $m_timestamp > $timestamp ) { 
+      return ($move->{'dest-ns'}, $move->{'dest-title'}, $move->{'timestamp'});
+    }
+  }
+
+  # Second check for redirect
+  my ($r_ns, $r_title, $r_timestamp) = api_resolve_redirect($ns, $title);
+  if ( defined $r_ns ) { 
+    return ($r_ns, $r_title, $r_timestamp);
+  }
+
+  return undef;
+
+}
 
 # Load successfully
 1;
