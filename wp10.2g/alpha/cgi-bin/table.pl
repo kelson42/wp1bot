@@ -406,7 +406,7 @@ sub query_form {
 sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = get_conf('list-url');
+	my $listURL = get_conf('list2-url');
 	my $logURL = get_conf('log-url');
 	$listURL = $listURL . "projecta=" . $project . "&limit=50";
 	$logURL = $logURL . "project=" . $project;
