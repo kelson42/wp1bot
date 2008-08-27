@@ -1032,9 +1032,9 @@ sub get_cached_review_icon {
 
 sub get_review_icon { 
 	my $class = shift;
-	my $r =  $api->parse('{{' . $class . get_conf('class_suffix') . '}}');
+	my $r =  $api->parse('{{' . $class . get_conf('class-suffix') . '}}');
 	my $t = $r->{'text'};
-	my $f =  $api->parse('{{' . $class . get_conf('icon_suffix') . '}}');
+	my $f =  $api->parse('{{' . $class . get_conf('icon-suffix') . '}}');
 	my $g = $f->{'text'};
 	
 	$t =~ s/\|.*//s;
