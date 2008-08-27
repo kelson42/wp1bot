@@ -1,5 +1,7 @@
 Goals to finish before promoting to beta version:
 
+* fix table2.pl (output is "Assessed = [1]")
+
 * Clean up all code, move hardcoded strings to conf file
 
 * Look through cgi-bin for duplicate code, move to a shared location
