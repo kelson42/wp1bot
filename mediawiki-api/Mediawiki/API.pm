@@ -74,7 +74,7 @@ sub new {
   $self->{'xmlretrydelay'} = 10;   # pause after XML level failure 
   $self->{'xmlretrylimit'} = 10;   # retries at XML level
 
-  $self->{'throttledelay'} = 90;   # delay on login throttle
+  $self->{'logintries'} = 5;       # delay on login throttle
 
   bless($self);
   return $self;
@@ -274,6 +274,12 @@ sub login {
  my $self = shift;
  my $userName = shift;
  my $userPassword = shift;
+ my $tries = shift || $self->{'logintries'};
+ $tries--;
+
+ if (  $tries == 0 ) {
+    die "Too many login attempts\n";
+ }
 
  $self->print(1,"A Logging in");
 
@@ -286,18 +292,27 @@ sub login {
   if ( ! defined $xml->{'login'} 
        || ! defined $xml->{'login'}->{'result'}) {
     
-    print "Foo: " . Dumper($xml);
+    $self->print(4, "E no login result.\n" . Dumper($xml));
     $self->handleXMLerror("login err");
   }
 
-  if ( ! ( $xml->{'login'}->{'result'} eq 'Success') ) {
-    if ( $xml->{'login'}->{'result'} eq 'Throttled') {   
-      $self->print(3, "Throttled, sleeping " 
-                      . $self->{'throttledelay'} . " seconds\n");
-      sleep $self->{'throttledelay'};
-      return $self->login($userName, $userPassword);
+  my $result = $xml->{'login'}->{'result'};
+
+
+  if ( $result ne 'Success' ) {
+    if ( $result eq 'Throttled' || $result eq 'NeedToWait') { 
+      my $wait = $xml->{'login'}->{'wait'} || 10;
+      $self->print(3, "R Login delayed: $result, sleeping " 
+                      . (2 + $wait) . " seconds\n");
+      $self->print(5, Dumper($xml));
+
+      sleep (2 + $xml->{'login'}->{'wait'});
+      return $self->login($userName, $userPassword, $tries);
     }
  
+    $self->print(5, "Login error\n");
+    $self->print(5, Dumper($xml));
+
     die( "Login error. Message was: '" . $xml->{'login'}->{'result'} . "'\n");
   }
 
@@ -611,7 +626,7 @@ sub where_embedded {
 
 #############################################################3
 
-=item $list = $api->log_events($pageName);
+=item $list = $api->log_events($pageName, $params);
 
 Fetch a list of log entries for the page.
 Returns a reference to an array of hashes.
@@ -621,7 +636,7 @@ Returns a reference to an array of hashes.
 sub log_events { 
   my $self = shift;
   my $pageTitle = shift;
-  my $type  = shift;
+  my $params  = shift || [];
 
   $self->print(1,"A Fetching log events for $pageTitle");
  
@@ -629,16 +644,16 @@ sub log_events {
   my %queryParameters =  ( 'action' => 'query', 
                            'list' => 'logevents', 
                            'lelimit' => $self->{'querylimit'},
-                           'letitle' => $pageTitle,
-                           'format' => 'xml' );
+                           'format' => 'xml' ,
+                            @$params);
+
+  if ( defined $pageTitle ) { 
+    $queryParameters{'letitle'}  = $pageTitle;
+  }
 
   if ( $self->is_bot) { 
     $queryParameters{'lelimit'} = $self->{'botlimit'}
   } 
-
-  if ( defined $type ) { 
-    $queryParameters{'letype'} = $type;
-  }
 
   my $results 
     = $self->fetchWithContinuation(\%queryParameters, 
@@ -886,6 +901,7 @@ sub fetchWithContinuation {
     $xml =$self->makeXMLrequest([ %{$queryParameters}], [$dataName]);
     @results = (@results, 
                 @{$self->child_data_if_defined($xml, $dataPath, [])} );
+
   }
 
   return \@results;
