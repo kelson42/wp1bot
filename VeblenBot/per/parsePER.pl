@@ -3,173 +3,31 @@
 # part of VeblenBot
 # Carl Beckhorn, 2008
 # Copyright: GPL 2.0
+#
 
-binmode STDOUT, ":utf8";
-
-use Date::Parse;
-use strict vars;
-use LWP::UserAgent;
-use POSIX qw(strftime);
-
-use Data::Dumper;
-
+use Date::Parse; 
+use strict vars; 
+use LWP::UserAgent; 
 use Encode;
 
+use Data::Dumper;
 $Data::Dumper::Useqq = 1;
 
-use lib '/home/veblen/VeblenBot/wikipedia_perl_bot';
-require 'bin/wikipedia_login.pl';
-require 'bin/fetch_articles_cats.pl';
+binmode STDOUT, ":utf8";
 
 use lib '/home/veblen/VeblenBot/';
 require Mediawiki::API;
 
-#log in (make sure you specify a login and password in bin/wikipedia_login.pl
-&wikipedia_login();
-  
 my $Root_category = 'Category:Wikipedia_protected_edit_requests';
-my @tmp_cats;
-my @tmp_articles;
 
 my $art;
 my %Dates;
-my $date;
+my $date = `/bin/date --rfc-3339=date`;
+chomp $date;
 
 my %Cached; 
-my %Seen;
-
-my @articles;
-
-##### Log in to API
-my $api;
-$api = new Mediawiki::API;
-$api->base_url('http://en.wikipedia.org/w/api.php');
-$api->debug_level(3);
-$api->login_from_file("/home/veblen/api.credentials");
-$api->{'botlimit'} = 1000;
-
-
-#################### Read cache of when tag was added
-my $tmp = $/; #This is ugly but I want to be paranoid about global vars
-
-$/ = "\n";  
-
-if ( -r "Cache") { 
-  open IN, "<Cache";
-  while ( $art = <IN>){
-    chomp $art;
-    ($date, $art) = split /\t/, $art, 2;
-    $Dates{$art} = $date;
-    $Cached{$art} = 1;
-  }
-}
-
-$/ = $tmp;
-
-################### Fetch list of editprotected requests from wiki
-
-$date =  `/bin/date --rfc-3339=date`;
-chop $date;  # $/ is likely wrong
-
-my $now;
-$now =  `/bin/date +'%F %H:%M'`;
-chop $now;
-
-print "Now: $now.\n";
-
-my $talk;
-my %Talks;
-
-#&fetch_articles_cats($Root_category, \@tmp_cats, \@tmp_articles);
-
-@tmp_articles = @{$api->pages_in_category($Root_category)};
-
-#print Dumper(@tmp_articles). "\n";
-
-foreach $art ( @tmp_articles) { 
-  $talk = $art;
-  $art =~ s/^Talk://;
-  $art =~ s/Template talk:/Template:/;
-  $art =~ s/MediaWiki talk:/MediaWiki:/;
-  $art =~ s/Wikipedia talk:/Wikipedia:/;
-  $art =~ s/Image talk:/:Image:/;
-  $art =~ s/User talk:/User:/;
-  $art =~ s/Help talk:/Help:/;
-  $art =~ s/Portal talk:/Portal:/;
-  $art =~ s/Category talk:/Category:/;
-
-  $Talks{$art} = $talk;
-
-  push @articles, $art; 
-
-  $Seen{$art} = 1;
-
-  if ( ! defined $Dates{$art} ) { 
-    $Dates{$art} = $date;
-  }
-}
-
-@articles = sort   { $_ = $Dates{$a} cmp $Dates{$b};
-                     if ( $_ != 0) { return $_;}
-                     return $a cmp $b;
-                   }
-                 @articles;
-
-
-#@articles = ('Super Mario Galaxy');
-#########################
-## screen scraping to find protection (last resort) 
-
-sub scrape() {
-  my $art = shift;
-  my $type = "unknown";
-  print STDOUT "\tFalling back to HTML scraping\n";
-  sleep 2;
-         
-  my $tmp = $/;
-  $/ = "\n";
-        
-  open NET, "/usr/bin/wget -q -O - http://en.wikipedia.org/wiki/"          
-                                         . html_encode($art) . "|";
-  my $line;
-  my $found = 0;
-  while ( $line = <NET> ) {
-    if ( $line =~ /^var wgRestrictionEdit = \["?([^"]*)"?\]/) { 
-      $line = $1;
-      $found = 1;
-      last;
-     } 
-  }
-  close NET;
-  $/ = $tmp;
-  
-  if ( $found == 1) { 
-    print "\tHTML scraping found '$line'\n"    ;
-    if ( $line eq 'sysop' || $line eq 'autoconfirmed') {
-      $type = $line;
-    }
-    if ( $line eq '') { 
-      $type = "Not protected";
-    }
-  }          
-
-  return $type;
-}
-
-
-#####################
-##################### main function 
-
-my $count = 0;
-
-my $min = 0;
-my $max = 10000;
-
-my $res;
-my $obj;
-my $query;
-my @logevents;
-my $event;
+my %Articles;
+my $count;
 
 my %Comments;
 my %Times;
@@ -178,257 +36,426 @@ my %Users;
 my %Actions;
 my %Expiries;
 my %Types;
+my %Talks;
 
-my $total = scalar @articles;
+my $now;
+$now =  `/bin/date +'%F %H:%M'`;
+chop $now;
 
-$count = 0;
+print "Now: $now.\n";
 
-##### Parse protection log for each article
 
-foreach $art ( @articles) { 
-  $count++;
-  printf "\n%04d/%04d %s\n", $count, $total, html_encode($art);
+##### Log in to API
+my $api;
+$api = new Mediawiki::API;
+$api->base_url('http://en.wikipedia.org/w/api.php');
+$api->debug_level(3);
+$api->login_from_file("/home/veblen/api.credentials");
 
-  if ( $art =~ /^MediaWiki/) { 
-    $Actions{$art} = "mw"; 
-    $Types{$art} = "mw";
-    next;
+read_cache();
+get_protected_page_data();
+make_pertable();
+update_cache();
+update_log();
+log_queue_length();
+
+exit;
+
+######################################################################
+
+sub get_protected_page_data {
+  my ($talk, $art, $type, $expiry, $art, $oldart, $comment, $action,
+      $time, $timeEpoch, $user, $d);
+
+  my @tmp_articles = @{$api->pages_in_category_detailed($Root_category)};
+
+  foreach $d ( @tmp_articles) { 
+    print Dumper($d);
+    $art = $d->{'title'};
+
+    next if ($art eq 'Category:Wikipedia semi-protected edit requests');
+
+    $talk = $art;
+    $art =~ s/^Talk://;
+    $art =~ s/Template talk:/Template:/;
+    $art =~ s/MediaWiki talk:/MediaWiki:/;
+    $art =~ s/Wikipedia talk:/Wikipedia:/;
+    $art =~ s/Image talk:/Image:/;
+    $art =~ s/User talk:/User:/;
+    $art =~ s/Help talk:/Help:/;
+    $art =~ s/Portal talk:/Portal:/;
+    $art =~ s/Category talk:/Category:/;
+
+    # Escape Category and Image links
+    $art =~ s/^Category/:Category/;
+    $art =~ s/^Image/:Image/;
+    $talk =~ s/^Category/:Category/;
+    $talk =~ s/^Image/:Image/;
+
+    $Talks{$art} = $talk;
+    $Articles{$art} = 1;
+
+    if ( ! defined $Dates{$art} ) { 
+      $Dates{$art} = substr($d->{'timestamp'}, 0, 10);
+      print "New request: $art: " . $Dates{$art} . "\n";
+    }
   }
 
-  @logevents  = @{$api->log_events(encode("utf8",$art))};
-#  print Dumper(@logevents);
-   
+  print Dumper(%Articles);
 
+  foreach $art ( sort by_name keys %Articles ) { 
+    if ( $art =~ /MediaWiki/) {
+      $type = "mw";
+      $expiry = "infinite";   
+      $user = "";
+      $expiry = "";
+      $time = "";
+      $action = "";
+      $timeEpoch = "";
+    } else {
+      ($type, $expiry) = get_protection_info($art);
+      ($comment, $time, $timeEpoch, $user, $action) = get_protection_log($art);
+      if ( ! defined $comment) { 
+        $oldart = get_former_name($art);
+        if ( defined $oldart) { 
+          ($comment, $time, $timeEpoch, $user, $action) = get_protection_log($oldart);
+        }   
+      } 
+    }
+
+#    if ( $type eq 'sysop') { 
+#      $type = "Fully protected";
+#    } elsif ( $type eq 'autoconfirmed') { 
+#       $type = 'Semiprotected';
+#    } 
+
+    $Types{$art} = $type;
+    $Comments{$art} = $comment;
+    $Times{$art} = $time;
+    $TimesEpoch{$art} = $timeEpoch;
+    $Users{$art} = $user;
+    $Expiries{$art} = $expiry;
+    $Actions{$art} = $action;
+  }
+
+  $count = scalar keys %Articles;
+
+}
+
+##########################################################
+
+sub get_protection_info() {
+  my $art = shift;
+
+  $art =~ s/^://;
+
+  my $pr;
+  my $type = 'Not protected';
+  my $expiry = 'infinite';
+
+  my $info = $api->page_info(encode("utf8",$art));
+  
+  if ( defined $info->{'protection'} ) { 
+    $info= $info->{'protection'}->{'pr'};
+    if (  ref($info) eq "HASH") { $info = [ $info ]; }
+ 
+    print Dumper($info);
+    foreach $pr ( @$info) { 
+      if ( $pr->{'type'} eq 'edit' || $pr->{'type'} eq 'create' ) { 
+        $type = $pr->{'level'};
+        $expiry = $pr->{'expiry'}
+      }
+    }      
+  } else { 
+    print "PAGE INFO NOT DEFINED $art\n";
+  }
+
+  print "$art $type $expiry\n";
+
+  return ($type, $expiry);
+}
+
+#######################################################
+
+sub get_protection_log {
+
+  my $art = shift;
+  my ($tmp, $Action, $Type, $Comment, $Time, $TimeEpoch,
+      $User, $Expiry);
+
+  my @logevents  = @{$api->log_events(encode("utf8",$art))};
+   
+  my $event;
   foreach $event ( @logevents) { 
     next unless ( ${$event}{'type'} eq 'protect');     
 
+#   print Dumper($event);
+
     my $time = str2time(${$event}{'timestamp'});
-    $Times{$art} = ${$event}{'timestamp'};
-    $Times{$art} =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
-    $TimesEpoch{$art} = $time;
+    $Time = $event->{'timestamp'};
 
-    $Users{$art} = ${$event}{'user'};
-#    print "User: " . $Users{$art} . "\n";
-    $Comments{$art} = ${$event}{'comment'};
-   
-    if ( ${$event}{'action'} eq 'modify') { 
-      ${$event}{'action'} = 'protect';
-    }
+    $Time =~ s/(\d\d\d\d-\d\d-\d\d).*/$1/;
+    $TimeEpoch = $time;
+    $User = $event->{'user'};
+    $Comment = $event->{'comment'};
+    $Comment =~ s/\s*\[[^]]*]( \(expires [\w\d ,:()]*\))?$//;
+    $Action = $event->{'action'};
 
-    $Actions{$art} = ${$event}{'action'};
+    last;
 
-    if ( ${$event}{'action'} eq 'protect') { 
-      my ($comment, $type, $expiry);
-      $expiry = ""; 
-
-      if ( $Comments{$art} =~ /^(.*)? ?\[edit=(.*):move=.*]( \(expires (.*)\))?/) 
-      {
-         $comment = $1;
-         $type = $2;
-         if ( defined $3 ) {          
-           $expiry= $3; 
-           $expiry =~ s/\(expires (.*)\)/$1/;
-           $expiry =~ s/^\s*//;
-           $time = str2time($expiry);
-           $expiry = strftime "%Y-%m-%d", gmtime($time);
-         } 
-      } else {
-         $comment = $Comments{$art};
-         $type = 'Unknown protection';
-         $type = &scrape($art);
-      }
-
-      if ( $type eq 'sysop') { $type = "Fully protected";} 
-      elsif ( $type eq 'autoconfirmed') { $type = 'Semiprotected'}
-      $Types{$art} = $type;
-
-      $Expiries{$art} = $expiry;
-      $Comments{$art} = $comment;
-    } else {  # it was an unprotection event
-      if ( defined $Comments{$art}  ) { 
-        # will be undef if no comment was left
-        $Comments{$art} =~ s/Unprotection,\s*//;
-      }
-    }
-    last; # we only want the most recent protection event from the log
-  }
-
-  if ( ! defined $Actions{$art} ) { 
-    my $type = &scrape($art);
-    if ( $type eq 'sysop') { 
-      $type = "Fully protected";
-      $Actions{$art} = "protect";
-    } elsif ( $type eq 'autoconfirmed') { 
-      $type = 'Semiprotected';
-      $Actions{$art} = "protect";
-    } elsif ( $type eq 'Not protected') {  
-      $Actions{$art} = "notprotected";
-    }
-
-    $Types{$art} = $type;
-  }
+  } 
+  
+  return ($Comment, $Time, $TimeEpoch, $User, $Action);
 }
 
+###################################################
+
+sub get_former_name { 
+  my $art = shift;
+  my $revs= $api->revisions(encode("utf8",$art), 2500);
+
+  my ($rev, $newpage, $oldpage);
+
+  foreach $rev ( @$revs) { 
+#    print $rev->{'comment'} . "\n";
+    if ( $rev->{'comment'} =~
+                  /[Mm]oved \[\[([^\]]*)]] to \[\[([^\]]*)]]/) { 
+      $oldpage = $1;
+      $newpage = $2;
+      print "\tNote: $oldpage moved to $newpage\n";
+      last;
+    }
+  }
+
+  return $oldpage;
+}
 
 ###################  Make wikitable of requests
 
-open OUT, ">PERtable";
-binmode OUT, ":utf8";
+sub make_pertable {
 
-print OUT << "HERE";
+  my %ColorScheme = ( 'yellow' =>  '#FFF9BF',
+                      'blue'   => '#E4FFCC',
+                      'red' => '#FFBFDC' );
+
+  my %ActVerb = ( 'protect' => 'Protected',
+                  'modify' => 'Modified',
+                  'unprotect' => 'Unprotected' );
+
+
+  my %TypeVerb = ( 'sysop' => 'Fully protected',
+                   'Not protected' => 'Not protected',
+                   'autoconfirmed' => 'Semiprotected' );
+
+  open OUT, ">PERtable.new";
+  binmode OUT, ":utf8";
+
+  my $s = 's';
+  if ( $count == 1) { 
+    $s = '';
+  }
+
+  print OUT << "HERE";
+<div class="veblenbot-pertable">
 {| class="wikitable" style="padding: 0em;"
 |-
-! $count [[WP:PER|protected edit requests]]
+! $count [[WP:PER|protected edit request$s]]
 |-
 |
 {| class="wikitable sortable" width=100% style="margin: 0em;"
-! Article
+! Page
 ! Tagged since
-! Protection
-! When / Expires
-! class = "unsortable" | Why
+! Protection level
+! class = "unsortable" | Last protection log entry
 HERE
 
+  my $log;
+  foreach $art ( sort by_name keys %Articles ) { 
+    $log = 'http://en.wikipedia.org/w/index.php?title=Special:Log&type=protect&page='
+           . html_encode($art);
 
-my $log;
-foreach $art ( @articles) { 
-  $log = 'http://en.wikipedia.org/w/index.php?title=Special:Log&type=protect&page='
-         . html_encode($art);
+    if ( ! defined $Comments{$art} ) { 
+      $Comments{$art} = "";
+    }
 
-  if ( ! defined $Comments{$art} ) { 
-    $Comments{$art} = "";
-  }
+    if ( ! defined $Expiries{$art} ) { 
+      $Expiries{$art} = '';
+    }
 
-  if ( ! defined $Actions{$art} ) {
-    print OUT << "HERE";
-|-
-| [[$art]] ([[$Talks{$art}#editprotected|request]])
-| $Dates{$art}
-| Never protected at this name (possibly moved after protection). <span class="plainlinks">([$log log])</span>
-| 
-| 
-HERE
-  } else {
-#    print STDERR "See action $Actions{$art}\n";
-  }
+    my ($typeLine, $logLine, $exp, $verb);
+    my $bg = "";
 
-if ( $Actions{$art} eq 'protect') { 
-     if ( defined $Users{$art}) { 
-# print "User 2: " . $Users{$art} . "\n";
-    print OUT << "HERE";
-|-
-| [[$art]] ([[$Talks{$art}#editprotected|request]])
-| $Dates{$art}
-| $Types{$art} by [[User talk:$Users{$art}|$Users{$art}]] <span class="plainlinks">([$log log])</span>
-| $Times{$art} $Expiries{$art}
-| <nowiki>$Comments{$art}</nowiki>
-HERE
-     } else {
-  if ( ! defined $Times{$art} ) { 
-    $Times{$art} ="";
-    $Expiries{$art} = "";
-  }
-print OUT << "HERE";
-|-
-| [[$art]] ([[$Talks{$art}#editprotected|request]])
-| $Dates{$art}
-| $Types{$art} by magic. <span class="plainlinks">([$log log])</span>
-| $Times{$art} $Expiries{$art}
-| 
-HERE
+    if ( $Types{$art} eq 'mw') { 
+      $typeLine = 'Mediawiki page';
+      $logLine = '';
+      $bg = "style=\"background-color: " . $ColorScheme{'yellow'} . ";\"";
+    } else { 
+      $verb = $TypeVerb{$Types{$art}};
+      if ( $Expiries{$art} =~ /infinit[ey]/ ) { 
+        $typeLine = "$verb <span class=\"plainlinks\">([$log log])</span>"; 
+      } else {
+        $exp = $Expiries{$art};
+        $exp =~ s/Z/ UTC/;
+        $exp =~ s/T/ at /;
+        $typeLine = "$verb, expires $exp <span class=\"plainlinks\">([$log log])</span>"; 
+      }
+
+       $Comments{$art} =~ s/{/&#123;/g;
+
+      if ( defined $Actions{$art} ) { 
+       print "$art '$Actions{$art}'\n";
+        $logLine = "$ActVerb{$Actions{$art}} by [[User:$Users{$art}|$Users{$art}]] on $Times{$art}: &#8220;$Comments{$art}&#8221;";
+      } else { 
+        $logLine = "";
      }
 
-  } elsif ($Actions{$art} eq 'unprotect')  { 
+      if ( ! ($Types{$art} eq 'sysop')) { 
+        $bg = "style=\"background-color: " . $ColorScheme{'red'} . ";\"";
+      }	elsif ( $art =~ /^Template:/) { 
+        $bg = "style=\"background-color: " . $ColorScheme{'blue'} . ";\"";
+      }        
+
+    }
+
+
     print OUT << "HERE";
-|-
+|- $bg
 | [[$art]] ([[$Talks{$art}#editprotected|request]])
 | $Dates{$art}
-| Unprotected by [[user:$Users{$art}|$Users{$art}]] <span class="plainlinks">([$log log])</span>
-| $Times{$art}
-| <nowiki>$Comments{$art}</nowiki>
+| $typeLine
+| $logLine
 HERE
-  } elsif ($Actions{$art} eq 'notprotected')  { 
-    print OUT << "HERE";
-|-
-| [[$art]] ([[$Talks{$art}#editprotected|request]])
-| $Dates{$art}
-| Not protected  <span class="plainlinks">([$log log])</span>
-| 
-| 
+
+    print << "HERE";
+Article:    $art
+Date:       $Dates{$art}
+Action:     $Actions{$art}
+Type:       $Types{$art}
+Expiry:     $Expiries{$art}
+User:       $Users{$art}
+Comment:    $Comments{$art}
+LogTime:    $Times{$art}
+
 HERE
-  } elsif ( $Actions{$art} eq 'mw') { 
-    print OUT << "HERE";
-|-
-| [[$art]] ([[$Talks{$art}#editprotected|request]])
-| $Dates{$art}
-| MediaWiki page
-| 
-| 
-HERE
+
   }
-}	
 
 
-#########################3### Update cache
-$date = `/bin/date`;
-
-print OUT << "HERE";
+  my $date = `/bin/date`;
+  chomp $date;
+  print OUT << "HERE";
 |}
 |-
 | style="text-align: right; font-size: smaller;"| Updated on the half hour. Last updated: $date
-|}
+|}</div>
 HERE
 
-close OUT;
+# |-
+# | style="font-size: smaller;" | '''Work in progress''': The code that 
+# generates this table has been upgraded to find more log entries. The 
+# layout has also been rearranged. Please direct any bug reports or 
+# comments to [[User talk:CBM]]. Especially let me know if I should 
+# improve or remove the colored rows.
 
-open OUT, ">Cache";
-foreach $art ( @articles) { 
-  print OUT "$Dates{$art}\t$art\n";
+
+  close OUT;
+
+  return;
 }
-close OUT;
 
+###########################################################################
 
-############## Log entries
-
-open LOG, ">>Log";
-my $msg;
-
-foreach $art ( keys %Seen) { 
-  print "Protected article: $art\n";
-
-  if ( ! defined $Actions{$art} ) { 
-    $msg = 'unknown';
-  } elsif ( $Actions{$art} eq 'protect') { 
-    $msg = $Types{$art};
-  } elsif ( $Actions{$art} eq 'unprotect') { 
-    $msg = 'Not protected';
-  } elsif ( $Actions{$art} eq 'mw') { 
-    $msg= 'mediawiki';
-  } elsif ( $Actions{$art} eq 'notprotected') { 
-    $msg= 'Not protected';
-  } else {
-    $msg = "error";
-  }
-
-  if ( ! defined $Cached{$art} ) { 
-    print LOG "N\t$now\t$msg\t$art\n";
+sub read_cache { 
+  my ($date, $art);
+  if ( -r "Cache.new") { 
+    open IN, "<Cache.new";
+    while ( $art = <IN>){
+      chomp $art;
+      ($date, $art) = split /\t/, $art, 2;
+      $Dates{$art} = $date;
+      $Cached{$art} = 1;
+      print "Cached: $art $date\n";
+    }
   }
 }
 
-foreach $art ( keys %Cached) { 
-  $msg = 'resolved';
-  if ( ! defined $Seen{$art} ) { 
-    print "Resolved $art\n";
-    print LOG "R\t$now\t$msg\t$art\n";
+sub update_cache { 
+  open OUT, ">Cache.new";
+  foreach $art ( keys %Articles) { 
+    print OUT "$Dates{$art}\t$art\n";
   }
+  close OUT;
 }
 
-close LOG;
+###########################################################################
+
+sub update_log {
+
+  open LOG, ">>Log.new";
+  my $msg;
+
+  foreach $art ( keys %Articles) { 
+#    print "Protected article: $art\n";
+
+    if ( ! defined $Actions{$art} ) { 
+      $msg = 'unknown';
+    } elsif ( $Actions{$art} eq 'protect') { 
+      $msg = $Types{$art};
+    } elsif ( $Actions{$art} eq 'unprotect') { 
+      $msg = 'Not protected';
+    } elsif ( $Actions{$art} eq 'mw' || $art =~ /^MediaWiki:/) { 
+      $msg= 'mediawiki';
+    } elsif ( $Actions{$art} eq 'notprotected') { 
+      $msg= 'Not protected';
+    } else {
+      $msg = "error";
+    }
+
+    if ( ! defined $Cached{$art} ) { 
+      print LOG "N\t$now\t$msg\t$art\n";
+    }
+  }
+
+  foreach $art ( keys %Cached) { 
+    $msg = 'resolved';
+    if ( ! defined $Articles{$art} ) { 
+      print "Resolved $art\n";
+      print LOG "R\t$now\t$msg\t$art\n";
+    }
+  }
+
+  close LOG;
+} 
 
 
-##################  Log queue length 
+###########################################################################
 
-open LOG, ">>Log2";
-print  "$count $now\n";
-close LOG;
+sub log_queue_length { 
+
+  open LOG, ">>Log2.new";
+  print LOG "$count $now\n";
+  close LOG;
+
+}
+
+###########################################################################
+
+sub html_encode {
+  local $_=$_[0];
+  s/ /_/g;
+  s/([^A-Za-z0-9_\-.:\/])/sprintf("%%%02x",ord($1))/eg;
+  return($_);
+}
+
+###########################################################################
+
+sub by_name { 
+  $_ = $Dates{$a} cmp $Dates{$b};
+  if ( $_ != 0) { return $_;}
+     return $a cmp $b;
+}
+
+###########################################################################
+# EOF
+
 
