@@ -3,7 +3,7 @@
 binmode STDOUT, ":utf8";
 
 use strict;
-use lib '/home/veblen/VeblenBot';
+use lib '/home/cbm/veblen/VeblenBot';
 use Date::Parse;
 use POSIX 'strftime';
 
@@ -12,21 +12,25 @@ my $api = new Mediawiki::API;
 $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
 $api->maxlag(2000);
-$api->login_from_file('/home/veblen/api.credentials');
+$api->login_from_file('/home/cbm/veblen/api.credentials');
 
 use Data::Dumper;
 
 
 my $project = $ARGV[0] || 'Mathematics';
 
-open LOG, ">Log.$project";
-binmode LOG, ":utf8";
+my $ptmp = $project;
+$ptmp =~ s/ /_/g;
+$ptmp =~ s/\//./g;
 
-print "open Log.$project\n";
+open LOG, ">Logs/$ptmp";
+binmode LOG, ":utf8";
+print "open Logs/$ptmp\n";
 
 my $query = [ 'action' => 'query',
               'prop'   => 'revisions',
-              'titles' => "Wikipedia:Version_1.0_Editorial_Team/" . $project . "_articles_by_quality_log",
+              'titles' => "Wikipedia:Version_1.0_Editorial_Team/" 
+                          . $project . "_articles_by_quality_log",
               'rvprop' => 'user|timestamp|content',
               'rvdir' => 'older', 
               'rvlimit' => '25',
@@ -59,13 +63,13 @@ while ($continue ) {
   print "--\n $timestamp\n";
   sleep 2;
 
-  last if ( 1 == scalar @$res );
+  last if ( 2 > scalar @$res );
 
 }
 
-
-
 exit;
+
+#########################################################################
 
 
 sub handle_content { 
@@ -73,28 +77,28 @@ sub handle_content {
   my $data = shift;
 
   my @lines = split /\n/, $content;
-  my $line;
-  my $page;
-  my $old_value;
-  my $new_value;
-  my $action;
-  my $qual;
-  my $imp;
-  my $oqual;
-  my $oimp;
-  my $new;
-
-  my $date;
+  my ($line, $page, $old_value, $new_value, $action, $qual,
+      $imp, $oqual, $oimp, $new, $date);
 
   foreach $line ( @lines) { 
 #    print "@ '$line' \n";
     print ".";
 
+
+    $line =~ s/No-Class/Unknown-Class/g;
+
     if ( $line =~ /^===(.*)===$/ ) {
       $date = $1;
       $date =~ s/[[\]]//g;
+      $date = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(str2time($date, 'UTC0')));
+      print "\n\t$date";
+    } elsif ( $line =~ /^==\[\[(.*)]], \[\[(\d\d\d\d)]]==$/ ) {
+      $date = $1 . " " . $2;
+      $date =~ s/[[\]]//g;
       $date = strftime("%Y%m%d%H%M%S", gmtime(str2time($date, 'UTC0')));
       print "\n\t$date";
+#      print "\nDATE EXCEPTION 1\n";
+#      sleep 3;
  
     } elsif ( $line =~ /noinclude/ ) { 
       next;
@@ -233,9 +237,33 @@ sub handle_content {
 #        print "\t$line\n";
 #        print "EXCEPTION 2\n";
 #        sleep 1;
+      } elsif ( $line =~ /\[\[([^]]*)]] \(\[\[Talk:.*\|talk]]\) moved from ([A-Za-z-]*) \(([A-Za-z-]*)\) to ([A-Za-z-]*) \(([A-Za-z-]*)\)/ ) {
+        $page = $1;
+        $qual = $2;
+        $imp = $3;
+        $action = 'reassessed';
+        $oqual = $4;
+        $oimp = $5;
+        print LOG "$date| $project| $action| $page| $qual| $imp| $oqual| $oimp\n";
+#        print  "\n$date| $project| $action| $page| $qual| $imp| $oqual| $oimp\n";
+#        print "\t$line\n";
+#        print "EXCEPTION 3b\n";
+#        sleep 1;
+      } elsif ( $line =~ /\[\[([^]]*)]] moved from ([A-Za-z-]*) to ([A-Za-z-]*)/ ) {
+        $page = $1;
+        $qual = $2;
+        $imp = '-';
+        $action = 'reassessed';
+        $oqual = $3;
+        $oimp = '-';
+        print LOG "$date| $project| $action| $page| $qual| $imp| $oqual| $oimp\n";
+#        print  "\n$date| $project| $action| $page| $qual| $imp| $oqual| $oimp\n";
+#        print "\t$line\n";
+#        print "EXCEPTION 3c\n";
+#        sleep 1;
       } else { 
         print "\t$line\n";
-        print "\tERROR 3\n";
+        print "\tERROR 3b\n";
         sleep 5;
       }
 
