@@ -142,33 +142,50 @@ sub login {
 
   $self->print(1,"A Logging in");
 
-  my $res = $self->makeHTMLrequest('post',
-           [ 'title' =>  'Special:Userlogin',
-             'action' => 'submitlogin',
-             'type' => 'login',
-               wpName     => $userName,
-               wpPassword => $userPassword,
-               wpRemember => 1] );
+  my $res;
 
   $res = $self->makeHTMLrequest('post',
-        ['title'=>'Special:Userlogin','wpCookieCheck'=>'login']);
+          [ 'title' =>  'Special:UserLogin',
+            'action' => 'submitlogin',
+            'type' => 'login',
+            'wpLoginattempt' => 'Log in',
+            'wpName'     => $userName,
+            'wpPassword' => $userPassword,
+            'wpRemember' => 1] );
+
+  $res = $self->makeHTMLrequest('post',
+        ['title'=>'Special:UserLogin','wpCookieCheck'=>'login']);
 
   my $content = $res->content();
 
-  if ( $content =~ m/var wgUserName = "$userName"/ ) {
-    $self->print(1,"R Login successful");
-    $self->{'loggedin'} = 'true';
-  } else {
-    if ( $content =~ m/There is no user by the name/ ) {
-       $self->{errstr} = qq/Login  failed: User does not exist/;
-    } elsif ( $content =~ m/Incorrect password entered/ ) {
-       $self->{errstr} = qq/Login failed: Bad password/;
-    } elsif ( $content =~ m/Password entered was blank/ ) {
-       $self->{errstr} = qq/Login failed: Blank password/;
-    }
+  $self->print(5, "Content 2: '$content'");
+
+  if ( $res->code() == 200 ) { 
     $self->print(1,  "E Login error.");
     exit;
+  } elsif ( $res->code() ==  302 ) { 
+    $self->print(1,"R Login successful");
+    $self->{'loggedin'} = 'true';
+  } else { 
+    $self->print(1,  "E Login error (strange HTTP response code).");
+    exit;
   }
+
+#  if ( $content =~ m/var wgUserName = "$userName"/ ) {
+#    $self->print(1,"R Login successful");
+#    $self->{'loggedin'} = 'true';
+#  } else {
+#    if ( $content =~ m/There is no user by the name/ ) {
+#       $self->{errstr} = qq/Login  failed: User does not exist/;
+#    } elsif ( $content =~ m/Incorrect password entered/ ) {
+#       $self->{errstr} = qq/Login failed: Bad password/;
+#    } elsif ( $content =~ m/Password entered was blank/ ) {
+#       $self->{errstr} = qq/Login failed: Blank password/;
+#    }
+#    $self->print(1,  "E Login error.");
+#    exit;
+#  }
+
 }
 
 ##################################
@@ -281,10 +298,12 @@ sub makeHTMLrequest {
       $res = $self->{'agent'}->get($url);
     }
 
+
     last if $res->is_success();
     last if $res->is_redirect();
 
     $self->print(1, "I HTTP response code: " . $res->code() ) ;
+    $self->print(5, "I HTTP response content: " . $res->content() ) ;
 
     if (defined $res->header('x-squid-error')) { 
       $self->print(1,"I \tSquid error: " 
@@ -344,11 +363,18 @@ sub dump {
 sub get_edit_token { 
   my $self = shift;
   my $page = shift;
+  my $section = shift;
 
   $self->print(1, "I Get token for $page");
 
-  my $res = $self->makeHTMLrequest('get', 
-             [ $self->{'indexurl'} . "?title=" . uri_escape($page) . "&action=edit"]);
+  my $url = $self->{'indexurl'} . "?title=" 
+             . uri_escape($page) . "&action=edit";
+
+  if ( defined $section ) { 
+    $url .= '&section=' . $section;
+  }
+
+  my $res = $self->makeHTMLrequest('get', [ $url ]);
 
   my $content = $res->content();
 
@@ -426,6 +452,98 @@ sub edit {
                               "title" => $page,
                               "wpTextbox1"    => $text,
                               "wpSummary"     => $summary, 
+                              "wpSave"        => 'Save Page',
+                              "wpEdittime"    => $edittime,
+                              "wpStarttime" => $starttime,
+                              "wpEditToken"   => $edittoken ];
+
+  if ( defined ($is_watched) && $is_watched == 1) { 
+      $queryParameters = [@$queryParameters, ["wpWatchthis" => 1]];
+   }
+
+   if ( defined($is_minor) && $is_minor == 1) { 
+      $queryParameters = [@$queryParameters, ["wpMinoredit" => 1]];
+   }
+
+    my $res = $self->makeHTMLrequest('post',$queryParameters);
+
+
+    if ( $res->code() == 302 ) { 
+      $self->print(2, "I Edit successful");
+      last;
+    } elsif ( $res->code() == 200) { 
+      $self->print(1, "E Edit unsuccessful ($try/$maxtries)");
+     
+      if ( $res->header('title') =~ /^\Q$self->{'dbLockedMessage'}\E/ ) {
+        $self->print(2, "I  Databased locked, retrying\n");
+        $try--;
+        $getToken = 1;
+      } else {    
+        print Dumper($res);
+      }
+
+      sleep $self->{'editFailedDelay'};
+
+      if ( $try >= $maxtries) { 
+        $self->print(1, "E Too many tries, giving up");
+        last;
+      }
+    }
+  }
+}
+
+
+################################################################
+sub edit_section  { 
+  my $self = shift;
+  my $page = shift;
+  my $section = shift;
+  my $text     = shift;
+  my $summary  = shift;
+  my $is_minor = shift || '0';
+  my $is_watched = shift || '0';
+
+  my ($edittoken, $edittime, $starttime, $edittext);
+
+  if ( $self->{'loggedin'} eq 'false' ) { 
+    die "Attempted to edit while not logged in, aborting.\n";
+  }
+
+
+  if ( ! ( $section =~ /^\d+$/ ) ) { 
+    die "Section '$section' invalid, must be nonnegative integer.\n";
+  }
+
+  $self->print(1, "A Commit section $section of $page (edit summary: '$summary')");
+
+  my $try = 0;
+  my $maxtries = $self->{'maxRetryCount'};
+  my $getToken = 1;
+
+  while (1) { 
+    $try++;
+
+    if ( $getToken == 1) { 
+      ($edittoken, $edittime, $starttime, $edittext) =  
+                            $self->get_edit_token($page, $section);
+
+      if ( defined $edittoken) { 
+        $getToken = 0; 
+      } else {
+        next;  
+      }
+
+      if ( $edittext eq $text) { 
+        $self->print(2,"I server text matches text to upload. Not making an edit");
+        return;
+      }	
+    }
+
+    my $queryParameters =   [ "action" => "submit",
+                              "title" => $page,
+                              "wpTextbox1"    => $text,
+                              "wpSummary"     => $summary, 
+                              "wpSection"     => $section,
                               "wpSave"        => 'Save Page',
                               "wpEdittime"    => $edittime,
                               "wpStarttime" => $starttime,
