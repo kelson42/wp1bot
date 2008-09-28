@@ -9,7 +9,6 @@ use POSIX qw(strftime);
 use HTML::Entities;
 use Encode;
 
-
 ##########################################################
 ## Enable a native code XML parser - makes a huge difference
 $XML::Simple::PREFERRED_PARSER = "XML::Parser";
@@ -129,7 +128,6 @@ sub max_retries  {
   return $self->{'maxRetryCount'};
 }
 
-
 ########################################################
 
 =item $level = $api->html_mode($new_level)
@@ -198,8 +196,6 @@ sub debug_level {
  return $self->{'debugLevel'};
 }
 
-
-
 ######################################################
 
 =item $lag = $api->maxlag($newlag)
@@ -251,8 +247,6 @@ sub cmsort  {
   return $self->{'cmsort'};
 }
 
-
-
 #############################################################
 
 =head2 Log in
@@ -298,7 +292,6 @@ sub login {
 
   my $result = $xml->{'login'}->{'result'};
 
-
   if ( $result ne 'Success' ) {
     if ( $result eq 'Throttled' || $result eq 'NeedToWait') { 
       my $wait = $xml->{'login'}->{'wait'} || 10;
@@ -306,7 +299,7 @@ sub login {
                       . (2 + $wait) . " seconds\n");
       $self->print(5, Dumper($xml));
 
-      sleep (2 + $xml->{'login'}->{'wait'});
+      sleep (2 + $wait);
       return $self->login($userName, $userPassword, $tries);
     }
  
@@ -328,6 +321,9 @@ sub login {
   if ( $self->is_bot() ) { 
     $self->print (1,"R Logged in user has bot rights");
   }
+
+  delete $self->{'editToken'};
+
 }
 
 ##################################
@@ -401,6 +397,46 @@ sub edit_page {
 
   $self->print(1,"A Editing $pageTitle");
 
+  my $editToken; 
+
+  if ( 1 == $self->{'cacheEditToken'} 
+         && defined $self->{'editToken'} ) { 
+    $editToken = $self->{'editToken'};
+    $self->print(5, "I using cached edit token: $editToken");  
+  } else { 
+    $editToken = $self->edit_token($pageTitle);
+  }
+
+  if ( $editToken eq '+\\' ) { die "Bad edit token!\n"; }
+
+  my $query = 
+      [ 'action' => 'edit',
+	'token' => $editToken,
+	'summary' => $editSummary,
+	'text' => $pageContent,
+	'title' => $pageTitle,
+	'format' => 'xml',
+       @$params  ];
+  
+  my $res  = $self->makeXMLrequest($query);
+
+  $self->print(5, 'R editing response: ' . Dumper($res));
+
+  if ( $res->{'edit'}->{'result'} eq 'Success' ) { 
+      return "";
+  } else { 
+      return $res;
+  }
+
+}
+
+############################################################
+# internal function
+
+sub edit_token {
+  my $self = shift;
+  my $pageTitle = shift;
+
   my $xml  = $self->makeXMLrequest(
                   [ 'action' => 'query', 
                     'prop' => 'info',
@@ -415,29 +451,15 @@ sub edit_page {
      $self->handleXMLerror($xml);
   }
 
-  my $editToken= $xml->{'query'}->{'pages'}->{'page'}->{'edittoken'};
+  my $editToken = $xml->{'query'}->{'pages'}->{'page'}->{'edittoken'};
   $self->print(5, "R edit token: ... $editToken ...");
 
-  my $query = 
-      [ 'action' => 'edit',
-	'token' => $editToken,
-	'summary' => $editSummary,
-	'text' => $pageContent,
-	'title' => $pageTitle,
-	'format' => 'xml',
-       @$params  ];
-  
-
-  my $res  = $self->makeXMLrequest($query);
-
-  $self->print(5, 'R editing response: ' . Dumper($res));
-
-  if ( $res->{'edit'}->{'result'} eq 'Success' ) { 
-      return "";
-  } else { 
-      return $res;
+  if ( 1 == $self->{'cacheEditToken'} ) { 
+    $self->{'editToken'} = $editToken;
+    $self->print(5, "I caching edit token");  
   }
 
+  return $editToken;
 }
 
 ############################################################
@@ -497,7 +519,6 @@ sub fetch_backlinks_compat {
 
   return \@articles;
 }
-
 
 #############################################################3
 
@@ -586,7 +607,6 @@ sub pages_in_category_detailed {
 
   return $results;
 }
-
 
 #############################################################3
 
@@ -703,7 +723,7 @@ sub image_embedded {
 ######################################################
 
 
-#########################################################33
+######################################################
 
 =item $text = $api->content($pageTitles);
 
@@ -752,7 +772,6 @@ sub content {
   return $arr;
 }
  
-
 #########################################################
 
 ## Internal function
@@ -869,7 +888,6 @@ sub page_info {
 
   return $self->child_data($results,  ['query', 'pages', 'page']);
 }
-
 
 #######################################################
 
@@ -1536,5 +1554,3 @@ Released under GNU Public License (GPL) 2.0.
 ########################################################
 ## Return success upon loading class
 1;
-
-
