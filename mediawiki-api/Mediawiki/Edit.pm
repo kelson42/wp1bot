@@ -3,6 +3,29 @@ package Mediawiki::Edit;
 # Carl Beckhorn, 2008
 # Copyright: GPL 2.0
 
+my $deprecated_err = << "HERE";
+The Mediawiki::Edit library is obsolete and deprecated. 
+It is no longer maintained and is believed to be broken. 
+
+You can replace Mediawiki::Edit with Mediawiki::API with little 
+effort. Just replace \$editor->edit(...) with \$api->edit_page(...).
+
+The edit_page() function in Mediawiki::API takes an additional argument,
+an array reference of options. These are documented in the API docs.
+The most important options are:
+
+  'section'=>'new'   :  start a new section
+  'bot'=>1           :  mark the edit as a bot edit
+
+To disable this fatal error, in order to keep using Mediawiki::Edit,
+edit the Mediawiki/Edit.pm file, and comment out the line that says 
+"die \$deprecated_err".
+
+HERE
+
+die "$deprecated_err\n";
+
+
 use strict;
 use Data::Dumper;
 use LWP::UserAgent;
