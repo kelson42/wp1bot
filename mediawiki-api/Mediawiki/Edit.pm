@@ -17,6 +17,9 @@ The most important options are:
   'section'=>'new'   :  start a new section
   'bot'=>1           :  mark the edit as a bot edit
 
+If your bot needs to detect edit conflicts, you need to read the API
+editing docs for details on how to do that.
+
 To disable this fatal error, in order to keep using Mediawiki::Edit,
 edit the Mediawiki/Edit.pm file, and comment out the line that says 
 "die \$deprecated_err".
