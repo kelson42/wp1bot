@@ -234,10 +234,9 @@ HERE
     }
 
 print << "HERE";
-    <th><b>Timestamp</b></th>
     <th><b>Article</b></th>
-    <th><b>Revision</b></th>
-    <th><b>Type</b></th>
+    <th><b>Timestamp</b></th>
+    <th><b>Revision Type</b></th>
     <th><b>New value</b></th>
     <th><b>Old value</b></th>
   </tr>
