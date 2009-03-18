@@ -23,7 +23,7 @@ require 'layout.pl';
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
-my $script_url = get_conf('list2-url') 
+my $script_url = $Opts->{'list2-url'} 
  or die "No 'list2-url' specified in configuration.\n";
 
 
@@ -52,7 +52,7 @@ if ( defined $ARGV[0] ) {
   exit;
 }
 
-layout_header('Overall summary table', 1);
+layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
@@ -101,6 +101,10 @@ group by grq.gr_rating, gri.gr_rating
   my @row;
 
   while ( @row = $sth->fetchrow_array ) {
+  print "Row: ";
+  print Dumper(@row);
+  print "\n";
+
     if ( ! defined $row[1] ) { $row[1] = 'Unknown-Class'; }
     if ( ! defined $row[2] ) { $row[2] = 'Unknown-Class'; }
     if ( ! defined $data->{$row[1]} ) { $data->{$row[1]} = {} };

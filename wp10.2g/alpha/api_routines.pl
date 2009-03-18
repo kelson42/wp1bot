@@ -2,7 +2,6 @@
 use strict;
 use Encode;
 
-
 =head1 SYNOPSIS
 
 Routines for fetching content from the wiki. This library
@@ -17,15 +16,16 @@ use lib '/home/cbm/veblen/VeblenBot';
 
 use Data::Dumper;
 
-our $Opts;
-
 require Mediawiki::API;
 require "toolserver_api.pl";
+
+require 'read_conf.pl';
+
 
 my $api;
 my $namespaces;
 
-my $use_toolserver = 1;
+my $use_toolserver = get_conf('use_toolserver');
 
 #####################################################################
 
@@ -45,8 +45,10 @@ sub init_api() {
   $api->base_url(get_conf('api_url'));
   $api->debug_level(3);
 
-  if ( defined $Opts->{'api-credentials'} ) { 
-#    $api->login_from_file($Opts->{'api-credentials'});
+  my $cred = get_conf('api-credentials');
+
+  if ( $cred ) { 
+    $api->login_from_file($cred);
   }
 
   # Initialize hash of namespace prefixes
@@ -89,6 +91,7 @@ sub pages_in_category {
   print "Get: $cat\n";
 
   if ( $use_toolserver ) { 
+#    print "\tusing toolserver\n";
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
     my $r =  toolserver_pages_in_category($cat, $ns);
@@ -140,6 +143,7 @@ sub pages_in_category_detailed {
   print "Get: $cat '$ns'\n";
 
   if ( $use_toolserver ) { 
+#    print "\tusing toolserver\n";
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
     my $r = toolserver_pages_in_category_detailed($cat, $ns);
@@ -203,7 +207,7 @@ sub api_namespaces {
 Find the redirect target for NS:TITLE.
 
 Return undef if NS:TITLE is not a redirect, otherwise return
-(DEST_NS, DEST_TITLE)
+(DEST_NS, DEST_TITLE, REV_TIMESTAMP)
 
 =cut
 
@@ -212,6 +216,7 @@ sub api_resolve_redirect {
   my $title = shift;
 
   if ($use_toolserver == 1) { 
+#    print "\tusing toolserver\n";
     return toolserver_resolve_redirect($ns, $title);
   }
 
@@ -224,15 +229,20 @@ sub api_resolve_redirect {
   my $data = $api->makeXMLrequest(['action'=>'query',
                                     'titles'=>$title,
                                     'redirects'=>'1',
+                                    'prop'=>'revisions',
+                                    'rvlimit' =>'1',
                                     'format'=>'xml']);
+
+  print Dumper($data);
 
   my $c = $data->{'query'}->{'redirects'}->{'r'}->{'to'};
 
   if ( defined $c) { 
     my $ns = $data->{'query'}->{'pages'}->{'page'}->{'ns'};
     my $title = $data->{'query'}->{'pages'}->{'page'}->{'title'};
+    my $timestamp = $data->{'query'}->{'pages'}->{'page'}->{'revisions'}->{'rev'}->{'timestamp'};
     $title =~ s/^\Q$namespaces->{$ns}\E//;
-    return $ns, $title;
+    return $ns, $title, $timestamp;
   } else { 
     return undef;
   }        
@@ -251,7 +261,8 @@ sub api_get_move_log {
   my $ns = shift;
   my $title = shift;
 
-  if (0 && $use_toolserver == 1) { 
+  if ($use_toolserver == 1) { 
+#    print "\tusing toolserver\n";
     return toolserver_get_move_log($ns, $title);
   }
 
@@ -270,11 +281,10 @@ sub api_get_move_log {
     $d->{'comment'} = encode('utf8', $d->{'comment'});
     $d->{'dest-ns'} =$d->{'move'}->{'new_ns'};
     $d->{'dest-title'} = encode('utf8',$d->{'move'}->{'new_title'});
-
     push @$output, $d;
   }
 
- return $output;
+  return $output;
 }
 
 

@@ -11,7 +11,7 @@ our $Opts = read_conf();
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url(get_conf('api_url'));
+$api->base_url('http://en.wikipedia.org/w/api.php');
 
 use Data::Dumper;
 use URI::Escape;
@@ -23,7 +23,10 @@ require 'layout.pl';
 
 my $timestamp = strftime("%Y-%m-%dT%H:%M:%SZ", gmtime(time()));
 
-my $script_url = get_conf('list2-url') 
+my $list_url = $Opts->{'list2-url'} 
+ or die "No 'list2-url' specified in configuration.\n";
+
+my $log_url = $Opts->{'log-url'} 
  or die "No 'list2-url' specified in configuration.\n";
 
 
@@ -50,16 +53,14 @@ require "database_www.pl";
 
 our $dbh = db_connect($Opts);
 
-if (defined $param{'project'}) {
-	layout_header("Summary tables: " . $proj . " " . get_conf('pages_label'), 1);
-} else {
-	layout_header("Summary tables: ", 1);
-}
+
+layout_header('Summary tables');
 my $projects = query_form($proj);
 
 if ( defined $proj && defined $projects->{$proj} ) {
   cached_ratings_table($proj);
 }	
+
 layout_footer();
 exit;
 
@@ -128,9 +129,9 @@ sub cached_ratings_table {
   print $html;
   print "</center>\n";
   print "\n";
-  print "<hr/><div class=\"indent\"><pre>";
-  print $wikicode;
-  print "</pre></div>\n";
+#  print "<hr/><div class=\"indent\"><pre>";
+#  print $wikicode;
+#  print "</pre></div>\n";
 
   $data = "TABLE:$proj" . $cache_sep 
         . $timestamp . $cache_sep
@@ -249,7 +250,7 @@ sub ratings_table {
 
       if ( $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
-                   '[' . $script_url . "projecta=" . uri_escape($proj) 
+                   '[' . $list_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . commify($data->{$qual}->{$prio}) . "]");
@@ -270,7 +271,7 @@ sub ratings_table {
 
   foreach $qual ( @QualityRatings ) {
     $table->data($qual, "Total", "'''[" 
-                   . $script_url . "projecta=" . uri_escape($proj) 
+                   . $list_url . "projecta=" . uri_escape($proj) 
 #                    . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . commify($qualcounts->{$qual}) . "]'''");
@@ -278,24 +279,24 @@ sub ratings_table {
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
 #                    . "&quality=" . uri_escape($qual)  
                    . ' ' . commify($priocounts->{$prio}) . "]'''");
 
     $table->data("Assessed", $prio, 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
                    . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . $script_url . "projecta=" . uri_escape($proj) 
+                   . $list_url . "projecta=" . uri_escape($proj) 
                    . ' ' . commify($total) . "]'''");
 
   $table->data("Assessed", "Total", 
-                "'''[" . $script_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
                     . "&quality=Assessed" 
                    . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
 
@@ -403,14 +404,17 @@ sub query_form {
 
 #####################################################################
 
+
+
 sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = get_conf('list2-url');
-	my $logURL = get_conf('log-url');
+	my $listURL = $list_url;
 	$listURL = $listURL . "projecta=" . $project . "&limit=50";
-	$logURL = $logURL . "project=" . $project;
 	
+        my $logURL = $log_url;
+        $logURL = $logURL . "project=" . $project;
+
 	($project, $timestamp, $wikipage, $parent, $shortname) = 
 	get_project_data($project);
 	if ( ! defined $wikipage) 
@@ -419,14 +423,17 @@ sub print_header_text {
 	}
 	elsif ( ! defined $shortname) 
 	{
-		print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b>"; 
+		print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
 	}
 	else
 	{
 		print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> "; 		
 	}
-	print "(<a href=\"" . $listURL . "\">list</a> \| <b>summary table</b> | <a href=\"" 
-			. $logURL . "\">assessment log</a>)\n";	
+
+	print "(<a href=\"" . $listURL . "\">lists</a> | "
+           .  "<a href=\"" . $logURL . "\">log</a> | "
+           . " <b>summary table</b>)\n";
+	
 }
 
 sub get_link_from_api { 
@@ -435,7 +442,7 @@ sub get_link_from_api {
 	my $t = $r->{'text'};
 	
 	# TODO: internationalize this bare URL
-	my $baseURL = get_conf('base_url');
+	my $baseURL = "http://en.wikipedia.org";
 	$t =~ s!^<p>!!;
 	my @t = split('</p>',$t);
 	$t = @t[0];

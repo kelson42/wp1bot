@@ -109,6 +109,80 @@ sub update_article_data {
   update_article_rating_data($project, $ns, $art, $table, $value, $timestamp);
 }
 
+#######################################################################
+
+=item B<update_article_moved>(TIMESTAMP, OLD_NAMESPACE, OLD_ARTICLE,
+                              NEW_NAMESPACE, NEW_TITLE, REV_TIMESTAMP)
+
+Top-level routine for logging that an article has been moved.
+Updates the I<moves> table and the <logging> table;
+
+Does not update any data for the for new name, only updates for old name.
+
+=cut
+
+sub update_article_moved {
+  my $global_timestamp = shift;
+  my $project = shift;
+  my $old_ns = shift;
+  my $old_art = shift;
+  my $new_ns = shift;
+  my $new_art = shift;
+  my $rev_timestamp = shift;
+
+  my ($r, $sth, @row);
+
+  print "N: $new_ns:$new_art\n";
+
+  $sth = $dbh->prepare("SELECT count(*) FROM moves       
+                                WHERE m_timestamp = ? 
+                                  AND m_old_namespace = ?
+                                  AND m_old_article = ?
+                                  AND m_new_namespace = ?
+                                  AND m_new_article = ?");
+  
+  $sth->execute($rev_timestamp, $old_ns, $old_art, $new_ns, $new_art);
+  @row = $sth->fetchrow_array();
+  $r = $row[0];
+
+  if ( '0' eq $r ) { 
+    $sth = $dbh->prepare("INSERT INTO moves " . 
+				 "values (?,?,?,?,?)");
+
+    $r = $sth->execute($rev_timestamp, $old_ns, $old_art, $new_ns, $new_art);
+    print "MOVES inserted $old_ns:$old_art => " 
+        . " $new_ns:$new_art $rev_timestamp: result $r\n";
+  } else { 
+    print "MOVES already shows $old_ns:$old_art "
+        . " => $new_ns:$new_art $global_timestamp: '$r'\n";
+  }
+
+  $sth = $dbh->prepare("SELECT count(*) FROM logging             
+                                WHERE l_project = ?
+                                  AND l_namespace = ?
+                                  AND l_article = ? 
+                                  AND l_action = ? 
+                                  AND l_revision_timestamp = ?");
+
+  $r = $sth->execute($project, $old_ns, $old_art, "moved", $rev_timestamp);
+  @row = $sth->fetchrow_array();
+  $r = $row[0];
+
+  if ( '0' eq $r ) { 
+    $sth = $dbh->prepare("INSERT INTO logging " . 
+                                "values (?,?,?,?,?,?,?,?)");
+ 
+    $r = $sth->execute($project, $old_ns, $old_art, "moved", 
+                       $global_timestamp, "", "", $rev_timestamp);
+  
+    print "LOG inserted logging entry for move: result '$r'\n";
+  } else { 
+    print "LOG already has logging entry for move: '$r'\n";
+  }
+
+  # Ratings for new article will be picked up separately
+}
+
 
 #######################################################################
 
@@ -248,7 +322,7 @@ HERE
   print "Updating articles table for $project\n";
   my $start = time();
   my $r = $sth->execute($project);
-  print "Result: $r rows in "  .(time() - $start) . " seconds\n";
+  print "  Result: $r rows in "  .(time() - $start) . " seconds\n";
   return;
 }
 
@@ -388,6 +462,7 @@ sub get_project_ratings {
     $ratings->{$art} = $row[2];
   }
 
+  print "Fetched: " . (scalar keys %$ratings) . " for type '$type' project '$project'\n";
   return $ratings;
 }
 
@@ -445,7 +520,7 @@ sub db_cleanup_project {
                         . " and r_importance = 'Unknown-Class' "
                         . " and r_project = ?");
   my $count = $sth->execute($proj);
-  print "Deleted articles: $count\n";
+  print "  Deleted articles: $count\n";
 
   # It's possible for the quality to be NULL if the article has a 
   # rated importance but no rated quality (not even Unassessed-Class).
@@ -456,13 +531,17 @@ sub db_cleanup_project {
                      . "r_quality_timestamp = r_importance_timestamp "
                      . "where isnull(r_quality) and r_project = ?");
   $count = $sth->execute($proj);
-  print "Null quality rows: $count\n";
+  print "  Null quality rows: $count\n";
+
+  # Finally, if a quality is assigned but not an importance, it is
+  # possible for the importance field to be null. Set it to 
+  # Unknown-Class in this case.
 
   $sth = $dbh->prepare("update ratings set r_importance = 'Unknown-Class', " 
                      . "r_importance_timestamp = r_quality_timestamp "
                      . "where isnull(r_importance) and r_project = ?");
   $count = $sth->execute($proj);
-  print "Null importance rows: $count\n";
+  print "  Null importance rows: $count\n";
 
   return 0;
 }
@@ -572,6 +651,26 @@ sub db_get_project_details {
   }
 
   return $data;
+}
+
+
+############################################################
+=item B<db_get_project_timestamp>()
+
+Returns the last time PROJECT was updated, or undef if
+project was never updated.
+
+=cut
+
+sub db_get_project_timestamp { 
+  my $proj = shift;
+
+  my $sth = $dbh->prepare("SELECT p_timestamp FROM projects
+                           WHERE p_project = ?");
+  $sth->execute($proj);
+  
+  my @row = $sth->fetchrow_array();
+  return $row[0];
 }
 
 

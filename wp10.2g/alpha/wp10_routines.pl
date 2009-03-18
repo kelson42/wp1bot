@@ -55,8 +55,6 @@ my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
             "December");
 
-# my $Moved = {};
-
 ######################################################################
 
 =item B<download_project_list>()
@@ -77,11 +75,11 @@ sub download_project_list {
     next unless ( $cat =~ m/\Q$By_quality\E/ );
     next if ( $Lang eq 'en' 
               && $cat =~ /\Q$Category\E:Articles \Q$By_quality\E/); 
-    
+
     $cat =~ s/^\Q$Category\E://;
     $cat =~ s/ \Q$Articles\E \Q$By_quality\E//;
 
-    push @$projects, $cat;       
+    push @$projects, $cat;
   }
 
   return $projects;
@@ -104,25 +102,29 @@ sub download_project {
 
   print "\n-- Download ratings data for '$project'\n";
   my ($homepage, $parent, $extra, $shortname, $timestamp);
-  
+
   eval {
         update_timestamps();
 	($homepage, $parent, $extra, $shortname) = 
           get_extra_assessments($project);
         $timestamp = db_get_project_timestamp($project);
-	download_project_quality_ratings($project, $extra, $timestamp);
-	download_project_importance_ratings($project, $extra, $timestamp);
+	download_project_assessments($project, $extra, $timestamp,'quality');
+	download_project_assessments($project, $extra, $timestamp,'importance');
 	db_cleanup_project($project);
-        update_articles_table($project);
 	update_project($project, $global_timestamp, $homepage,
                        $parent, $shortname);
-    db_commit();
-	};
 
-	if ($@) {
+        # This must come after update_project because update_project
+        # sets up the ratings for unassessed articles, which have to 
+        # be right before this runs
+        update_articles_table($project);
+	db_commit();
+      };
+
+  if ($@) {
     print "Transaction aborted: $@";
     db_rollback();
-	}
+  }
 
   db_unlock("PROJECT:$project");
 
@@ -153,7 +155,6 @@ sub get_project_quality_categories {
   # adopted by a particular wiki
   my $cat = "$Category:$project $Articles $By_quality";
 
-#  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   my $cats = pages_in_category($cat, $categoryNS);
   my $value;
 
@@ -200,7 +201,6 @@ sub get_project_importance_categories {
 
   my $cat = "$Category:$project $Articles $By_importance";
   my $cats = pages_in_category($cat, $categoryNS);
-#  my $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   my $value;
 
   # If 'by importance' is empty, the category tree might be under 
@@ -209,7 +209,6 @@ sub get_project_importance_categories {
     print "Fall back to 'priority' naming\n";
     $cat = "$Category:$project $Articles $By_importance_alt";
     $cats = pages_in_category($cat, $categoryNS);
-#    $cats = pages_in_category(encode("utf8",$cat), $categoryNS);
   }
 
   foreach $cat ( @$cats ) { 
@@ -234,28 +233,47 @@ sub get_project_importance_categories {
 
 #################################################################
 
-=item B<download_project_quality_ratings>(PROJECT, EXTRA)
+=item B<download_project_assessments>(PROJECT, EXTRA, TIMESTAMP, TYPE)
 
-Download quality assessments for project, update database
+Download assessments for project and update database. 
+
+TYPE is either C<quality> or C<importance>.
 
 =cut
 
-sub download_project_quality_ratings { 
+sub download_project_assessments {
   my $project = shift;
   my $extra = shift;
   my $timestamp = shift;
+  my $type = shift;
 
-  print "Get stored quality ratings for $project\n";
+  if ( $type ne 'quality' && $type ne 'importance' ) {
+    die "Bad type '$type'";
+  }
 
-  my $oldrating = get_project_ratings($project, 'quality');
-  my $newrating = {};
+  print "Get stored $type ratings for $project\n";
+  my $oldrating = get_project_ratings($project, $type);
+  my $newrating = [];
 
   my $seen = {};
-  my $qcats = get_project_quality_categories($project, $extra);
+  my $moved = {};
+  my $qcats;
+
+  if ( $type eq 'quality' ) { 
+    $qcats = get_project_quality_categories($project, $extra);
+  } else { 
+    $qcats = get_project_importance_categories($project, $extra);
+  }
+
   my ($cat, $tmp_arts, $qual, $art, $d);
 
+  if ( 0 == scalar keys %$qcats ) { 
+    print "Project $project has no $type categories. Skipping them.\n";
+    return;
+  }
+
   foreach $qual ( keys %$qcats ) { 
-#    print "\nFetching list for quality $qual\n";
+    print "\nFetching list for $type $qual\n";
 
     $tmp_arts = pages_in_category_detailed($qcats->{$qual});
 
@@ -264,16 +282,16 @@ sub download_project_quality_ratings {
 
     foreach $d ( @$tmp_arts ) {
        $i++;
-       next if ( ($d->{'ns'} < 0) || ($d->{'ns'} == 3) 
-		 || ( 0 == $d->{'ns'} % 2));
-       $d->{'ns'}--;
+       $d->{'ns'}--;  # Talk pages are tagged, we want the NS of the article itself
+       next unless (acceptable_namespace($d->{'ns'}));
+
        $art = $d->{'ns'} . ":" . $d->{'title'};
        $seen->{$art} = 1;
 
-       if ( ! defined $oldrating->{$art} ) { 
-         update_article_data($global_timestamp, $project,
-			     $d->{'ns'}, $d->{'title'}, "quality",
-                             $qual, $d->{'timestamp'}, 'Unknown-Class');
+       if ( ! defined $oldrating->{$art} ) {
+         $d->{'art'} = $art;
+         $d->{'rating'} = $qual;
+         push @$newrating, $d;
          next;
        }
 
@@ -281,118 +299,70 @@ sub download_project_quality_ratings {
          # No change
        } else {
          update_article_data($global_timestamp, $project,
-			     $d->{'ns'}, $d->{'title'}, 'quality',
+			     $d->{'ns'}, $d->{'title'}, $type,
                              $qual, $d->{'timestamp'}, $oldrating->{$art} );
-       } 
+       }
     }
-  } 
+  }
 
-  my ($ns, $title);
+  my ($ns, $title, $new_ns, $new_title, $new_timestamp, $new_art);
 
-  foreach $art ( keys %$oldrating ) { 
-    next if ( exists $seen->{$art} );   
-    next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
-    print "NOT SEEN (quality) '$art'\n";
+  my $totalArts = scalar keys %$oldrating;
+  print "Total old arts: $totalArts\n";
+  my $curArt = 0;
+  foreach $art ( keys %$oldrating ) {
+    $curArt++;
+    next if ( exists $seen->{$art} );
+    next if ( $oldrating->{$art} eq 'Unknown-Class' );
+
+    # I believe the next thing will only happen on the
+    # first run. Prove me wrong. 
+
+    next if ( $type eq 'importance' && $oldrating->{$art} eq '' ); 
+    print "NOT SEEN ($type: $curArt / $totalArts) '$art' '" 
+          . $oldrating->{$art} . "'\n";
+
     ($ns, $title) = split /:/, $art, 2;
+    ($new_ns, $new_title, $new_timestamp)
+                       = get_new_name($ns, $title, $timestamp);
 
-#    my ($new_ns, $new_title, $new_timestamp)
-#                        = get_new_name($ns, $title, $timestamp);
-#    if ( defined $new_ns ) { 
-#      print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
-#      update_article_moved($global_timestamp, $project, $ns, $title, 
-#                              $new_ns, $new_title, $new_timestamp);
-#
-#      $Moved->{$art} = 1;
-#      next;
-#    }
+    if ( defined $new_ns ) {
+      print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
+      update_article_moved($global_timestamp, $project, $ns, $title,
+			   $new_ns, $new_title, $new_timestamp);
+
+      $new_art = $new_ns . ":" . $new_art;
+      $moved->{$new_art} = 1;
+      next;
+    }
 
     update_article_data($global_timestamp, $project, 
-			$ns, $title, "quality",
+			$ns, $title, $type,
                         'Unknown-Class', $global_timestamp_wiki, 
                         $oldrating->{$art});
+  }
 
+  # At this point, we are aware of which articles have been
+  # moved since the last update of this project
+
+   print "Total new arts: " . (scalar @$newrating) . "\n";
+
+  $curArt = 0;
+  foreach $d ( @$newrating ) {
+   $curArt++;
+    if ( 0 == $curArt % 1000) { print "\t$curArt\n"; }
+
+    if ( ! defined $moved->{$d->{$art}} ) {
+#         print "New: ". Dumper($d);
+         update_article_data($global_timestamp, $project,
+			     $d->{'ns'}, $d->{'title'}, $type,
+                             $d->{'rating'}, $d->{'timestamp'}, 
+			     'Unknown-Class');
+#         exit;
+       }
   }
 
   return 0;
-}
-
-#################################################################
-
-=item B<download_project_importance_ratings>(PROJECT, EXTRA)
-
-Download importance assessments for project, update database
-
-=cut
-
-sub download_project_importance_ratings { 
-  my $project = shift;
-  my $extra = shift;
-
-  print "Get importance ratings for $project\n";
-
-  print "Getting old data from database\n";
-  my $oldrating = get_project_ratings($project, 'importance');
-
-  my $seen = {};
-  my $icats = get_project_importance_categories($project, $extra);
-  my ($cat, $tmp_arts, $imp, $art, $d);
-
-  foreach $imp ( keys %$icats ) { 
-#    print "\nFetching list for importance $imp\n";
-
-    $tmp_arts = pages_in_category_detailed($icats->{$imp});
-
-    my $count = scalar @$tmp_arts;
-    my $i = 0;
-
-    foreach $d ( @$tmp_arts ) {
-       $i++;
-       next if ( ($d->{'ns'} < 0) || ($d->{'ns'} == 3) 
-		 || ( 0 == $d->{'ns'} % 2));
-       $d->{'ns'}--;
-       $art = $d->{'ns'} . ":" . $d->{'title'};
-       $seen->{$art} = 1;
-
-       if ( ! defined $oldrating->{$art} ) { 
-         update_article_data($global_timestamp, $project, 
-			     $d->{'ns'}, $d->{'title'}, "importance", 
-                             $imp, $d->{'timestamp'}, 'Unknown-Class');
-         next;
-       }
-
-       if ( $oldrating->{$art} eq $imp ) { 
-         # No change
-       } else {
-         update_article_data($global_timestamp, $project, 
-			     $d->{'ns'}, $d->{'title'}, "importance",
-                             $imp, $d->{'timestamp'}, $oldrating->{$art} );
-       } 
-    }
-  } 
-
-  my ($title, $ns);
-  foreach $art ( keys %$oldrating ) { 
-    # for importance only, NULL values are OK
-    next if ( $oldrating->{$art} eq 'Unknown-Class' ); 
-    next if ( exists $seen->{$art} );    
-    ($ns, $title) = split /:/, $art, 2;
-    print "NOT SEEN (importance) $art\n";
-
-
-#    # This may not be seen because the update_moved function
-#    # may erase the article before the importance update even 
-#    # sees it. 
-#    if ( defined $Moved->{$art} ) { 
-#      print "Was moved\n";
-#      next;
-#    }
-
-    update_article_data($global_timestamp, $project, 
-			$ns, $title, "importance",
-                        'Unknown-Class', $global_timestamp_wiki, 
-                        $oldrating->{$art});
-  }
-
 }
 
 ###################################################################
@@ -711,6 +681,27 @@ sub get_new_name {
 
   return undef;
 
+}
+
+#######################################################################
+
+=item B<acceptable_namespace>(NS) 
+
+Used to blacklist undesired namespaces. 
+
+Returns 1 if NS is an acceptable namespace for an assessed page,
+for example namespace 0. Returns 0 for non-acceptable namespaces.
+
+=cut
+
+sub acceptable_namespace { 
+  my $ns = shift;
+
+  return 0 if ( $ns < 0 );
+  return 0 if ( $ns == 2 );
+  return 0 if ( 1 == $ns % 2 );
+
+  return 1;
 }
 
 # Load successfully

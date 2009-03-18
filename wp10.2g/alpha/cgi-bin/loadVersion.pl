@@ -15,7 +15,7 @@ our $Opts = read_conf();
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url(get_conf('api_url'));
+$api->base_url('http://en.wikipedia.org/w/api.php');
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
@@ -30,7 +30,7 @@ if ( ! defined $rev ) {
  exit;
 }
 
-my $url = get_conf('server_url') . "?title="
+my $url = "http://en.wikipedia.org/w/index.php?title="
 . uri_escape($param{'article'}) . "&oldid="
 . $rev->{'revid'} . "\n";
 

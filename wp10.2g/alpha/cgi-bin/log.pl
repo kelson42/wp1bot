@@ -17,7 +17,9 @@ require 'init_cache.pl';
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url(get_conf('api_url'));
+$api->base_url('http://en.wikipedia.org/w/api.php');
+
+my $Namespaces = init_namespaces();
 
 my $cacheFile = init_cache();
 my $cacheMem = {};
@@ -47,7 +49,7 @@ foreach $p ( keys %param ) {
   $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
 }
 
-# FIXME: Use get_conf instead of Opts
+
 if ( defined $Opts->{'log-dir'} 
      && -d $Opts->{'log-dir'} ) { 
   open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
@@ -59,14 +61,12 @@ my $proj = $param{'project'} || $ARGV[0];
 
 our $dbh = db_connect($Opts);
 
+my $NamespaceIDs = db_get_namespaces();
+
+
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-if (defined $param{'project'}) {
-  layout_header("Assessment logs: " . $proj . " " . get_conf('pages_label'), 1);
-} else {
-  layout_header("Assessment logs", 1);
-}
-
+layout_header("Assessment logs");
 
 my $projects = list_projects();
 query_form(\%param, $projects);
@@ -88,20 +88,29 @@ sub log_table {
    my $projects = shift;
   
    my ($project, $pagename, $oldrating, $newrating , 
-       $pagenameWC, $offset, $limit);
+       $pagenameWC, $offset, $limit, $ns, $newerthan, $olderthan);
   
    $project = $params->{'project'} || "";
    $pagename = $params->{'pagename'} || "";
+   $ns = $params->{'ns'} || "";
+
    $oldrating = $params->{'oldrating'} || "";
    $newrating = $params->{'newrating'} || "";
    $pagenameWC = $params->{'pagenameWC'} || 0;
    $offset = $params->{'offset'} || 1;
    $limit = $params->{'limit'} || 1000;
+   $newerthan = $params->{'newerthan'} || "";
+   $olderthan = $params->{'olderthan'} || "";
+
+   $newerthan =~ s/\s//g;
+   $newerthan =~ s/[:-]//;
+
+   $olderthan=~ s/\s//g;
+   $olderthan=~ s/[:-]//g;
+
   
    if ( $offset > 0) { $offset--; }
    if ( $limit > 1000 ) { $limit = 1000; } 
-   # FIXME: use get_conf('class-suffix'); not sure how that would work 
-   # with the /-Class/ regexp below
    if ( $oldrating =~ /\w|\d/ && ! $oldrating =~ /-Class/) { 
      $oldrating .= "-Class";
    }
@@ -121,7 +130,7 @@ sub log_table {
 
    my $query = << "HERE";
  SELECT l_project, l_article, l_action, l_timestamp, 
-        l_old, l_new, l_revision_timestamp
+        l_old, l_new, l_revision_timestamp, l_namespace
  FROM logging
 HERE
 	  
@@ -140,6 +149,20 @@ HERE
      }
    }
   
+   if ( $olderthan =~ /\w|\d/ ) {
+     $query .=  " AND l_revision_timestamp <= ?";
+     $queryc .= " AND l_revision_timestamp <= ?";
+     push @qparam, $olderthan;
+     push @qparamc, $olderthan;
+   }
+
+   if ( $newerthan =~ /\w|\d/ ) {
+     $query .=  " AND l_revision_timestamp >= ?";
+     $queryc .= " AND l_revision_timestamp >= ?";
+     push @qparam, $newerthan;
+     push @qparamc, $newerthan;
+   }
+
    if ( $oldrating =~ /\w|\d/) {
      # 'Assessed' is a magic word that means "not unassessed".
      if ( $oldrating eq 'Assessed-Class' ) { 
@@ -179,18 +202,22 @@ HERE
        push @qparamc, $pagename;
      }
    }
-  
 
-   $query .= " ORDER BY l_revision_timestamp DESC, l_article ";
+   if ( defined $ns && $ns =~/\d/) { 
+     $query .= " AND l_namespace = ? ";
+     $queryc .= " AND l_namespace = ? ";
+     push @qparam, $ns;
+     push @qparamc, $ns;
+   }
 
+   $query .= " ORDER BY l_revision_timestamp DESC, l_article";
   
    $query .= " LIMIT ?";
    push @qparam, $limit;
   
    $query .= " OFFSET ?";
    push @qparam, $offset;
-  
-  
+ 
    # clean up the SQL for edge cases 
    $query =~ s/WHERE\s*AND/WHERE /;
    $queryc =~ s/WHERE\s*AND/WHERE /;
@@ -199,10 +226,14 @@ HERE
    $queryc =~ s/WHERE\s*ORDER/ORDER/;
   
    $queryc =~ s/WHERE\s*$//;
-  
-  
-   print "<pre>Q:\n$query</pre>\n";
-   print join "<br/>", @qparam;
+   
+#   print "<pre>Q:\n$query</pre>\n";
+#   my @params = @qparam;
+#   print join "<br/>", map { $_ = "'" . $_ . "'" } @params;
+
+#   print "<pre>Q:\n$queryc</pre>\n";
+#   @params = @qparamc;
+#   print join "<br/>", map { $_ = "'" . $_ . "'" } @params;
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
@@ -218,10 +249,18 @@ HERE
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p>\n";
 
-
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
   my $i = $offset;
+
+  print "<!-- count: '$c' -->\n";
+
+
+# SELECT l_project, l_article, l_action, l_timestamp, 
+#             0           1       2            3
+
+#        l_old, l_new, l_revision_timestamp, l_namespace
+#           4       5      6                     7
 
   print << "HERE";
   <center><table class="wikitable">
@@ -237,29 +276,53 @@ print << "HERE";
     <th><b>Article</b></th>
     <th><b>Timestamp</b></th>
     <th><b>Revision Type</b></th>
-    <th><b>New value</b></th>
     <th><b>Old value</b></th>
+    <th><b>New value</b></th>
   </tr>
 HERE
 
-
   while ( @row = $sth->fetchrow_array ) {
-    $i++;
+    $i++;  
+    print "<!-- $i -->\n";
 
-    print "<tr><td>$i</td>\n";
+    if ( $row[2] eq 'moved' ) { 
 
-    if (  ! ( $project =~ /\w|\d/ ) ) { 
-      print "    <td>" . $row[0] . "</td>\n";
+      print "<tr><td>$i</td>\n";
+
+      if (  ! ( $project =~ /\w|\d/ ) ) { 
+        print "    <td>" . $row[0] . "</td>\n";
+      }
+
+      print "    <td>" . make_article_link($row[7], $row[1]) . "</td>\n";
+      print "    <td>" . make_history_link($row[7], $row[1],$row[6],"l") 
+          . "</td>\n";
+
+     my ($dest_ns, $dest_art) = db_get_move_target($row[7], $row[1], $row[6]);
+#XXXXXXXXXXXXX
+
+      my $link = make_article_link($dest_ns, $dest_art);
+      print << "HERE";
+<td>redirected</td>
+<td colspan="2">$link</td>
+HERE
+print "</tr>\n";
+
+    } else {  # the quality or importance was changed
+      print "<tr><td>$i</td>\n";
+
+      if (  ! ( $project =~ /\w|\d/ ) ) { 
+        print "    <td>" . $row[0] . "</td>\n";
+      }
+
+#     print "    <td>" . $row[3] . "</td>\n";
+      print "    <td>" . make_article_link($row[7], $row[1]) . "</td>\n";
+      print "    <td>" . make_history_link($row[7], $row[1],$row[6],"l") 
+          . "</td>\n";
+      print "    <td>" . $row[2] . "</td>\n";
+      print "    " . get_cached_td_background($row[4]) . "\n";
+      print "    " . get_cached_td_background($row[5]) . "\n";
+      print "</tr>\n";
     }
-
-#    print "    <td>" . $row[3] . "</td>\n";
-    print "    <td>" . make_article_link($row[1]) . "</td>\n";
-    print "    <td>" . make_history_link($row[1],$row[6],"l") . "</td>\n";
-    print "    <td>" . $row[2] . "</td>\n";
-    print "    " . get_cached_td_background($row[5]) . "\n";
-    print "    " . get_cached_td_background($row[4]) . "\n";
-
-    print "</tr>\n";
   }
   print "</table>\n</center>\n";
 
@@ -291,6 +354,10 @@ HERE
 		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
 	}
 	print "\n";	
+
+   print "<hr/>\n";
+
+   get_previous_name($params->{'ns'}, $params->{'pagename'});
 	
 }
 
@@ -319,8 +386,16 @@ sub query_form {
   my $oldrating = $params->{'oldrating'} || "";
   my $newrating = $params->{'newrating'} || "";
 
+  my $olderthan = $params->{'olderthan'} || "";
+  my $newerthan = $params->{'newerthan'} || "";
+
   my $limit = $params->{'limit'} || "1000";
   my $offset = $params->{'offset'} || "1";
+
+  my $ns = $params->{'ns'};
+  if ( ! defined $ns ) { 
+    $ns = "";
+  }  
 
   my $pagename = $params->{'pagename'} || "";
   my $pagenameWC = $params->{'pagenameWC'} || "";
@@ -339,16 +414,27 @@ sub query_form {
   <table class="subform">
     <tr><td>Project name</td>
       <td><input type="text" value="$project" name="project"/></td></tr>
+    <tr><td>Namespace<br/>number</td>
+      <td><input type="text" value="$ns" name="ns"/></td></tr>
     <tr><td>Page name</td>
       <td><input type="text" value="$pagename" name="pagename"/></td></tr>
+    <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  
+                               name="pagenameWC" />
+      Treat page name as a 
+      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td>
+    </tr>
+
     <tr><td>Old rating</td>
       <td><input type="text" value="$oldrating" name="oldrating"/></td></tr>
     <tr><td>New rating</td>
       <td><input type=\"text\" value="$newrating" name="newrating"/></td></tr>
-    <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  
-                               name="pagenameWC" />
-      Treat page name as a 
-      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
+
+    <tr><td>Assessments before</td>
+      <td><input type="text" value="$olderthan" name="olderthan"/></td></tr>
+    <tr><td>Assessments after</td>
+      <td><input type=\"text\" value="$newerthan" name="newerthan"/></td></tr>
+
+
     <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
   </table>
@@ -376,6 +462,9 @@ HERE
 
 sub get_cached_td_background { 
   my $class = shift;
+
+  if ( ! defined $class ) { 
+    return "<td style=\"text-align: center;\">&mdash;</td>\n"; }
 
   if ( defined $cacheMem->{$class} ) { 
     print " <!-- hit $class in memory cache --> ";
@@ -410,10 +499,8 @@ sub get_td_background {
 
   $t =~ s/\|.*//s;
   $t =~ s!^<p>!!;
-  # FIXME: use get_conf('class-suffix') instead;
   $class =~ s/-Class//;
   $t = "<td $t><b>$class</b></td>";
-
   return $t;
 }
 
@@ -424,7 +511,8 @@ sub get_link_from_api {
   my $r =  $api->parse($text);
   my $t = $r->{'text'};
 
-  my $baseURL = get_conf('base_url');
+  # TODO: internationalize this bare URL
+  my $baseURL = "http://en.wikipedia.org";
   $t =~ s!^<p>!!;
   my @t = split('</p>',$t);
   $t = @t[0];
@@ -440,13 +528,12 @@ sub get_link_from_api {
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL = get_conf('table-url');
-  my $listURL = get_conf('list2-url');
+  my $tableURL = $ENV{"SCRIPT_URI"};
+  my @t = split('log.pl',$tableURL);
+  $tableURL = @t[0] . "table.pl";
 
-  # If the project is defined, show the project's navbar
   if ( $project =~ /\w|\d/ ) { 
-    $tableURL = $tableURL . "project=" . $project;
-    $listURL = $listURL . "projecta=" . $project . "&limit=50";
+    $tableURL = $tableURL . "?project=" . $project;
 
     ($project, $timestamp, $wikipage, $parent, $shortname) = 
       get_project_data($project);
@@ -462,8 +549,8 @@ sub print_header_text {
     print " Data for all projects ";
   }
 
-  print "(<a href=\"" . $listURL . "\">list</a> \| <a href=\"" . $tableURL 
-        . "\">summary table</a> | <b>assessment log</b>)\n";
+  print "(<b>list</b> \| <a href=\"" . $tableURL 
+        . "\">summary table</a>)\n";
 }
 
 
@@ -471,22 +558,61 @@ sub print_header_text {
 
 sub make_article_link {
   my $server_uri = "http://en.wikipedia.org/w/index.php";
+  my $log_uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/log.pl";
+  my $ns = shift;
   my $a = shift;
-  return "<a href=\"$server_uri?title=" . uri_escape($a) . "\">$a</a>"
-         . " (<a href=\"$server_uri?title=Talk:" . uri_escape($a) 
-         . "\">t</a> &middot; "
-         . "<a href=\"$server_uri?title=" . uri_escape($a) 
-         . "&action=history\">h</a>)";
+  my $pagename = make_page_name($ns, $a);
+  my $talkname = make_talk_name($ns, $a);
+
+  return "<a href=\"$server_uri?title=" . uri_escape($pagename) 
+       . "\">$pagename</a>"
+         . " (<a href=\"$server_uri?title=" . uri_escape($talkname) 
+         . "\">t</a>" 
+         . " &middot; "
+         . "<a href=\"$server_uri?title=" . uri_escape($pagename) 
+         . "&action=history\">h</a>"
+         . " &middot; "
+         . "<a href=\"$log_uri?pagename=" . uri_escape($a)  
+         . "&ns=" . uri_escape($ns) 
+         . "\">l</a>)";
+}
+
+###########################################################################
+
+sub make_page_name { 
+  my $ns = shift;
+  my $title = shift;
+
+  if ( $ns == 0 ) { 
+    return $title;
+  } else {
+    return $NamespaceIDs->{$ns} . ":" . $title;
+  }
+}
+
+sub make_talk_name { 
+  my $ns = shift;
+  my $title = shift;
+
+  if ( 1 == $ns % 2) { 
+    return $title;
+  } else { 
+    return make_page_name($ns+1, $title);
+  }
+
 }
 
 ###########################################################################
 
 sub make_history_link { 
-  my $art = shift;
+  my $ns = shift;
+  my $title = shift;
   my $ts = shift;
   my $long = shift || "";
 
   my $d = $ts;
+
+  my $art = make_page_name($ns, $title);
 
   if ( $long eq 'l' ) { 
     $d =~ s/T/ /;
@@ -498,6 +624,66 @@ sub make_history_link {
   my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
   return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
+}
+
+###########################################################################
+
+sub get_previous_name {
+  my $ns = shift;
+  my $title = shift;
+
+  return unless ( defined $ns && defined $title);
+
+  my $sth = $dbh->prepare('select m_timestamp, m_old_namespace, m_old_article
+                           from moves where m_new_namespace = ? 
+                                        and m_new_article = ?');
+
+  my $r = $sth->execute($ns, $title);
+
+  if ( $r > 0 ) { 
+    print "<b>Previous names:</b><ul>\n";
+    print << "HERE";
+<table class="wikitable">
+<tr><th>Article</th>
+<th>Date redirected</th>
+</tr>
+HERE
+
+    my @row;
+
+    while ( @row = $sth->fetchrow_array ) { 
+      print "<tr>\n";
+      print "  <td>" . make_article_link($row[1], $row[2]) . "</td>\n";
+      print "  <td>$row[0]</td>\n";
+      print "<tr>\n";
+    }
+   print "</table>\n";
+ 
+  }
+
+ return;
+}
+
+###########################################################################
+
+sub init_namespaces {
+
+  # Initialize hash of namespace prefixes
+  my $r = $api->site_info();
+  $r = $r->{'namespaces'}->{'ns'};
+  
+  my $namespaces ={};
+  my $n;
+  foreach $n ( keys %$r ) { 
+    if (  $r->{$n}->{'content'} ne "" ) { 
+      $namespaces->{$n}= $r->{$n}->{'content'} . ":";
+    } else { 
+      $namespaces->{$n} = "";
+    }
+  }
+  
+  return $namespaces;
+
 }
 
 ###########################################################################

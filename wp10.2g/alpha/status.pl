@@ -9,7 +9,7 @@ while ( $f = <IN> ) {
   $f =~ /dl.(\d+)$/;
   $p = $1;
 
-  if ( -e "/proc/$p") { 
+  if ( -e "/proc/$p" && -o "/proc/$p") { 
     print_line($f, $p);
     $procs++;
   } else { 

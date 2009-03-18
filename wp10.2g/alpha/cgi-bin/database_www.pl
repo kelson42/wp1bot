@@ -90,5 +90,58 @@ sub db_get_project_details {
 
 ###########################################################
 
+=item B<db_get_move_target>(NAMESPACE, ARTICLE, TIMESTAMP)
+
+Get the destination where NAMESPACE:ARTICLE was moved
+at TIMESTAMP.
+
+Returns (DEST_NAMESPACE, DEST_ARTICLE)
+
+=cut
+
+sub db_get_move_target{ 
+  my $old_ns = shift;
+  my $old_art = shift;
+  my $timestamp = shift;
+  my $sth = $dbh->prepare("SELECT m_new_namespace, m_new_article " .
+                          "FROM moves WHERE m_timestamp = ? " . 
+                          "and m_old_namespace = ? " .
+                          "and m_old_article = ? ");
+
+  my $r = $sth->execute($timestamp, $old_ns, $old_art);
+  print "<!-- move target r: '$r' for '$old_ns' '$old_art' '$timestamp' -->\n";
+
+  return $sth->fetchrow_array();
+}
+
+###########################################################
+
+=item B<db_get_namespaces>() 
+
+Return a hash reference that maps NAMESPACE_NUMBER => NAMESPACE_TITLE
+
+=cut
+
+sub db_get_namespaces {
+  my $sth = $dbh->prepare("SELECT ns_id, ns_name " 
+                        . "FROM toolserver.namespace where dbname = ?");
+  $sth->execute('enwiki_p');
+  my $input = $sth->fetchall_hashref('ns_id');
+  my $output = {};
+  my $key;
+  foreach $key ( keys %$input ) { 
+    $output->{$key} = $input->{$key}->{'ns_name'};
+  }
+  return $output;
+
+
+}
+
+
+###########################################################
+
+
+#
+
 # Load successfully
 1;

@@ -7,7 +7,7 @@ use Data::Dumper;
 use POSIX 'strftime';
 
 require  'read_conf.pl';
-our $Opts;
+
 my  $Prefix;
 my  $PrefixRev;
 
@@ -22,99 +22,84 @@ my  $PrefixRev;
  
 =cut
 
-my $dbh = toolserver_connect($Opts);
+my $dbh = toolserver_connect();
 
 #####################################################################
 
-=item B<toolserver_connect>(OPTIONS )
+=item B<toolserver_connect>( )
  
- <Establishes a connection with the toolserver's copy of the wiki's 
- database>
+ Establishes a connection with the toolserver's copy of the wiki's 
+ database
  
- Parameters:
- 
- OPTIONS: options from the ~/.wp10.conf configuration file
- 
- Returns:
- 
- DB: database handler object
+ Returns a DBH object
  
 =cut
 
 sub toolserver_connect {
-	my $opts = shift;
-	
 	die "No 'database_wiki_ts' given in database conf file\n"
-	unless ( defined $opts->{'database_wiki_ts'} );
+   	   unless ( defined get_conf('database_wiki_ts'));
 	
 	my $connect = "DBI:mysql"
-         . ":database=" . $opts->{'database_wiki_ts'};
+         . ":database=" . get_conf('database_wiki_ts');
 	
 	# For the enwiki_p db, this should be sql-s1
-	if ( defined $opts->{'host_wiki_ts'} ) {
-		$connect .= ":host="     . $opts->{'host_wiki_ts'} ;
+	if ( defined get_conf('host_wiki_ts') ) {
+			$connect .= ":host=" . get_conf('host_wiki_ts') ;
 	}
 	
 	
-	if ( defined $opts->{'credentials-toolserver'} ) {
-		$opts->{'password'} = $opts->{'password'} || "";
-		$opts->{'username'} = $opts->{'username'} || "";
-		
+        my $username = get_conf('username') || "";
+        my $password = get_conf('password') || "";
+
+	if ( defined get_conf('credentials-toolserver') ) {
 		$connect .= ":mysql_read_default_file=" 
-		. $opts->{'credentials-toolserver'};
+		. get_conf('credentials-toolserver');
 	}
 	
-	my $db = DBI->connect($connect, 
-	$opts->{'username'}, 
-	$opts->{'password'},
+	my $db = DBI->connect($connect, $username, $password,
 	{'RaiseError' => 1, 
 	'AutoCommit' => 0} )
 	or die "Couldn't connect to database: " . DBI->errstr;
 	
-	get_prefixes($opts, $opts->{'database_wiki_ts'});
-	
-	return $db;
+	get_prefixes(get_conf('database_wiki_ts'));
+
+        return $db;
 }
 
 #####################################################################
 
-=item B<get_prefixes>(OPTIONS, DB )
+=item B<get_prefixes>(DB )
  
 Loads a the namespace names of the "DB" wiki from the 
 toolserver's global database into internal variables
  
  Parameters:
  
- OPTIONS: options from the ~/.wp10.conf configuration file
-
  DB: database name
  
 =cut
 
 sub get_prefixes { 
-	my $opts = shift;
 	my $db = shift;
 	
 	die "No 'database_ts' given in database conf file\n"
-	unless ( defined $opts->{'database_ts'} );
+	unless ( defined get_conf('database_ts') );
 	
-	my $connect = "DBI:mysql" . ":database=" . $opts->{'database_ts'};
+	my $connect = "DBI:mysql" . ":database=" . get_conf('database_ts');
 	
-	if ( defined $opts->{'host_ts'} ) {
-		$connect .= ":host="     . $opts->{'host_ts'} ;
+	if ( defined get_conf('host_ts') ) {
+		$connect .= ":host="     . get_conf('host_ts') ;
 	}
+
+        my $username = get_conf('username') || "";
+        my $password = get_conf('password') || "";
 	
-	if ( defined $opts->{'credentials-toolserver'} ) {
-		$opts->{'password'} = $opts->{'password'} || "";
-		$opts->{'username'} = $opts->{'username'} || "";
-		
+	if ( defined get_conf('credentials-toolserver') ) {
 		$connect .= ":mysql_read_default_file=" 
-		. $opts->{'credentials-toolserver'};
+		. get_conf('credentials-toolserver');
 	}
 	
-	my $dbt = DBI->connect($connect, 
-	$opts->{'username'}, 
-	$opts->{'password'},
+	my $dbt = DBI->connect($connect, $username, $password,
 	{'RaiseError' => 1, 
 	'AutoCommit' => 0} )
 	or die "Couldn't connect to database: " . DBI->errstr;
@@ -287,7 +272,7 @@ sub toolserver_resolve_redirect {
 
   $title =~ s/ /_/g;
 
-  my $query = "select rd_namespace, rd_title from page 
+  my $query = "select rd_namespace, rd_title, page_touched from page 
                join redirect on page_id = rd_from 
                 and page_title = ? and page_namespace = ?";
 
@@ -297,7 +282,7 @@ sub toolserver_resolve_redirect {
   if ( $r == 1) { 
     my @row = $sth->fetchrow_array();
     $row[1] =~ s/_/ /g;
-    return $row[0], $row[1];
+    return $row[0], $row[1], fix_timestamp($row[2]);
   }
   
   return undef;
@@ -320,7 +305,7 @@ sub toolserver_get_move_log {
 
 
   my $query = "select log_id, log_type, log_action, log_timestamp, 
-                  user_name, log_namespace, log_title, log_comment 
+                  user_name, log_namespace, log_title, log_comment, log_params 
                from logging 
                join user on log_user = user_id where log_namespace = ?
                and log_title = ?  and log_type = 'move' 
@@ -353,11 +338,13 @@ sub toolserver_get_move_log {
     my $art = $row[8];
     my $ns = 0;
     my $n;
+
     foreach $n ( keys %$PrefixRev ) { 
-      next if ( $n == 0);
-      if ( $art =~ /^\Q$PrefixRev->{$n}\E/ ) {
-        $ns = $n;
-        $art =~ s/^\Q$PrefixRev->{$n}\E//;
+      next if ( $n eq "");
+
+      if ( $art =~ /^\Q$n\E/ ) {
+        $ns = $PrefixRev->{$n};
+        $art =~ s/^\Q$n\E//;
         last;
       }
     }

@@ -5,8 +5,9 @@ my $Opts = read_conf();
 
 use DBI;
 my $dbh = db_connect($Opts);
-my $sth_move = $dbh->prepare('insert into moves values (?,?,?,?,?)');
-my $sth_logging = $dbh->prepare('insert into logging values (?,?,?,?,?,?,?,?)');
+my $sth_move = $dbh->prepare('insert into moves values (?,?,?,?,?) on duplicate key update m_old_article = m_old_article');
+my $sth_logging = $dbh->prepare('insert into logging values (?,?,?,?,?,?,?,?) on duplicate key update l_timestamp = l_timestamp ');
+
 
 use POSIX 'strftime';
 $global_timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
@@ -15,12 +16,16 @@ my $c = 0;
 my $d = 0;
 
 open IN, "<", $ARGV[0];
+print "Mathematics: ";
+select STDOUT; 
+$| = 1;
 while ( $line = <IN> ) { 
   $c++;
   if ( defined $seen{$line} ) { 
     $d++;
     next;
   }
+  if ( 0 == $c % 1000) { print "."; }
 
   $seen{$line} = 1;
   chomp $line;
@@ -32,7 +37,9 @@ while ( $line = <IN> ) {
 # 20080904000000| Mathematics| renamed| Vector (spatial)| B-Class
 # | Top-Class| Vector (geometric)
 
-    $sth_move->execute($parts[0], 0, $parts[3], 0, $parts[6]);    
+    $sth_move->execute($parts[0], 0, $parts[3], 0, $parts[6]);   
+    $sth_logging->execute($parts[1], 0, $parts[3], "moved", 
+                          $global_timestamp, "", "", $parts[0]);
 
   } elsif ( $parts[2] eq 'added' ) { 
 
@@ -83,7 +90,7 @@ while ( $line = <IN> ) {
 
 $dbh->commit();
 
-print "Lines: $c / dups $d\n";
+print "\tLines: $c / dups $d\n";
 
 exit;
 

@@ -1,11 +1,9 @@
 #!/usr/bin/perl
 
-
 use strict;
 use Data::Dumper;
 use POSIX;
 use Getopt::Long;
-
 
 #############################################################
 # Define global variables and then load subroutines
@@ -23,6 +21,8 @@ my $start_time = time();
 #############################################################
 
 my ($mode, $projects) = parse_argv();
+
+if ( $mode eq 'none') { exit; }
 
 print "Mode: $mode\n";
 

@@ -199,7 +199,7 @@ create table if not exists releases (
     rel_0p5_category        varchar(63) not null,
         -- The Wikipedia 0.5 category (Arts, Language, etc.)
 
-    rel_0p5_timestamp       binary(16),
+    rel_0p5_timestamp       binary(20),
         -- time when article was added to a 0.5 release category
         -- NOTE: a revid can be obtained from timestamp via API
         -- a wiki-format timestamp
@@ -210,6 +210,30 @@ create table if not exists releases (
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
+
+-- the moves table keeps track of previous names of 
+-- assessed articles
+
+create table if not exists moves (
+    m_timestamp      binary(20),
+      -- when the move was made
+
+    m_old_namespace      int unsigned not null,
+      -- article namespace before move
+
+    m_old_article        varchar(255) not null,
+       -- article name before move
+
+    m_new_namespace      int unsigned not null,
+      -- article namespace after move
+
+    m_new_article        varchar(255) not null,
+       -- article name after move
+
+   primary key (m_old_namespace, m_old_article, m_timestamp),
+   key (m_new_namespace, m_new_article)
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
 
 -- the global_rankings table determines which
 -- quality and importance ratings appear in the
@@ -231,18 +255,20 @@ create table if not exists global_rankings (
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
+-- default contents of the global_rankings table
+
 replace into global_rankings values 
-   ('quality', 'FA-Class',       500),
-   ('quality', 'FL-Class',       480), 
-   ('quality', 'A-Class',        425), 
-   ('quality', 'GA-Class',       400), 
-   ('quality', 'B-Class',        300), 
-   ('quality', 'C-Class',        225), 
-   ('quality', 'Start-Class',    150),
-   ('quality', 'Stub-Class',     100), 
-   ('quality', 'List-Class',      80),              
-   ('quality', 'Assessed-Class',  20),
-   ('quality', 'Unassessed-Class' ,0),
+   ('quality',    'FA-Class',       500),
+   ('quality',    'FL-Class',       480), 
+   ('quality',    'A-Class',        425), 
+   ('quality',    'GA-Class',       400), 
+   ('quality',    'B-Class',        300), 
+   ('quality',    'C-Class',        225), 
+   ('quality',    'Start-Class',    150),
+   ('quality',    'Stub-Class',     100), 
+   ('quality',    'List-Class',      80),              
+   ('quality',    'Assessed-Class',  20),
+   ('quality',    'Unassessed-Class' ,0),
    ('importance', 'Top-Class',      400),
    ('importance', 'High-Class',     300),                
    ('importance', 'Mid-Class',      200), 

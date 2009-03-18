@@ -16,7 +16,6 @@ $api->login_from_file('/home/cbm/veblen/api.credentials');
 
 use Data::Dumper;
 
-
 my $project = $ARGV[0] || 'Mathematics';
 
 my $ptmp = $project;
@@ -203,10 +202,6 @@ sub handle_content {
         print "\tERROR 6\n";
         sleep 5;
       }
-
-
-
-
 
     } elsif ( $line =~ /\*.*reassessed from/ ) { 
       if ( $line =~ /\[\[([^]]*)]] reassessed from ([A-Za-z-]*) \(([A-Za-z-]*)\) to ([A-Za-z-]*) \(([A-Za-z-]*)\)/ ) {
