@@ -571,7 +571,7 @@ sub list_projects {
   }
   return $projects;
 }
-
+################################################################
 
 sub query_form {
   my $params = shift;
@@ -818,49 +818,6 @@ sub print_header_text {
 
 ###########################################################################
 
-sub make_article_link {
-  my $server_uri = "http://en.wikipedia.org/w/index.php";
-  my $ns = shift;
-  my $title = shift;
-
-  if ( ! defined $Namespaces ) { 
-      $Namespaces = init_namespaces();
-  }
-
-  my $a = $Namespaces->{$ns} . $title;
-  my $b = $Namespaces->{$ns+1} . $title;
-
-
-  return "<a href=\"$server_uri?title=" . uri_escape($a) . "\">$a</a>"
-         . " (<a href=\"$server_uri?title=" . uri_escape($b) 
-         . "\">t</a> &middot; "
-         . "<a href=\"$server_uri?title=" . uri_escape($a) 
-         . "&action=history\">h</a>)";
-}
-
-###########################################################################
-
-sub make_history_link { 
-  my $ns = shift;
-  my $art = shift;
-  my $ts = shift;
-
-  if ( ! defined $Namespaces ) { 
-      $Namespaces = init_namespaces();
-  }
-
-  my $art = $Namespaces->{$ns} . $art;
-
-  my $d = $ts;
-  $d =~ s/T.*//;
-
-  my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
-  return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
-       . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
-}
-
-###########################################################################
-
 sub make_wp05_link { 
   my $cat = shift;
   my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
@@ -976,28 +933,6 @@ sub sort_sql {
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
   }
   return $query;
-}
-
-##########################################################################
-
-sub init_namespaces {
-
-  # Initialize hash of namespace prefixes
-  my $r = $api->site_info();
-  $r = $r->{'namespaces'}->{'ns'};
-  
-  my $namespaces ={};
-  my $n;
-  foreach $n ( keys %$r ) { 
-    if (  $r->{$n}->{'content'} ne "" ) { 
-      $namespaces->{$n}= $r->{$n}->{'content'} . ":";
-    } else { 
-      $namespaces->{$n} = "";
-    }
-  }
-  
-  return $namespaces;
-
 }
 
 ###########################################################################

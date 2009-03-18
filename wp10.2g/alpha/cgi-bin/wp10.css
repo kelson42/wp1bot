@@ -14,7 +14,7 @@ div.head {
   font-size: 125%;
   font-weight: bold;
   margin: 0;
-  padding: 0 0 0 0.5em;
+  padding: 0 0 1pt 0.5em;
   width: 100%;
 }
 
@@ -23,20 +23,20 @@ div.subhead {
   border-bottom:0 none;
   color:#FFF;
   font-size:90%;
-  font-variant:small-caps;
-  font-weight:bold;
+/*   font-variant:small-caps; */
+/*   font-weight:bold;  */
   height:1.3em;
   line-height:1.5em;
-  padding:0 0 0 0.5em;
+  padding:0 0 1pt 0.5em;
   width:100%;
 }
 
 div.content { 
   background: #fff;
+  margin-top: 1em;
   padding: 1em 0em 1em 0em;
   border-top: 1px solid #000;
   border-bottom: 2px solid #000;
-  margin-bottom: .25em;
 }
 
 
@@ -111,11 +111,10 @@ div.navbox {
   border: 1px solid #aaaaaa;
   background-color: #CEDDEC;
   background-position: 0 0;
-  margin-bottom: 5px;
+  margin: 0 0 0.5em 0;
   padding: 0px;
   text-align:center;
   width:100%;
-  margin:0 auto 1em;
   font-size: 100%;
   line-height: 1.5em;
 }
@@ -158,7 +157,12 @@ input.submitButton {
 }
 
 div.footer { 
-  padding-left: 0.5em;
+  padding: 1pt 2pt 1pt 0.5em;
+  margin: 0 0 0 0;
+  background: #eee;
+  display: table;
+  border: 1px solid black;
+  border-top: none;
 }
 
 
@@ -198,4 +202,14 @@ div.footer {
 	text-align: center;
 	top: 50%;
 	width: 100px;
+}
+
+div.subhead a { 
+  color: white;  
+  text-decoration: none;
+}
+
+div.subhead span.selectedtool a{
+  color: yellow;
+  font-weight: bold;
 }

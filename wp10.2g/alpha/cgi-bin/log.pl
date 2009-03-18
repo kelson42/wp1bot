@@ -19,7 +19,6 @@ my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
 $api->base_url('http://en.wikipedia.org/w/api.php');
 
-my $Namespaces = init_namespaces();
 
 my $cacheFile = init_cache();
 my $cacheMem = {};
@@ -60,8 +59,6 @@ if ( defined $Opts->{'log-dir'}
 my $proj = $param{'project'} || $ARGV[0];
 
 our $dbh = db_connect($Opts);
-
-my $NamespaceIDs = db_get_namespaces();
 
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
@@ -274,8 +271,8 @@ HERE
 
 print << "HERE";
     <th><b>Article</b></th>
-    <th><b>Timestamp</b></th>
-    <th><b>Revision Type</b></th>
+    <th><b>Revision</b></th>
+    <th><b>Type</b></th>
     <th><b>Old value</b></th>
     <th><b>New value</b></th>
   </tr>
@@ -556,78 +553,6 @@ sub print_header_text {
 
 ###########################################################################
 
-sub make_article_link {
-  my $server_uri = "http://en.wikipedia.org/w/index.php";
-  my $log_uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/log.pl";
-  my $ns = shift;
-  my $a = shift;
-  my $pagename = make_page_name($ns, $a);
-  my $talkname = make_talk_name($ns, $a);
-
-  return "<a href=\"$server_uri?title=" . uri_escape($pagename) 
-       . "\">$pagename</a>"
-         . " (<a href=\"$server_uri?title=" . uri_escape($talkname) 
-         . "\">t</a>" 
-         . " &middot; "
-         . "<a href=\"$server_uri?title=" . uri_escape($pagename) 
-         . "&action=history\">h</a>"
-         . " &middot; "
-         . "<a href=\"$log_uri?pagename=" . uri_escape($a)  
-         . "&ns=" . uri_escape($ns) 
-         . "\">l</a>)";
-}
-
-###########################################################################
-
-sub make_page_name { 
-  my $ns = shift;
-  my $title = shift;
-
-  if ( $ns == 0 ) { 
-    return $title;
-  } else {
-    return $NamespaceIDs->{$ns} . ":" . $title;
-  }
-}
-
-sub make_talk_name { 
-  my $ns = shift;
-  my $title = shift;
-
-  if ( 1 == $ns % 2) { 
-    return $title;
-  } else { 
-    return make_page_name($ns+1, $title);
-  }
-
-}
-
-###########################################################################
-
-sub make_history_link { 
-  my $ns = shift;
-  my $title = shift;
-  my $ts = shift;
-  my $long = shift || "";
-
-  my $d = $ts;
-
-  my $art = make_page_name($ns, $title);
-
-  if ( $long eq 'l' ) { 
-    $d =~ s/T/ /;
-    $d =~ s/Z/ /;
-  } else { 
-    $d =~ s/T.*//;
-  }
-
-  my $dir = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin/";
-  return "<a href=\"$dir/loadVersion.pl?article=" . uri_escape($art) 
-       . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
-}
-
-###########################################################################
-
 sub get_previous_name {
   my $ns = shift;
   my $title = shift;
@@ -664,26 +589,4 @@ HERE
  return;
 }
 
-###########################################################################
-
-sub init_namespaces {
-
-  # Initialize hash of namespace prefixes
-  my $r = $api->site_info();
-  $r = $r->{'namespaces'}->{'ns'};
-  
-  my $namespaces ={};
-  my $n;
-  foreach $n ( keys %$r ) { 
-    if (  $r->{$n}->{'content'} ne "" ) { 
-      $namespaces->{$n}= $r->{$n}->{'content'} . ":";
-    } else { 
-      $namespaces->{$n} = "";
-    }
-  }
-  
-  return $namespaces;
-
-}
-
-###########################################################################
+1;

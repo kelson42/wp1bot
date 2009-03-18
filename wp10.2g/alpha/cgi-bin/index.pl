@@ -88,12 +88,9 @@ sub project_index_link {
   my $project = shift;
   my $data = shift;
 
-  my $URI = $ENV{'SCRIPT_URI'};
-  $URI =~ s/index.pl//;
-
-  my $listp = $URI . "list2.pl?projecta=" . uri_escape($project);
-  my $tablep = $URI . "table.pl?project=" . uri_escape($project);
-  my $logp = $URI . "log.pl?project=" . uri_escape($project);
+  my $listp = make_list_link({'projecta'=>$project});
+  my $tablep = make_table_link($project);
+  my $logp = make_log_link({'project'=>$project});
   my $catp = "/wiki/Category:" . uri_escape($project)
              . " articles by quality";
   
