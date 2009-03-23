@@ -37,6 +37,7 @@ my %Actions;
 my %Expiries;
 my %Types;
 my %Talks;
+my %Blacklist;
 
 my $now;
 $now =  `/bin/date +'%F %H:%M'`;
@@ -49,10 +50,11 @@ print "Now: $now.\n";
 my $api;
 $api = new Mediawiki::API;
 $api->base_url('http://en.wikipedia.org/w/api.php');
-$api->debug_level(3);
+$api->debug_level(5);
 $api->login_from_file("/home/veblen/api.credentials");
 
 read_cache();
+read_blacklist();
 get_protected_page_data();
 make_pertable();
 update_cache();
@@ -85,6 +87,8 @@ sub get_protected_page_data {
     $art =~ s/Help talk:/Help:/;
     $art =~ s/Portal talk:/Portal:/;
     $art =~ s/Category talk:/Category:/;
+
+    next if ( defined $Blacklist{$art} );
 
     # Escape Category and Image links
     $art =~ s/^Category/:Category/;
@@ -453,6 +457,17 @@ sub by_name {
   $_ = $Dates{$a} cmp $Dates{$b};
   if ( $_ != 0) { return $_;}
      return $a cmp $b;
+}
+
+###########################################################################
+
+sub read_blacklist {
+  open BL, "<Blacklist";
+  while ( <BL> ) { 
+    chomp;
+    $Blacklist{$_} = 1;
+    print "Blacklist '$_'\n";
+  }
 }
 
 ###########################################################################
