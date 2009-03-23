@@ -73,6 +73,8 @@ sub new {
   $self->{'xmlretrydelay'} = 10;   # pause after XML level failure 
   $self->{'xmlretrylimit'} = 10;   # retries at XML level
 
+  $self->{'cacheEditToken'} = 0;   
+
   $self->{'logintries'} = 5;       # delay on login throttle
 
   bless($self);
@@ -1299,6 +1301,8 @@ sub makeHTTPrequest {
 #    print Dumper($res);
 
     $self->print(1, "HTTP response code: " . $res->code() ) ;
+    $self->print(5, "Dump of response: " . Dumper($res) );  
+
 
     if (defined $res->header('x-squid-error')) { 
       $self->print(1,"I  Squid error: " . $res->header('x-squid-error'));
