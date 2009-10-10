@@ -41,25 +41,24 @@ close IN;
 ######### Main routine 
 ######### Read list of categories to fetch and do it
 
-open IN, "<CategoryList";
-binmode IN, ":utf8";
-
+my $file;
 my $cat;
 my $ns;
 
 my $namespaces = $api->site_info()->{'namespaces'}->{'ns'};
 
-while ( $line = <IN> ) {
-  chomp $line;
+foreach $file ( 'CategoryList', 'CategoryListTS' ) { 
+  open IN, "<", $file;
+  binmode IN, ":utf8";
 
-  ($ns, $cat) = split /\t/, $line, 2;
+  while ( $line = <IN> ) {
+    chomp $line;
+    ($ns, $cat) = split /\t/, $line, 2;
+    download_cat_list($api, $namespaces, $cat, $ns);
+  }
 
-  download_cat_list($api, $namespaces, $cat, $ns);
-
+  close IN;
 }
-
-close IN;
-
 
 #######################################################
 ### Download a particular category's contents
