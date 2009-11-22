@@ -252,8 +252,9 @@ sub ratings_table {
          $table->data($qual, $prio, 
                    '[' . $list_url . "projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
-                    . "&quality=" . uri_escape($qual)  . ' ' 
-                    . commify($data->{$qual}->{$prio}) . "]");
+                    . "&quality=" . uri_escape($qual)  
+                    . "&run=yes" 
+                    . ' ' . commify($data->{$qual}->{$prio}) . "]");
       } else { 
          $table->data($qual, $prio, "");
       }

@@ -68,7 +68,9 @@ layout_header("Assessment logs");
 my $projects = list_projects();
 query_form(\%param, $projects);
 
-if ( ! defined $param{'entry'} ) { 
+print "<!-- HERE -->\n";
+
+if ( ! defined $param{'entry'} || 1 ) { 
   log_table(\%param, $projects);
 }
 
@@ -118,6 +120,7 @@ sub log_table {
   
    if ( (! $project =~ /\w|\d/) && (! $pagename =~ /\w|\d/ ) ) { 
      return;
+#     print "No projct!\n";
    }
   
    my @qparam;
@@ -131,6 +134,8 @@ sub log_table {
  FROM logging
 HERE
 	  
+
+
    $query .= " WHERE ";
    $queryc .= " WHERE ";
   
@@ -179,8 +184,8 @@ HERE
        $query .= " AND NOT l_old = 'Unassessed-Class'";
        $queryc .= " AND NOT l_old = 'Unassessed-Class'";
      } else { 
-       $query .= " AND l_old = ?";
-       $queryc .= " AND l_old = ?";
+       $query .= " AND l_new = ?";
+       $queryc .= " AND l_new = ?";
        push @qparam, $newrating;
        push @qparamc, $newrating;
      }
@@ -220,13 +225,8 @@ HERE
    $queryc =~ s/WHERE\s*AND/WHERE /;
   
    $query =~ s/WHERE\s*ORDER/ORDER/;
-   $queryc =~ s/WHERE\s*ORDER/ORDER/;
-  
+   $queryc =~ s/WHERE\s*ORDER/ORDER/;  
    $queryc =~ s/WHERE\s*$//;
-   
-#   print "<pre>Q:\n$query</pre>\n";
-#   my @params = @qparam;
-#   print join "<br/>", map { $_ = "'" . $_ . "'" } @params;
 
 #   print "<pre>Q:\n$queryc</pre>\n";
 #   @params = @qparamc;

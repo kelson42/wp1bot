@@ -302,6 +302,8 @@ HERE
   # depends on whether "previous" is defined or not 
   my $prev = 0;
 
+ 
+ 
   my $p;
   my $params_enc;
   foreach $p ( keys %$params ) { 
@@ -310,7 +312,7 @@ HERE
   }
 
   if (($offset - $limit + 1) > 0)  {
-    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+    my $newURL = make_list_link() . "?" . $params_enc
 		      . "&offset=" . ($offset - $limit + 1);	  
     print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
     $prev = 1;
@@ -320,7 +322,7 @@ HERE
     if ($prev == 1)  {
       print " | ";
     }
-    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc 
+    my $newURL = make_list_link() . "?" . $params_enc 
               . "&offset=" . ($limit + $offset + 1);	  
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
@@ -538,7 +540,7 @@ HERE
   # depends on whether "previous" is defined or not 
   my $prev = 0;
   if (($offset - $limit + 1) > 0) {
-    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+    my $newURL =  $Opts->{'list2-url'} . "?" . $params_enc
                . "offset=" . ($offset - $limit + 1);	  
 		
     print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
@@ -549,7 +551,7 @@ HERE
     if ($prev == 1) {
  	print " | ";
     }
-    my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+    my $newURL =  $Opts->{'list2-url'}  . "?" . $params_enc
                  . "&offset=" . ($offset + $limit + 1);	  
 
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
@@ -789,9 +791,7 @@ sub get_link_from_api {
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL = $ENV{"SCRIPT_URI"};
-  my @t = split('list2.pl',$tableURL);
-  $tableURL = @t[0] . "table.pl";
+  my $tableURL =  $Opts->{'table-url'} 
 
   if ( $project =~ /\w|\d/ ) { 
     $tableURL = $tableURL . "?project=" . $project;

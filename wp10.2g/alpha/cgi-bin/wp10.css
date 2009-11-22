@@ -1,3 +1,12 @@
+/* 
+http://colorschemedesigner.com/#3-31TsOsOK-K-
+Primary Color:
+2626A1		343464		04044C		7979E7		AEAEE7
+Secondary Color A:
+E6D317		8F883F		6D6303		F9EC6D		F9F2B0
+Secondary Color B:
+E68D17		8F6D3F		6D4003		F9BD6D		F9D9B0
+*/
 body { 
   margin: 0px;
   padding: 0px;
@@ -5,9 +14,8 @@ body {
   font-family: sans-serif;
 }
 
-
 div.head {
-  background: #0F0F6B none repeat scroll 0 0;
+  background: #0404CC none repeat scroll 0 0;
   color:  #FFF;
   line-height: 1.3em;
   font-family: sans-serif;
@@ -19,7 +27,7 @@ div.head {
 }
 
 div.subhead { 
-  background: #3C78B5 none repeat scroll 0 0;
+  background: #7979E7  none repeat scroll 0 0;
   border-bottom:0 none;
   color:#FFF;
   font-size:90%;
@@ -109,7 +117,7 @@ table.wikitable th {
 
 div.navbox {
   border: 1px solid #aaaaaa;
-  background-color: #CEDDEC;
+  background-color: #F9F2B0;
   background-position: 0 0;
   margin: 0 0 0.5em 0;
   padding: 0px;
@@ -166,8 +174,6 @@ div.footer {
 }
 
 
-
-
 .progress_cell {
 	background: #D3D3D3 none repeat scroll 0 0;
 	border: 1px solid gray;
@@ -213,3 +219,4 @@ div.subhead span.selectedtool a{
   color: yellow;
   font-weight: bold;
 }
+
