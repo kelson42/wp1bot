@@ -1,3 +1,9 @@
+#!/usr/bin/perl
+
+# database_www.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 =head1 SYNOPSIS
 
 Routines for the CGI programs to connect to the database

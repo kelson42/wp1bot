@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# loadVersion.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 use Encode;
 use URI::Escape;

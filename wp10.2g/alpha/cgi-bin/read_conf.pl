@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+
+# read_conf.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 use Data::Dumper;
 
@@ -8,6 +13,8 @@ sub read_conf {
 	my $filename;
 	my $settings;
 	my $homedir = (getpwuid($<))[7];
+
+ $homedir = "/home/veblen";
 	
 	if ( defined $ENV{'WP10_CREDENTIALS'} ) {
 		$filename = $ENV{'WP10_CREDENTIALS'};

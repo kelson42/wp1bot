@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# log.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 use Encode;
 use URI::Escape;
@@ -12,16 +16,6 @@ our $Opts = read_conf();
 
 require 'database_www.pl';
 require 'layout.pl';
-require 'init_cache.pl';
-
-require Mediawiki::API;
-my $api = new Mediawiki::API;
-$api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
-
-
-my $cacheFile = init_cache();
-my $cacheMem = {};
 
 require CGI;
 require CGI::Carp; 
@@ -60,12 +54,11 @@ my $proj = $param{'project'} || $ARGV[0];
 
 our $dbh = db_connect($Opts);
 
-
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
 layout_header("Assessment logs");
 
-my $projects = list_projects();
+my $projects = list_projects($dbh);
 query_form(\%param, $projects);
 
 print "<!-- HERE -->\n";
@@ -79,8 +72,6 @@ layout_footer();
 exit;
 
 ###########################################################################
-###########################################################################
-
 
 sub log_table { 
    my $params = shift;
@@ -361,21 +352,6 @@ print "</tr>\n";
 
 ###########################################################################
 
-sub list_projects { 
-  my @row;
-  my $projects = {};
-
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
-  $sth->execute();
-
-  while ( @row = $sth->fetchrow_array ) { 
-    $projects->{$row[0]} = 1;
-  }
-  return $projects;
-}
-
-###########################################################################
-
 sub query_form {
   my $params = shift;
   
@@ -405,9 +381,10 @@ sub query_form {
   print << "HERE";
 <form>
 
+<table class="outer">
+<tr><td>
 <table class="mainform">
-<tr>
-<td id="projecta" class="toprow"><b>First project</b><br/>
+<td id="projecta" class="toprow"><b>Project info</b><br/>
   <table class="subform">
     <tr><td>Project name</td>
       <td><input type="text" value="$project" name="project"/></td></tr>
@@ -430,94 +407,35 @@ sub query_form {
       <td><input type="text" value="$olderthan" name="olderthan"/></td></tr>
     <tr><td>Assessments after</td>
       <td><input type=\"text\" value="$newerthan" name="newerthan"/></td></tr>
-
-
     <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
+</table>
+
+
+<tr><td colspan="2" class="submit-td">
+<div style="text-align: center;"><input type="submit" value="Generate list"/></div>
+</td></tr>
   </table>
 </td>
-</tr>
 
+<td>
+<table class="mainform">
 <tr>
-<td class="bottomrow"><b>Output options</b><br/>
+<td id="output" class="toprow">
+<b>Output options</b><br/>
 <table class="subform">
   <tr><td>Results per page</td>
       <td><input type="text" value="$limit" name="limit"/></td></tr>
   <tr><td>Start with result #</td>
       <td><input type="text" value="$offset" name="offset"/></td></tr>
 </table>
-<div style="text-align: center;"><input type="submit" value="Generate list"/></div>
+</td></tr></table>
 </td>
 </tr>
 </table>
 </form>
 HERE
 
-}
-
-###########################################################################
-
-sub get_cached_td_background { 
-  my $class = shift;
-
-  if ( ! defined $class ) { 
-    return "<td style=\"text-align: center;\">&mdash;</td>\n"; }
-
-  if ( defined $cacheMem->{$class} ) { 
-    print " <!-- hit $class in memory cache --> ";
-    return $cacheMem->{$class};
-  }
-
-  my $key = "CLASS:" . $class;
-  my $data;
-
-  if ( $cacheFile->exists($key) ) { 
-     print " <!-- hit $class in file cache, expires " 
-           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
-           . " --> ";
-    $data = $cacheFile->get($key);
-    $cacheMem->{$class} = $data;
-    return $data;
-  }
-
-  $data = get_td_background($class);
-
-  $cacheFile->set($key, $data, '12 hours');
-  $cacheMem->{$class} = $data;
-  return $data;
-}
-
-###########################################################################
-
-sub get_td_background { 
-  my $class = shift;
-  my $r =  $api->parse('{{' . $class . '}}');
-  my $t = $r->{'text'};
-
-  $t =~ s/\|.*//s;
-  $t =~ s!^<p>!!;
-  $class =~ s/-Class//;
-  $t = "<td $t><b>$class</b></td>";
-  return $t;
-}
-
-###########################################################################
-
-sub get_link_from_api { 
-  my $text = shift;
-  my $r =  $api->parse($text);
-  my $t = $r->{'text'};
-
-  # TODO: internationalize this bare URL
-  my $baseURL = "http://en.wikipedia.org";
-  $t =~ s!^<p>!!;
-  my @t = split('</p>',$t);
-  $t = @t[0];
-
-  @t = split('"',$t,2);
-  $t = @t[0] . "\"" . $baseURL .  @t[1];
-
-  return $t;
 }
 
 ###########################################################################

@@ -1,3 +1,9 @@
+#!/usr/bin/perl
+
+# init_cache.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 require Cache::File;
 
 our $Opts;
@@ -13,7 +19,6 @@ sub init_cache {
 
   return $cacheFile;
 }
-
 
 # Load successfully
 1;

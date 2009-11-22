@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# list2.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for more information
+
 use strict;
 use Encode;
 use URI::Escape;
@@ -12,12 +16,6 @@ our $Opts = read_conf();
 
 require 'database_www.pl';
 require 'layout.pl';
-require 'init_cache.pl';
-
-require Mediawiki::API;
-my $api = new Mediawiki::API;
-$api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
 
 require CGI;
 require CGI::Carp; 
@@ -26,9 +24,6 @@ CGI::Carp->import('fatalsToBrowser');
 require DBI;
 require POSIX;
 POSIX->import('strftime');
-
-my $cacheFile = init_cache();
-my $cacheMem = {};
 
 my $Namespaces;
 
@@ -74,7 +69,7 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 layout_header("Article lists");
 
-my $projects = list_projects();
+my $projects = list_projects($dbh);
 query_form(\%param, $projects);
 
 
@@ -127,7 +122,7 @@ SELECT r_project, r_namespace, r_article, r_importance,
        r_importance_timestamp, r_quality, 
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
-       ISNULL(rev_value) as null_rev
+       ISNULL(rev_value) as null_rev, r_score
 FROM ratings 
 HERE
 
@@ -190,7 +185,6 @@ HERE
     }
   }
 
-
   my $importance =  $params->{'importance'};
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
@@ -198,7 +192,6 @@ HERE
     push @qparam, $importance;
     push @qparamc, $importance;
   }
-
 
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
@@ -261,14 +254,19 @@ print << "HERE";
     <th colspan="2"><b>Importance</b></th>
     <th colspan="2"><b>Quality</b></th>
     <th colspan="2"><b>Review</b><br/><b>Release</b></th>
+    <th colspan="1"><b>Score</b></th>
   </tr>
 HERE
 
+  my $evenodd;
 
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
-    print "<tr><td>$i</td>\n";
+    if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
+    else { $evenodd = "list-odd"; }    
+
+    print "<tr class=\"$evenodd\"><td>$i</td>\n";
 
     if (  ! ( $project =~ /\w|\d/ ) ) { 
       print "    <td>" . $row[0] . "</td>\n";
@@ -292,6 +290,8 @@ HERE
     } else { 
       print "<td></td>\n"; 
     }
+
+    print "<td class=\"score\">" . $row[11] . "</td>\n";
 
     print "\n";
     print "</tr>\n";
@@ -377,7 +377,7 @@ sub ratings_table_intersect {
 SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
        rb.r_importance, rb.r_quality, rel_0p5_category,
        rev_value, ISNULL(rel_0p5_category) as null_rel,
-       ISNULL(rev_value) as null_rev
+       ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score
 FROM ratings as ra
   JOIN ratings as rb ON rb.r_article = ra.r_article 
                     AND ra.r_namespace = rb.r_namespace  
@@ -494,21 +494,28 @@ HERE
 <tr>
   <th><b>Result</b></th>
   <th><b>Article</b></th>
-  <th colspan="2"><b>$projecta</b></th>
-  <th colspan="2"><b>$projectb</b></th>
+  <th colspan="3"><b>$projecta</b></th>
+  <th colspan="3"><b>$projectb</b></th>
   <th colspan="2"><b>Review</b><br/><b>Release</b></th>
 </tr>
 HERE
+
+  my $evenodd;
      
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
-     print "<tr><td>$i</td>\n";
+    if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
+    else { $evenodd = "list-odd"; }    
+
+    print "<tr class=\"$evenodd\">\n<td>$i</td>\n";
     print "    <td>" . make_article_link($row[0], $row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
+    print "<td class=\"score\">$row[10]</td\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
     print "    " . get_cached_td_background($row[5]) . "\n";
+    print "<td class=\"score\">$row[11]</td\n";
 
 
     if ( defined $row[7] ) { 
@@ -560,20 +567,6 @@ HERE
 }
 
 ###########################################################################
-
-sub list_projects { 
-  my @row;
-  my $projects = {};
-
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
-  $sth->execute();
-
-  while ( @row = $sth->fetchrow_array ) { 
-    $projects->{$row[0]} = 1;
-  }
-  return $projects;
-}
-################################################################
 
 sub query_form {
   my $params = shift;
@@ -701,17 +694,9 @@ sub query_form {
   </table>
 </td></tr>
 
-
-
 </tr></table>
-
 </td></tr>
-
 </table>
-
-
-
-
 </form>
 
 HERE
@@ -720,78 +705,10 @@ HERE
 
 ###########################################################################
 
-sub get_cached_td_background { 
-  my $class = shift;
-
-  if ( defined $cacheMem->{$class} ) { 
-    print " <!-- hit $class in memory cache --> ";
-    return $cacheMem->{$class};
-  }
-
-  my $key = "CLASS:" . $class;
-  my $data;
-
-  if ( $cacheFile->exists($key) ) { 
-     print " <!-- hit $class in file cache, expires " 
-           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
-           . " --> ";
-    $data = $cacheFile->get($key);
-    $cacheMem->{$class} = $data;
-    return $data;
-  }
-
-  $data = get_td_background($class);
-
-  $cacheFile->set($key, $data, '12 hours');
-  $cacheMem->{$class} = $data;
-  return $data;
-}
-
-###########################################################################
-
-sub get_td_background { 
-  my $class = shift;
-#  print "<!-- get background for '$class' -->\n";
-  my $r =  $api->parse('{{' . $class . '}}');
-  my $t = $r->{'text'};
-#  print "<!-- $t -->\n";
-
-  $t =~ s/\|.*//s;
-  $t =~ s!^<p>!!;
-  $class =~ s/-Class//;
-  $t = "<td $t><b>$class</b></td>";
-
-  # XXX hack
-  $t =~ s/Bplus/B+/;
-
-  return $t;
-}
-
-###########################################################################
-
-sub get_link_from_api { 
-  my $text = shift;
-  my $r =  $api->parse($text);
-  my $t = $r->{'text'};
-
-  # TODO: internationalize this bare URL
-  my $baseURL = "http://en.wikipedia.org";
-  $t =~ s!^<p>!!;
-  my @t = split('</p>',$t);
-  $t = @t[0];
-
-  @t = split('"',$t,2);
-  $t = @t[0] . "\"" . $baseURL .  @t[1];
-
-  return $t;
-}
-
-###########################################################################
-
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL =  $Opts->{'table-url'} 
+  my $tableURL =  $Opts->{'table-url'};
 
   if ( $project =~ /\w|\d/ ) { 
     $tableURL = $tableURL . "?project=" . $project;
@@ -811,42 +728,10 @@ sub print_header_text {
   }
 
   print "(<b>list</b> \| <a href=\"" 
-  ."http://toolserver.org/~cbm/cgi-bin/wp10.2g/alpha/cgi-bin/"
-  . $tableURL   . "\">summary table</a>)\n";
+  . $Opts->{'table-url'} . "\">summary table</a>)\n";
 }
 
 
-###########################################################################
-
-sub make_wp05_link { 
-  my $cat = shift;
-  my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
-  my $linkb = "http://en.wikipedia.org/wiki/Wikipedia:Version_0.5";
-  my $abbrev = {  'Arts' => 'A',
-		  'Engineering, applied sciences, and technology' => 'ET',
-		  'Everyday life' => 'EL',
-		  'Geography' => 'G',
-		  'History' => 'H',
-		  'Language and literature' => 'LL',
-		  'Mathematics' => 'Ma',
-		  'Natural sciences' => 'NS',
-		  'Philosophy and religion' => 'PR',
-		  'Social sciences and society' => 'SS',
-		  'Uncategorized'  => 'U'};
-
-  return "<a href=\"$linka\">0.5</a> ";
-# .        "(<a href=\"$linkb/" . uri_escape($cat) . "\">" . $abbrev->{$cat} . "</a>)";
-}
-
-
-###########################################################################
-
-sub make_review_link { 
-  my $type = shift;
-
-	#return get_cached_review_icon($type);
-  return get_cached_td_background($type . "-Class") ;
-}
 
 ###########################################################################
 
@@ -933,58 +818,5 @@ sub sort_sql {
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
   }
   return $query;
-}
-
-###########################################################################
-
-sub get_cached_review_icon { 
-	my $class = shift;
-	
-	if ( defined $cacheMem->{$class . "-icon"} ) { 
-		print " <!-- hit {$class}-icon in memory cache --> ";
-		return $cacheMem->{$class . "-icon"};
-	}
-	
-	my $key = "CLASS:" . $class . "-icon";
-	my $data;
-	
-	if ( $cacheFile->exists($key) ) { 
-		print " <!-- hit {$class}-icon in file cache, expires " 
-		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
-		. " --> ";
-		$data = $cacheFile->get($key);
-		$cacheMem->{$class} = $data;
-		return $data;
-	}
-	
-	$data = get_review_icon($class);
-	
-	$cacheFile->set($key, $data, '12 hours');
-	$cacheMem->{$class . "-icon"} = $data;
-	return $data;
-}
-
-###########################################################################
-
-sub get_review_icon { 
-	my $class = shift;
-	my $r =  $api->parse('{{' . $class . '-Class}}');
-	my $t = $r->{'text'};
-	my $f =  $api->parse('{{' . $class . '-classicon}}');
-	my $g = $f->{'text'};
-	
-	$t =~ s/\|.*//s;
-	$t =~ s!^<p>!!;
-	$g =~ s/<\/p.*//;
-	$g =~ s!^<p>!!;
-	# Perl doesn't want to get rid of the rest of the lines in the 
-	# multi-line string, so remove them the hard way
-	my @str = split(/\n/,$g);
-	$g = @str[0];
-	undef(@str);
-	$class =~ s/-Class//;
-	$t = "<td $t><b>$g&nbsp;$class</b></td>";
-	
-	return $t;
 }
 

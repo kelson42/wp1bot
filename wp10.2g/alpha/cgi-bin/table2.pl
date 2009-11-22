@@ -1,9 +1,13 @@
 #!/usr/bin/perl
+
+# table2.pl
+# Part of WP 1.0 bot 
+# See the files README, LICENSE, and AUTHORS for more information
+
+# CGI to display table of ratings information
+
 use strict;
 use Encode;
-
-# WP 1.0 bot - second generation
-# CGI to display table of ratings information
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -47,7 +51,7 @@ require "database_www.pl";
 our $dbh = db_connect($Opts);
 
 
-if ( defined $ARGV[0] ) { 
+if ( defined $ARGV[0] && $ARGV[0] eq 'force') { 
   cached_ratings_table(1);
   exit;
 }
@@ -56,6 +60,7 @@ layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
+#print Dumper(cached_ratings_table());
 
 print "<hr/><div class=\"navbox\">\n";
 print_header_text();
@@ -63,6 +68,7 @@ print "</div>\n<center>\n";
 print $html;
 print "</center>\n";
 print "\n";
+
 #print "<hr/><div class=\"indent\"><pre>";
 #print $wikicode;
 #print "</pre></div>\n";
@@ -101,9 +107,9 @@ group by grq.gr_rating, gri.gr_rating
   my @row;
 
   while ( @row = $sth->fetchrow_array ) {
-  print "Row: ";
-  print Dumper(@row);
-  print "\n";
+#  print "Row: ";
+#  print Dumper(@row);
+#  print "\n";
 
     if ( ! defined $row[1] ) { $row[1] = 'Unknown-Class'; }
     if ( ! defined $row[2] ) { $row[2] = 'Unknown-Class'; }
@@ -242,7 +248,9 @@ group by grq.gr_rating, gri.gr_rating
 
   my $r =  $api->parse($code);
 
-  return ($r->{'text'}, $code);
+#  print Dumper($r);
+
+  return ($r->{'text'}->{'content'}, $code);
 }
 
 #####################################################################
@@ -285,25 +293,6 @@ sub get_categories {
 
 #####################################################################
 
-sub get_link_from_api { 
-	my $text = shift;
-	my $r =  $api->parse($text);
-	my $t = $r->{'text'};
-	
-	# TODO: internationalize this bare URL
-	my $baseURL = "http://en.wikipedia.org";
-	$t =~ s!^<p>!!;
-	my @t = split('</p>',$t);
-	$t = @t[0];
-	
-    @t = split('"',$t,2);
-    $t = @t[0] . "\"" . $baseURL .  @t[1];
-	
-	return $t;
-}
-
-#####################################################################
-
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
@@ -317,7 +306,6 @@ sub print_header_text {
 
 sub cached_ratings_table { 
   my $force_regenerate = shift || 0;
-
 
   my $key = "GLOBAL:TABLE";
   my $data;
@@ -349,6 +337,10 @@ sub cached_ratings_table {
   my $ts = time();
   
   my ($html, $wikicode) = ratings_table();
+
+  print "----\n";
+  print "$html\n";
+  print "----\n";
 
   $ts = time() - $ts;
   print "Regenerated in $ts seconds</div>\n";

@@ -1,10 +1,14 @@
 #!/usr/bin/perl
 
+# layout.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 
-my $App = "Wikipedia Release Version Data";
-
 our $Opts;
+my $App = $Opts->{'appname'}
+    or die "Must specify application name\n";
 
 my $indexURL = $Opts->{'index-url'};
 my $table2URL = $Opts->{'table2-url'};
@@ -15,6 +19,16 @@ my $versionURL = $Opts->{'version-url'};
 my $serverURL = $Opts->{'server-url'};
 
 my $namespaceIDs;
+
+require 'init_cache.pl';
+my $cacheFile = init_cache();
+my $cacheMem = {};
+
+require Mediawiki::API;
+my $api = new Mediawiki::API;
+$api->debug_level(0); # no output at all 
+$api->base_url('http://en.wikipedia.org/w/api.php');
+
 
 ##################################################
 
@@ -42,17 +56,16 @@ sub layout_header {
 </head>
 <body>
 <div class="head">
-<a href="http://$ENV{'SERVER_NAME'}/">
-<img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" src="http://$ENV{'SERVER_NAME'}/~titoxd/images/wikimedia-toolserver-button.png"/>
+<a href="http://toolserver.org">
+  <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" 
+       src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
 </a>	
 $App
 </div>
 <div class="subhead">
 HERE
 
-
 print "<!-- '$subtitle' -->\n";
-
 
 if ( $subtitle eq "Project index" ) { 
   print "<span class=\"selectedtool\"><a href=\"$indexURL\">" 
@@ -114,7 +127,7 @@ Please comment or file bug reports at the
 Current version:<br/>
 HERE
 
-system "ssh", "login.toolserver.org", "/home/cbm/wp10.2g/alpha/revinfo.pl";
+# system "ssh", "login.toolserver.org", "/home/cbm/wp10.2g/alpha/revinfo.pl";
 
 print << "HERE";
 </div>
@@ -201,14 +214,12 @@ sub make_log_link {
 
 #######################################################################
 
-
 sub make_article_link {
 
   my $ns = shift;
   my $a = shift;
   my $pagename = make_page_name($ns, $a);
   my $talkname = make_talk_name($ns, $a);
-
 
   my $loguri = $logURL;
 
@@ -245,10 +256,8 @@ sub make_history_link {
     $d =~ s/T.*//;
   }
 
-
   return "<a href=\"" . $versionURL . "article=" . uri_escape($art)
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
-
 }
 
 ###########################################################################
@@ -291,10 +300,171 @@ sub init_namespaces {
   }
 
   return $namespaces;
-
 }
 
 ###########################################################################
 
+sub get_link_from_api {
+  my $text = shift;
+
+  my $r =  $api->parse($text);
+  my $t = $r->{'text'}->{'content'};
+
+  # TODO: internationalize this bare URL
+  $t =~ s!^<p>!!;
+  my @t = split('</p>',$t);
+  $t = @t[0];
+
+  @t = split('"',$t,2);
+  $t = @t[0] . "\"" . $serverURL .  @t[1];
+
+  return $t;
+}
+
+###########################################################################
+
+sub list_projects { 
+  my $dbh = shift;
+  my @row;
+  my $projects = {};
+
+  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  $sth->execute();
+
+  while ( @row = $sth->fetchrow_array ) { 
+    $projects->{$row[0]} = 1;
+  }
+  return $projects;
+}
+
+###########################################################################
+
+sub get_cached_td_background { 
+  my $class = shift;
+
+  if ( defined $cacheMem->{$class} ) { 
+    print " <!-- hit $class in memory cache --> ";
+    return $cacheMem->{$class};
+  }
+
+  my $key = "CLASS:" . $class;
+  my $data;
+
+  if ( $cacheFile->exists($key) ) { 
+     print " <!-- hit $class in file cache, expires " 
+           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
+           . " --> ";
+    $data = $cacheFile->get($key);
+    $cacheMem->{$class} = $data;
+    return $data;
+  }
+
+  $data = get_td_background($class);
+
+  $cacheFile->set($key, $data, '12 hours');
+  $cacheMem->{$class} = $data;
+  return $data;
+}
+
+###########################################################################
+
+sub get_td_background { 
+  my $class = shift;
+  my $r =  $api->parse('{{' . $class . '}}');
+  my $t = $r->{'text'}->{'content'};
+
+  $t =~ s/\|.*//s;
+  $t =~ s!^<p>!!;
+  $class =~ s/-Class//;
+  $t = "<td $t><b>$class</b></td>";
+
+  # XXX hack
+  $t =~ s/Bplus/B+/;
+
+  return $t;
+}
+
+###########################################################################
+
+sub get_cached_review_icon { 
+	my $class = shift;
+	
+	if ( defined $cacheMem->{$class . "-icon"} ) { 
+		print " <!-- hit {$class}-icon in memory cache --> ";
+		return $cacheMem->{$class . "-icon"};
+	}
+	
+	my $key = "CLASS:" . $class . "-icon";
+	my $data;
+	
+	if ( $cacheFile->exists($key) ) { 
+		print " <!-- hit {$class}-icon in file cache, expires " 
+		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
+		. " --> ";
+		$data = $cacheFile->get($key);
+		$cacheMem->{$class} = $data;
+		return $data;
+	}
+	
+	$data = get_review_icon($class);
+	
+	$cacheFile->set($key, $data, '12 hours');
+	$cacheMem->{$class . "-icon"} = $data;
+	return $data;
+}
+
+###########################################################################
+
+sub get_review_icon { 
+	my $class = shift;
+	my $r =  $api->parse('{{' . $class . '-Class}}');
+	my $t = $r->{'text'}->{'content'};
+	my $f =  $api->parse('{{' . $class . '-classicon}}');
+	my $g = $f->{'text'}->{'content'};
+	
+	$t =~ s/\|.*//s;
+	$t =~ s!^<p>!!;
+	$g =~ s/<\/p.*//;
+	$g =~ s!^<p>!!;
+	# Perl doesn't want to get rid of the rest of the lines in the 
+	# multi-line string, so remove them the hard way
+	my @str = split(/\n/,$g);
+	$g = @str[0];
+	undef(@str);
+	$class =~ s/-Class//;
+	$t = "<td $t><b>$g&nbsp;$class</b></td>";
+	
+	return $t;
+}
+
+###########################################################################
+
+sub make_wp05_link { 
+  my $cat = shift;
+  my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
+  my $linkb = "http://en.wikipedia.org/wiki/Wikipedia:Version_0.5";
+  my $abbrev = {  'Arts' => 'A',
+		  'Engineering, applied sciences, and technology' => 'ET',
+		  'Everyday life' => 'EL',
+		  'Geography' => 'G',
+		  'History' => 'H',
+		  'Language and literature' => 'LL',
+		  'Mathematics' => 'Ma',
+		  'Natural sciences' => 'NS',
+		  'Philosophy and religion' => 'PR',
+		  'Social sciences and society' => 'SS',
+		  'Uncategorized'  => 'U'};
+
+  return "<a href=\"$linka\">0.5</a> ";
+}
+
+###########################################################################
+
+sub make_review_link { 
+  my $type = shift;
+  return get_cached_td_background($type . "-Class") ;
+}
+
+###########################################################################
 
 1;

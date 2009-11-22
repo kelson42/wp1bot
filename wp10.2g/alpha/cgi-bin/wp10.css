@@ -65,7 +65,7 @@ table.mainform td {
   vertical-align: top;
   padding-left: 0.5em;
   padding-right: 0.5em;
-/*  border-right: 1px solid red; */
+  border-right: 1px solid black; 
 }
 
 table.subform td { 
@@ -81,6 +81,7 @@ table.subform {
   padding-left: 1em;
 /*  border-left: 1px solid #555;
   border-bottom: 1px solid #555;  */
+
 }
 
 div.indent {
@@ -92,6 +93,9 @@ table.wikitable {
   border: 1px solid #aaa;
   background: #eee;
 }
+
+table.wikitable tr.list-odd { background: #fff; }
+table.wikitable tr.list-even { background: #ffd; }
 
 table.wikitable a { text-decoration:none; }
 
@@ -154,6 +158,7 @@ table.outer {
 table.outer td { 
   margin: 0px;
   padding:0px;
+  vertical-align: top;
 }
 
 table.mainform td { 
@@ -220,3 +225,11 @@ div.subhead span.selectedtool a{
   font-weight: bold;
 }
 
+
+img { 
+  border: none;
+}
+
+td.score { 
+  text-align: right;
+}

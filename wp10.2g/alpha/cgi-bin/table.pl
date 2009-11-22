@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+
+# table.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 use Encode;
 
@@ -304,7 +309,7 @@ sub ratings_table {
   my $code = $table->wikicode();
   my $r =  $api->parse($code);
 
-  return ($r->{'text'}, $code);
+  return ($r->{'text'}->{'content'}, $code);
 }
 
 ###################################

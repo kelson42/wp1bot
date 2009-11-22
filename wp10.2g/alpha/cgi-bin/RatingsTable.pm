@@ -1,12 +1,11 @@
 #!/usr/bin/perl
+
 # RatingsTable.pm
-# part of VeblenBot
-# Carl Beckhorn, 2008
-# Copyright: GPL 2.0
-#
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 # This class is used to create a table of article rating data,
 # to abstract the table generation code away from the main code
-#
 #
 # * The data for the table goes in a 2D hash, indexed by symbolic tags.
 #
@@ -14,7 +13,6 @@
 #
 # * The symbolic tags are not used for output; there are other parameters
 #   for how to format them.
-# 
 #
 
 package RatingsTable;
