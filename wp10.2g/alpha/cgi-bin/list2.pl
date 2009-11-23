@@ -215,8 +215,8 @@ HERE
 
   $queryc =~ s/WHERE\s*$//;
 
-# print "<pre>Q:\n$query</pre>\n";
-# print join "<br/>", @qparam;
+ print "<pre>Q:\n$query</pre>\n";
+ print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
 

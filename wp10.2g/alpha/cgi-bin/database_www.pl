@@ -52,6 +52,42 @@ sub db_connect {
 
 #####################################################################
 
+
+=item B<db_connect_rw>(OPTS)
+
+Connect to the database, uses the readwrite credentials
+
+=cut
+
+sub db_connect_rw {
+  my $opts = shift;
+
+  die "No database given in database conf file\n"
+    unless ( defined $opts->{'database'} );
+
+  my $connect = "DBI:mysql"
+           . ":database=" . $opts->{'database'};
+
+  if ( defined $opts->{'host'} ) {
+    $connect .= ":host="     . $opts->{'host'} ;
+  }
+
+  if ( defined $opts->{'credentials-readwrite'} ) {
+    $opts->{'password'} = $opts->{'password'} || "";
+    $opts->{'username'} = $opts->{'username'} || "";
+
+    $connect .= ":mysql_read_default_file=" 
+                . $opts->{'credentials-readwrite'};
+  }
+
+  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'})
+     or die "Couldn't connect to database: " . DBI->errstr;
+   
+  return $db;
+}
+
+#####################################################################
+
 =item B<get_project_data>(PROJECT)
 
 Return data from the I<projects> table for PROJECT
@@ -139,13 +175,9 @@ sub db_get_namespaces {
     $output->{$key} = $input->{$key}->{'ns_name'};
   }
   return $output;
-
-
 }
 
-
 ###########################################################
-
 
 #
 

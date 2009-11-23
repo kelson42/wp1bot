@@ -45,14 +45,20 @@ div.content {
   padding: 1em 0em 1em 0em;
   border-top: 1px solid #000;
   border-bottom: 2px solid #000;
+  padding-left: 1em;
 }
 
 
 h1 { 
   font-size: 150%;
   padding-left: 1em;
+  margin-top: 0em;
 }
 
+h2 { 
+  font-size: 125%;
+  padding-left: 1em;
+}
 
 table.mainform { 
   background: #eee;
@@ -225,11 +231,57 @@ div.subhead span.selectedtool a{
   font-weight: bold;
 }
 
-
 img { 
   border: none;
 }
 
 td.score { 
   text-align: right;
+}
+
+div.loginform { 
+  margin-left: 0.5em;
+}
+
+div.auth { 
+  border: 1px solid black;
+  padding: 0em; 
+  width: 3in;
+
+  position: relative;
+  top: 0px;
+  left: -1px;
+
+  margin: 1em;
+  border-bottom: 2px solid black;
+}
+
+
+div.auth h2 { 
+  background: #7979E7  none repeat scroll 0 0;
+  color: white;
+  margin: 0px; 
+  font-size: 14px;  
+  margin-bottom: 2px; 
+}
+
+div.loginform form { 
+  clear: none; 
+  margin: 0px; 
+  padding: 0px;
+}
+
+div.clear { clear: both; }
+
+div.authline { 
+  width: 2.5in;
+  float: right; 
+  border: 1px solid black;
+  padding: 0.5em;
+}
+
+
+span.notauthenticatederror { 
+  font-size: 125%;
+  color: red;
 }

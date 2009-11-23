@@ -467,4 +467,13 @@ sub make_review_link {
 
 ###########################################################################
 
+sub fix_timestamp { 
+  my $t = shift;
+
+  return substr($t, 0, 4) . "-" . substr($t, 4, 2) . "-"
+           . substr($t, 6, 2) . "T" . substr($t, 8, 2) 
+           . ":" . substr($t, 10, 2) . ":" . substr($t, 12, 2)  . "Z";
+}
+
+
 1;
