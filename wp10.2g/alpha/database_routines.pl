@@ -597,7 +597,7 @@ sub db_connect {
               . $opts->{'credentials-readwrite'};
   }
 
-  print "COnnect: '$connect'\n";
+#  print "COnnect: '$connect'\n";
 
   my $db = DBI->connect($connect, 
                         $opts->{'username'}, 
@@ -917,6 +917,94 @@ sub db_unlock {
   my $r = $sth->execute($lock);
   my @row = $sth->fetchrow_array();
   return $row[0];
+}
+
+############################################################
+
+=item B<update_project_scores>(PROJECT)
+
+Update the release version scores for articles in a project.
+Requires that the icount field in the projects table is accurate.
+
+=cut
+
+sub update_project_scores {
+  my $project = shift;
+
+  print "SCORES '$project'\n";
+
+  my $query;
+  my $res;  
+
+  my $sth = $dbh->prepare("select p_icount from projects
+                           where p_project = ?");
+  $res = $sth->execute($project);
+  my @r = $sth->fetchrow_array();
+  
+  print "Updating release version scores for '$project'\n";
+
+
+  if ( $r[0] > 0 ) { 
+    print "  Detected that project uses importance ratings\n";
+
+    $query = <<"HERE";
+   update ratings join projects on r_project = p_project 
+                  left join selection_data on r_namespace = 0 
+                               and r_article = sd_article 
+                  left join global_rankings as gq on gq.gr_type = 'quality' 
+                                     and gq.gr_rating = r_quality 
+                  left join global_rankings as gi on gi.gr_type = 'importance' 
+                                     and  gi.gr_rating = r_importance 
+   set r_score = floor(
+            if( isnull(gi.gr_ranking) OR gi.gr_ranking = 0, 4/3, 1)
+                * (     50*if( sd_hitcount > 0, log10(sd_hitcount),  0) 
+                     + 100*if(sd_pagelinks > 0, log10(sd_pagelinks), 0) 
+                     + 250*if(sd_langlinks > 0, log10(sd_langlinks), 0) 
+                  )
+            + if(isnull(gi.gr_ranking), 0, gi.gr_ranking)
+            + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
+            + p_scope ) 
+      where r_project = ? and r_namespace = 0;
+HERE
+   }  else { 
+       print "  Detected that project does not use importance ratings\n";
+
+    $query = <<"HERE";
+   update ratings join projects on r_project = p_project 
+                  left join selection_data on r_namespace = 0 
+                               and r_article = sd_article 
+                  left join global_rankings as gq on gq.gr_type = 'quality' 
+                                     and gq.gr_rating = r_quality 
+   set r_score = floor(
+             4/3 * (    50*if( sd_hitcount > 0, log10(sd_hitcount),  0) 
+                     + 100*if(sd_pagelinks > 0, log10(sd_pagelinks), 0) 
+                     + 250*if(sd_langlinks > 0, log10(sd_langlinks), 0) 
+                   )
+             + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
+             + p_scope ) 
+      where r_project = ? and r_namespace = 0;
+HERE
+  }
+
+#   print "QUERY: $query\n\n";
+
+   $sth = $dbh->prepare($query);   
+   my $time = time();
+   $res = $sth->execute($project);
+   $time = time() - $time;
+   print "  Result: $res rows in $time seconds\n";
+
+}
+############################################################
+
+=item B<database_handle>()
+
+Return the Perl DBI database handle
+
+=cut
+
+sub database_handle { 
+  return $dbh;
 }
 
 ############################################################

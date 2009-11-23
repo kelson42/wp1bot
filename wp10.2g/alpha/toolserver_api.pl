@@ -47,7 +47,7 @@ sub toolserver_connect {
     unless ( defined get_conf('database_wiki_ts'));
 
   if ( $opts->{'use_toolserver'} eq '0' ) { 
-     print "Not using toolserver\n";
+#     print "Not using toolserver\n";
      return;
     }
 	
@@ -301,7 +301,7 @@ sub toolserver_resolve_redirect {
 }
 
 ######################################################################
-=item B<toolserver_get_move_log(NS, TITLE)
+=item B<toolserver_get_move_log>(NS, TITLE)
 
 Gets move log entries for NS:TITLE 
 

@@ -2,10 +2,6 @@ Goals to finish before promoting to beta version:
 
 * Clean up all code, move hardcoded strings to conf file
 
-* Put license statements in the file headers (GPL v2?)
-
 * Finish score computations in the update code
 
 * Add filters by score and release version to list2.pl
-
-* Finish manual selection code

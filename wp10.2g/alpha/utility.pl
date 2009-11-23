@@ -4,6 +4,13 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+A maintenance script
+
+=cut
+
+
 
 binmode STDOUT, ":utf8";
 

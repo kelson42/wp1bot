@@ -120,6 +120,26 @@ sub download_project {
 	update_project($project, $global_timestamp, $homepage,
                        $parent, $shortname);
 
+#	db_commit();
+#      };
+#
+#  if ($@) {
+#    print "Transaction aborted: $@";
+#    db_rollback();
+#  }
+#
+#temporary hack - split the transaction in half
+#
+#  eval { 
+#
+        # Update release version scores for this project
+        # This assumes that the count of articles with an assessed
+        # importance is accurate; it's ser via update_project()
+        # Also this requires the ratings table is accurate, of course
+
+	update_project_scores($project);
+
+        # This updates the global articles table
         # This must come after update_project because update_project
         # sets up the ratings for unassessed articles, which have to 
         # be right before this runs
@@ -131,6 +151,8 @@ sub download_project {
     print "Transaction aborted: $@";
     db_rollback();
   }
+
+
 
   db_unlock("PROJECT:$project");
 
