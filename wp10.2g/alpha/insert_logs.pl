@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# insert_logs.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 require 'read_conf.pl';
 my $Opts = read_conf();
 

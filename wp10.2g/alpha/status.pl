@@ -1,4 +1,9 @@
 #!/usr/bin/perl
+
+# status.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use POSIX 'strftime';
 
 open IN, "find /home/cbm/wp10downloads -name 'dl.*'|";

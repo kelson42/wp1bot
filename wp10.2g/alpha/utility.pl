@@ -1,5 +1,10 @@
 #!/usr/bin/perl
 
+# utility.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
+
 binmode STDOUT, ":utf8";
 
 use strict;

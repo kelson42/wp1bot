@@ -1,3 +1,8 @@
+-- tables.sql
+-- Contains table schema for the wikipedia assessments bot
+-- Part of WP 1.0 bot
+-- See the files README, LICENSE, and AUTHORS for additional information
+
 -- The project table stores a list of participating wikiprojects
 
 create table if not exists projects ( 
@@ -26,7 +31,11 @@ create table if not exists projects (
     p_icount          int unsigned default 0,
         -- how many pages have importance assessments in the project 
 
+    p_scope    int unsigned not null default 0,
+        -- the "scope points" for the project, used to compute selection scores
+   
     primary key (p_project)
+
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
@@ -59,6 +68,10 @@ create table if not exists ratings (
     r_importance_timestamp  binary(20),
         -- time when importance rating was assigned
         -- a wiki-style timestamp
+
+
+    r_score int(8) unsigned not null default 0,
+        -- the selection score for this rating of this article
 
     primary key (r_project, r_namespace, r_article)
 ) default character set 'utf8' collate 'utf8_bin'
@@ -162,7 +175,6 @@ create table if not exists reviews (
   engine = InnoDB;
 
 
-
 -- The global_articles table stores the higest quality and 
 -- highest importance assigned to each article. It is used to 
 -- generate global statistics 
@@ -179,6 +191,8 @@ create table if not exists global_articles (
 
     a_importance          varchar(63) not null,
         -- The Wikipedia 0.5 category (Arts, Language, etc.)
+
+    a_score           int(8) unsigned not null,
 
     primary key (a_article)
 
@@ -238,6 +252,7 @@ create table if not exists moves (
 -- the global_rankings table determines which
 -- quality and importance ratings appear in the
 -- global table
+ 
 
 create table if not exists global_rankings (
 
@@ -274,3 +289,50 @@ replace into global_rankings values
    ('importance', 'Mid-Class',      200), 
    ('importance', 'Low-Class',      100),
    ('importance', 'Unassessed-Class', 0);
+
+
+
+create table if not exists selection_data (
+  sd_article varchar(255) not null,
+
+  sd_langlinks int unsigned not null default 0,
+ 
+  sd_pagelinks int unsigned not null default 0,
+
+  sd_hitcount int unsigned not null default 0,
+  primary key (sd_article)
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+
+create table if not exists manualselection (
+  
+  ms_article varchar(255) not null,
+
+  ms_timestamp       binary(14) not null,
+
+  primary key(ms_article)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+
+create table if not exists manualselectionlog ( 
+
+  ms_article varchar(255) not null,
+
+  ms_timestamp       binary(14) not null,
+
+  ms_action varchar(16) not null,
+
+  ms_user varchar(255) not null,
+
+  ms_reason varchar(255) not null,
+
+  primary key (ms_article, ms_timestamp)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
+
+

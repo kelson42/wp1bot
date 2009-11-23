@@ -1,5 +1,9 @@
 #!/usr/bin/perl
 
+# download.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict;
 use Data::Dumper;
 use POSIX;
@@ -11,7 +15,6 @@ use Getopt::Long;
 require 'read_conf.pl';
 our $Opts = read_conf(); # Also initializes library paths
 
-#print Dumper (get_conf('quality'));
 require 'database_routines.pl';
 require 'wp10_routines.pl';
 require 'api_routines.pl';

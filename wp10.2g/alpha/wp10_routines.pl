@@ -1,3 +1,9 @@
+#!/usr/bin/perl
+
+# wp10_routines.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
 use strict vars;
 use Data::Dumper;
 our $global_timestamp;
@@ -379,6 +385,9 @@ sub get_extra_assessments {
 
   my $cat = "$Category:$project $Articles $By_quality";
   my $txt = content_section($cat, 0);
+
+  print "See '$txt'\n";
+
   my @lines = split /\n+/, $txt;
 
   my $Starter = get_conf('template_start');	

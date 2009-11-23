@@ -1,5 +1,9 @@
-use strict vars;
-use Data::Dumper;
+#!/usr/bin/perl
+
+
+# database_routines.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
 
 =head1 SYNOPSIS
 
@@ -48,6 +52,9 @@ conjunction with the ARTICLE parameter
 =back
 
 =cut
+
+use strict vars;
+use Data::Dumper;
 
 $Data::Dumper::Sortkeys = 1;
 
@@ -280,7 +287,7 @@ sub update_article_rating_data {
       $importance = $rating; 
       $importanceTS = $rating_timestamp;
     }
-    $sth = $dbh->prepare ("INSERT INTO ratings VALUES (?,?,?,?,?,?,?)");
+    $sth = $dbh->prepare ("INSERT INTO ratings VALUES (?,?,?,?,?,?,?,0)");
     $count = $sth->execute($project, $ns, $article, $quality, 
                            $qualityTS, $importance, $importanceTS);
   }
@@ -301,7 +308,7 @@ sub update_articles_table {
 
   my $query = <<"HERE";
 REPLACE INTO global_articles
-SELECT r_article, max(qual.gr_ranking), max(imp.gr_ranking) 
+SELECT r_article, max(qual.gr_ranking), max(imp.gr_ranking), max(r_score)
 FROM ratings
 JOIN categories as ci
    ON r_project = ci.c_project AND ci.c_type = 'importance'      
@@ -397,7 +404,7 @@ sub update_project {
 			    $icount, $project);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?,?,?)");
+    $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?,?,?,0)");
     $count = $sth->execute($project, $timestamp, $wikipage, 
                            $parent, $shortname, $proj_count, $qcount, $icount);
   }
@@ -570,6 +577,11 @@ sub db_connect {
   die "No database given in database conf file\n"
     unless ( defined $opts->{'database'} );
 
+#if ( $opts->{'use_toolserver'} eq '0' ) { 
+#  print "Not using toolserver\n";
+#  return;
+#}
+
   my $connect = "DBI:mysql"
            . ":database=" . $opts->{'database'};
 
@@ -584,6 +596,8 @@ sub db_connect {
     $connect .= ":mysql_read_default_file=" 
               . $opts->{'credentials-readwrite'};
   }
+
+  print "COnnect: '$connect'\n";
 
   my $db = DBI->connect($connect, 
                         $opts->{'username'}, 
@@ -631,6 +645,7 @@ Returns a hash reference:
 =cut
 
 sub db_get_project_details { 
+
   my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count 
                            FROM projects;");
   $sth->execute();

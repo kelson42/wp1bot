@@ -1,6 +1,8 @@
 #!/usr/bin/perl
-use strict;
-use Encode;
+
+# api_routines.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
 
 =head1 SYNOPSIS
 
@@ -12,6 +14,8 @@ into a common interface and output format.
 
 =cut
 
+use strict;
+use Encode;
 use lib '/home/cbm/veblen/VeblenBot';
 
 use Data::Dumper;
@@ -43,7 +47,7 @@ sub init_api() {
   $api->max_retries(20);
 
   $api->base_url(get_conf('api_url'));
-  $api->debug_level(3);
+  $api->debug_level(4);
 
   my $cred = get_conf('api-credentials');
 
@@ -183,7 +187,9 @@ sub content_section {
 
   init_api();
 
-  return encode("utf8", $api->content_section($art, $sect));
+  my $t = $api->content_section($art, $sect);
+
+  return encode("utf8", $t->{'content'});
 
 }
 
@@ -270,7 +276,7 @@ sub api_get_move_log {
 
   $title = $namespaces->{$ns} . $title;  
 
-  my $data = $api->log_events($title, 'move');
+  my $data = $api->log_events($title, ['letype'=>'move']);
 
   my $output = [];
   my $d;

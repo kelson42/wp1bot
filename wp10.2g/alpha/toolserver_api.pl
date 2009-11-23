@@ -1,15 +1,8 @@
 #!/usr/bin/perl
 
-use strict;
-use DBI;
-use Encode;
-use Data::Dumper;
-use POSIX 'strftime';
-
-require  'read_conf.pl';
-
-my  $Prefix;
-my  $PrefixRev;
+# toolserver_api.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
 
 =head1 SYNOPSIS
  
@@ -22,7 +15,19 @@ my  $PrefixRev;
  
 =cut
 
-my $dbh = toolserver_connect();
+use strict;
+use DBI;
+use Encode;
+use Data::Dumper;
+use POSIX 'strftime';
+
+our $Opts;
+require 'read_conf.pl';
+
+my  $Prefix;
+my  $PrefixRev;
+
+my $dbh = toolserver_connect($Opts);
 
 #####################################################################
 
@@ -36,8 +41,15 @@ my $dbh = toolserver_connect();
 =cut
 
 sub toolserver_connect {
-	die "No 'database_wiki_ts' given in database conf file\n"
-   	   unless ( defined get_conf('database_wiki_ts'));
+  my $opts = shift;
+
+  die "No 'database_wiki_ts' given in database conf file\n"
+    unless ( defined get_conf('database_wiki_ts'));
+
+  if ( $opts->{'use_toolserver'} eq '0' ) { 
+     print "Not using toolserver\n";
+     return;
+    }
 	
 	my $connect = "DBI:mysql"
          . ":database=" . get_conf('database_wiki_ts');

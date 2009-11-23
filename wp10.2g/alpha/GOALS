@@ -1,16 +1,11 @@
 Goals to finish before promoting to beta version:
 
-* Fix all three CGI programs not to use SCRIPT_URI which is broken.
-  Put all three links into the conf file and read them from there, 
-  so that no links are created by hand.
-
-* Make all theee CGI programs link to each other in the top header
-  bar and in the light blue project bar
-
-* Look through cgi-bin for duplicate code, move to a shared location
-
 * Clean up all code, move hardcoded strings to conf file
 
-* Move all the get_link_from_api routines to api_routines.pl?
-
 * Put license statements in the file headers (GPL v2?)
+
+* Finish score computations in the update code
+
+* Add filters by score and release version to list2.pl
+
+* Finish manual selection code
