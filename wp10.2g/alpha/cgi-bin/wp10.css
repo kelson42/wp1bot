@@ -26,6 +26,20 @@ div.head {
   width: 100%;
 }
 
+div.superhead {
+  background: #2626A1 none repeat scroll 0 0;
+  font-style: italic;
+  color:  #FFF;
+  line-height: 1.3em;
+  font-family: sans-serif;
+  font-size: 125%;
+  font-weight: bold;
+  margin: 0;
+  padding: 0 0 1pt 0.5em;
+  width: 100%;
+}
+
+
 div.subhead { 
   background: #7979E7  none repeat scroll 0 0;
   border-bottom:0 none;
@@ -46,6 +60,10 @@ div.content {
   border-top: 1px solid #000;
   border-bottom: 2px solid #000;
   padding-left: 1em;
+}
+
+div.content { 
+  padding-top: 0em !important;
 }
 
 
@@ -129,10 +147,12 @@ div.navbox {
   border: 1px solid #aaaaaa;
   background-color: #F9F2B0;
   background-position: 0 0;
-  margin: 0 0 0.5em 0;
+  margin: 0px;
+  margin-bottom: 1em;
+  margin-right: 1em;
   padding: 0px;
   text-align:center;
-  width:100%;
+/*  width:100%; */
   font-size: 100%;
   line-height: 1.5em;
 }
@@ -276,7 +296,8 @@ div.clear { clear: both; }
 div.authline { 
   width: 2.5in;
   float: right; 
-  border: 1px solid black;
+  text-align: right;
+/*  border: 1px solid black; */
   padding: 0.5em;
 }
 
@@ -285,3 +306,32 @@ span.notauthenticatederror {
   font-size: 125%;
   color: red;
 }
+
+legend { 
+  font-weight: bold;
+}
+
+fieldset.manual { 
+  width: 3in;
+  margin-bottom: 1em;
+  text-align: right;
+  margin-top: 0.5em;
+}
+
+
+div.superhead a { 
+  text-decoration: none;
+  color: #fff;
+}
+
+
+div.superhead a:hover { 
+  color: yellow;
+  text-decoration: underline; 
+}
+
+div.subhead a:hover { 
+  color: yellow;
+  text-decoration: underline; 
+}
+

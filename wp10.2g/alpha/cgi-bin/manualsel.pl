@@ -17,7 +17,7 @@ use POSIX 'strftime';
 use URI::Escape;
 
 my $maxadds = 10;
-my $pagesize = 2;
+my $pagesize = 5;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -70,7 +70,7 @@ HERE
   $authline = << "HERE";
 <div class="authline notloggedin">
 <img src="http://upload.wikimedia.org/wikipedia/commons/1/1b/Lock-closed.png"> 
-You are not logged in ('$ua', '$pa').
+You are not logged in.
 </div>
 HERE
 
@@ -114,6 +114,7 @@ if ( $mode eq 'add' ) {
   do_list();
 }
 
+layout_footer();
 exit;
 
 
@@ -136,7 +137,7 @@ sub process_add {
 
   if ( $authenticated == 0) { 
     print << "HERE";
-    <span class="notauthenticatederror">Error: You must log in to perform this action.</span>
+    <span class="notauthenticatederror">Action not performed: You must log in to perform this action.</span>
 
 HERE
     do_add(1);
@@ -147,34 +148,52 @@ HERE
   my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?)");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
                                 VALUES (?,?,?,?,?)");
-print "Here 4\n";
-
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
   my ($art, $reason, $result, $r1, $r2);
 
-  print "<table border=\"1\">";
+  print << "HERE";
+<center>
+<table class="wikitable">
+<tr>
+<th>#</th>
+<th>Article</th>
+<th>Reason</th>
+<th>Result</th>
+</tr>
+HERE
+
   my $i;
 
   for ( $i = 1; $i < $maxadds+1; $i++ ) {
-  print "$i<br/>\n";
     next unless ( defined $param{"addart$i"} );
     $art = $param{"addart$i"};
-#  $art =~ s/^\s*//;
-#  $art =~ s/\s*$//;
+    $art =~ s/^\s*//;
+    $art =~ s/\s*$//;
     next if ( $art eq '');
     $reason = $param{"addreason$i"};
+    $reason =~ s/^\s*//;
+    $reason =~ s/\s*$//;
+
+    my $error = "OK";
 
     $r1 = $sthart->execute($art,$timestamp);
-    $r2 = $sthlog->execute($art, $timestamp, "add", $user, $reason);
 
+    if ( 1 == $r1 ) { 
+      $r2 = $sthlog->execute($art, $timestamp, "add", $user, $reason);
+      if ( 1 != $r2 ) { 
+        $error = "Failed";
+      }
+    } else { 
+      $error = "Failed";
+    }
 
     print << "HERE";
     <tr>
       <td>$i</td>
       <td>$art</td>
       <td>$reason</td>
-       <td>$r1, $r2</td>
+      <td>$error</td>
     </tr>
 HERE
   }
@@ -183,8 +202,6 @@ $dbh->commit();
 
 print << "HERE";
 </table>
-</body>
-</html>
 HERE
 
 }
@@ -214,7 +231,7 @@ HERE
 
 
   print << "HERE";
-      <table border="1">
+      <table class="wikitable">
        <tr>
         <th>Article</th>
         <th>Reason</th>
@@ -230,14 +247,25 @@ HERE
     $reason = $param{"reason:$1"};
 
     print "SEE: " . $art . " &rarr; ".  $reason . "<br/>";
+
+    my $error = "OK";
+
     $r1 = $sthart->execute($art);
-    $r2 = $sthlog->execute($art, $timestamp, "remove", $user, $reason);
+
+    if ( $r1 == 1 ) { 
+      $r2 = $sthlog->execute($art, $timestamp, "remove", $user, $reason);
+      if ( 1 != $r2) { 
+        $error = "Failed";
+     }
+    } else { 
+      $error = "Failed";
+    }
 
     print << "HERE";
     <tr>
     <td>$art</td>
     <td>$reason</td>
-    <td>$r1, $r2</td>
+    <td>$error</td>
     </tr>
 HERE
 
@@ -259,7 +287,8 @@ sub do_add {
       <input type="hidden" name="user" value="$user">
       <input type="hidden" name="pass" value="$pass">
       <input type="hidden" name="mode" value="processadd">
-      <table border="1">
+    <center>
+      <table class="wikitable">
        <tr>
         <th>#</th>
         <th>Article</th>
@@ -306,7 +335,8 @@ HERE
   print << "HERE";
   <input type="submit" value="Add articles">
   </td></tr>
-  </table></form></body></html>
+  </table></center>
+</form>
 HERE
 
 }
@@ -314,26 +344,79 @@ HERE
 ############################################################################
 
 sub do_list {
-  print "<h2>List articles in the manual selection</h2><br/>\n";
 
   $dbh  = db_connect($Opts);
 
-
   my $offset = $param{'offset'} || 0;
-  
-  my $query = <<"HERE";
-    select * from manualselection 
-    order by ms_timestamp desc limit ? offset ? 
+  my $farticle = $param{'farticle'} || "";  
+  $farticle =~ s/^\s*//;
+  $farticle =~ s/\s*$//;
+
+  my $artenc = uri_escape($farticle);
+
+  print << "HERE";
+    <form action="$url" method="post">
+    <fieldset class="manual">
+    <legend>List articles in the manual selection</legend>
+    <input type="hidden" name="mode" value="list">
+      Article:&nbsp;<input type="text" name="farticle" value="$artenc">
+    <input type="submit" value="Filter results">
+    </fieldset>
+    </form>
 HERE
-#    limit 100 offset ?
+
+  my @params;
+  
+  my $query = "select * from manualselection ";
+
+   if ( 0 < length $farticle ) { 
+     $query .= " where ms_article regexp ? ";
+     push @params, $farticle;
+   }
+
+  $query .= " order by ms_timestamp desc limit ? offset ? ";
+  push @params, $pagesize;
+  push @params, $offset;
 
   my $sth = $dbh->prepare($query);
 
-my @params = ( $pagesize, $offset );
+  my $count = $sth->execute(@params);
 
-#  $sth->execute();
-  $sth->execute(@params);
-#  $sth->execute($offset);
+  if ( $count eq '0E0') { $count = 0; }
+
+  my $poffset = $offset - $pagesize;
+
+if ( $poffset < 0) { $poffset = 0 };
+
+my $noffset = $offset + $pagesize;
+
+
+print << "HERE";
+<div class="results navbox">
+HERE
+
+if ( $count > 0 ) { 
+  print "Showing $count results starting with #$offset<br/>";
+} else { 
+  print "No more results<br/>\n";
+}
+
+if ( $offset > 0 ) { 
+print << "HERE";
+  <a href="$url?mode=list&offset=$poffset&farticle=$artenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
+HERE
+
+}
+
+if ( $count > 0) { 
+print << "HERE";
+  <a href="$url?mode=list&offset=$noffset&farticle=$artenc">Next $pagesize &rarr;</a>
+HERE
+}
+
+print "</div>\n";
+
+if ( $count == 0) { return; }
 
   print << "HERE";
 <center>
@@ -341,6 +424,10 @@ my @params = ( $pagesize, $offset );
 <input type="hidden" name="mode" value="processremoves">
 
   <table class="wikitable">
+<tr>
+<th colspan="4">
+</th>
+</tr>
    <tr>
     <th>Article</th>
     <th>Timestamp</th>
@@ -379,44 +466,65 @@ print << "HERE";
 HERE
 
 
-my $poffset = $offset - $pagesize;
-
-if ( $poffset < 0) { $poffset = 0 };
-
-my $noffset = $offset + $pagesize;
-
-if ( $offset > 0 ) { 
-print << "HERE";
-  <a href="$url?mode=list&offset=$poffset">&larr; Previous 2</a>&nbsp;&nbsp;
-HERE
-
-}
-
-print << "HERE";
-  <a href="$url?mode=list&offset=$noffset">Next 2 &rarr;</a>
-</div></body></html>
-HERE
-
-
 }
 
 ############################################################################
 
 sub do_log {
-  print "<h2>Show changelog for the manual selection</h2><br/>\n";
+
+  my $offset = $param{'offset'} || 0;
+  my $fuser = $param{'fuser'} || "";  
+  my $farticle = $param{'farticle'} || "";  
+  $fuser =~ s/^\s*//;
+  $fuser =~ s/\s*$//;
+  $farticle =~ s/^\s*//;
+  $farticle =~ s/\s*$//;
+
+  my $artenc = uri_escape($farticle);
+  my $userenc = uri_escape($fuser);
+
+print << "HERE";
+  <form action="$url" method="post">
+  <fieldset class="manual">
+  <legend>Show changelog for the manual selection</legend>
+  <input type="hidden" name="mode" value="logs">
+  Article:&nbsp;<input type="text" name="farticle" value="$artenc"><br/>
+  User:&nbsp;<input type="text" name="fuser" value="$userenc"><br/>
+  <input type="submit" value="Filter results">
+  </fieldset>
+  </form>
+HERE
 
   $dbh  = db_connect($Opts);
 
-  my $offset = $param{'offset'} || 0;
+
+  my @params;
   
-  my $query = <<"HERE";
-    select * from manualselectionlog
-    order by ms_timestamp desc limit ? offset ? 
-HERE
+  my $query = "select * from manualselectionlog";
+
+  if ( 0 < length $fuser ) { 
+    $query .= " where ms_user regexp ? ";
+    push @params, $fuser;
+
+    if ( 0 < length $farticle ) { 
+      $query .= " and ms_article regexp ? ";
+      push @params, $farticle;
+    }
+  } else { 
+    if ( 0 < length $farticle ) { 
+      $query .= " where ms_article regexp ? ";
+      push @params, $farticle;
+    }
+  }
+
+  $query .= " order by ms_timestamp desc limit ? offset ? ";
+  push @params,  $pagesize;
+  push @params, $offset;
+
+# print "Query: $query<br/>Params: ";
+#  print (join "<br/>", @params);
 
   my $sth = $dbh->prepare($query);
-
-  my @params = ( $pagesize, $offset );
 
   $sth->execute(@params);
 
@@ -466,14 +574,14 @@ my $noffset = $offset + $pagesize;
 
 if ( $offset > 0 ) { 
 print << "HERE";
-  <a href="$url?mode=logs&offset=$poffset">&larr; Previous 2</a>&nbsp;&nbsp;
+  <a href="$url?mode=logs&offset=$poffset&farticle=$artenc&fuser=$userenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
 HERE
 
 }
 
 print << "HERE";
-  <a href="$url?mode=logs&offset=$noffset">Next 2 &rarr;</a>
-</div></body></html>
+  <a href="$url?mode=logs&offset=$noffset&farticle=$artenc&fuser=$userenc">Next $pagesize &rarr;</a>
+</div>
 HERE
 
 
@@ -486,7 +594,10 @@ sub check_auth {
   my $user = shift;
   my $pass = shift;
 
-  my $users = { 'CBM' => 'fbbe7e01ed8b949d214a0734b7c7e46b' };
+  my $users = { 
+     'CBM' => 'fbbe7e01ed8b949d214a0734b7c7e46b',
+     'Joe' => '93a8f2d59dd65d78ce96fc9df5d403d4' 
+   };
 
   my $md5sum = Digest::MD5->new();
 
@@ -508,6 +619,7 @@ sub layout_header_manual {
   my $subtitle = shift;
 
   $App = "Manual selection maintenance";
+  my $App2 = "Wikipedia Release Version Data";
 
   my $stylesheet = $Opts->{'wp10.css'}
     or die "Must specify configuration value for 'wp10.css'\n";
@@ -529,16 +641,18 @@ sub layout_header_manual {
 <script type="text/javascript"  src="http://toolserver.org/~cbm/foo.js"></script>
 </head>
 <body>
-<div class="head">
+<div class="superhead">
 <a href="http://toolserver.org">
   <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" 
        src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
 </a>    
-$App
+<a href="index.html">$App2</a>
+</div>
+<div class="head">
+$App 
 </div>
 <div class="subhead">
 HERE
-
 print "<!-- '$subtitle' -->\n";
 
 if ( $subtitle eq "List manual selection" ) { 
@@ -573,7 +687,7 @@ if ( $subtitle eq "Log in" ) {
 print << "HERE";
 </div>
 
-<div class="content">
+<div class="content content-manual">
 HERE
 
 }
@@ -582,22 +696,14 @@ HERE
 
 sub auth_form_manual { 
   print << "HERE";
-  <div class="auth auth$authenticated">
-  <h2>Log in</h2>
-  <div class="loginform">
   <form action="$url" method="post"><br/>
+  <fieldset class="manual">
+  <legend>Log in</legend>
   <input type="hidden" name="mode" value="processlogin">
-  <table>
-    <tr><td>
-     User</td><td><input type="text" name="user" value="$user"></td></tr>
-    <tr><td>
-     Password
-   </td><td><input type="password" name="pass" value="$value"></td></tr>
-   <tr><td colspan="2" style="text-align: right;">
-   <input type="submit" value="Login">
-    </td></tr></table>
+  User:&nbsp;<input type="text" name="user" value="$user"><br/>
+  Password:&nbsp;<input type="password" name="pass" value="$value"><br/>
+   <input type="submit" value="Log in">
+   </fieldset>
    </form>
-   </div>
-  </div>
 HERE
 }
