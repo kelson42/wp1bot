@@ -115,7 +115,7 @@ sub ratings_table {
   my @qparamc;
 
 
-  $queryc = "SELECT count(r_article) FROM ratings";
+  $queryc = "SELECT count(r_article) FROM ratings as ra";
 
   $query = << "HERE";
 SELECT r_project, r_namespace, r_article, r_importance, 
@@ -123,7 +123,7 @@ SELECT r_project, r_namespace, r_article, r_importance,
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
        ISNULL(rev_value) as null_rev, r_score
-FROM ratings 
+FROM ratings as ra
 HERE
 
   my $sort = $params->{'sorta'};
@@ -751,7 +751,9 @@ sub sort_orders {
             'Release status' => 'rel_0p5_category',
             'Importance' => 'r_importance',
 	    'Review status' => 'rev_value',
+            'Score' => 'r_score',
           };
+
 }
 
 ###########################################################################
@@ -774,6 +776,8 @@ sub sort_key {
     $query .= " null_rel ASC, rel_0p5_category";
   } elsif ( $sort eq 'Review status' )  { 
     $query .= " null_rev ASC, rev_value";
+  } elsif ( $sort eq 'Score' )  { 
+    $query .= ' ra.r_score';
   } else {
     $query .= " " . $prefix . "r_project";
   }
@@ -809,7 +813,8 @@ sub sort_sql {
   
   my $query = "";
   if ( $sort eq 'Project' || $sort eq 'Project (reverse)' 
-       || $sort eq 'Release status' || $sort eq 'Review status') { 
+       || $sort eq 'Release status' || $sort eq 'Review status'
+       || $sort eq 'Score'  ) { 
     # No additional SQL needed
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
     $query .=   " JOIN categories AS c$which
@@ -821,7 +826,10 @@ sub sort_sql {
                      ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'quality'
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
+  } else { 
+    die "Unknown sort key in sort_sql\n";
   }
+  
   return $query;
 }
 
