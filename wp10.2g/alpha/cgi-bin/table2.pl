@@ -35,7 +35,7 @@ my $script_url = $Opts->{'list2-url'}
 
 require 'init_cache.pl';
 my $cache = init_cache();
-my $cache_sep = "<hr/><!-- cache separator -->\n";
+my $cache_sep = "<!-- cache separator -->\n";
 
 require CGI;
 CGI::Carp->import('fatalsToBrowser');
@@ -50,7 +50,6 @@ require "database_www.pl";
 
 our $dbh = db_connect($Opts);
 
-
 if ( defined $ARGV[0] && $ARGV[0] eq 'force') { 
   cached_ratings_table(1);
   exit;
@@ -60,16 +59,19 @@ layout_header('Overall summary table');
 
 my ($html, $wikicode) = cached_ratings_table();
 
-#print Dumper(cached_ratings_table());
+if ( 0 < length $html ) { 
 
-print "<hr/><div class=\"navbox\">\n";
-print_header_text();
-print "</div>\n<center>\n";
-print $html;
-print "</center>\n";
-print "\n";
+  #print Dumper(cached_ratings_table());
 
-#print "<hr/><div class=\"indent\"><pre>";
+  print "<div class=\"navbox\">\n";
+  print_header_text();
+  print "</div>\n<center>\n";
+  print $html;
+  print "</center>\n";
+  print "\n";
+}
+
+#print "<div class=\"indent\"><pre>";
 #print $wikicode;
 #print "</pre></div>\n";
 
@@ -328,7 +330,12 @@ sub cached_ratings_table {
   }
 
   if ( ! $force_regenerate ) { 
-    print "Cannot regenerate table over CGI request.<br/>\n";
+    print << "HERE";
+<div class="navbox">
+<b>Error: no cached version of the table is available.</b><br/>
+Please contact this page's maintainer.
+</div>
+HERE
     return;
   }
 

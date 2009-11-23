@@ -145,7 +145,11 @@ HERE
       push @qparam, $project;
       push @qparamc, $project;
     } else { 
-      print "Project '$project' is not in the database<br/>\n";
+      print << "HERE";
+        <div class="navbox">
+         Project '$project' is not in the database.
+        </div>
+HERE
       return;
     }
   }
@@ -228,11 +232,12 @@ HERE
   
   print "<div class=\"navbox\">\n";
   print_header_text($project);
+  print "<br/><b>Total results:&nbsp;" . $total 
+        . "</b>. Displaying up to $limit results beginning with #" 
+        . ($offset +1) . "\n";
   print "</div>\n";
 
-  print "<p><b>Total results: " . $total 
-        . "</b>.<br/> Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "</p>\n";
+
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);

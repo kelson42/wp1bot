@@ -14,6 +14,8 @@ use URI::Escape;
 require 'read_conf.pl';
 our $Opts = read_conf();
 
+my $logurl = $Opts->{'log-url'};
+
 require 'database_www.pl';
 require 'layout.pl';
 
@@ -137,7 +139,11 @@ HERE
        push @qparam, $project;
        push @qparamc, $project;
      } else { 
-       print "Project '$project' is not in the database<br/>\n";
+       print << "HERE";
+         <div class="navbox">
+          Project '$project' is not in the database.
+        </div>
+HERE
        return;
      }
    }
@@ -231,11 +237,11 @@ HERE
   
   print "<div class=\"navbox\">\n";
   print_header_text($project);
-  print "</div>\n";
 
-  print "<p><b>Total results: " . $total 
-        . "</b>.<br/> Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "</p>\n";
+  print "<br/><b>Total results:&nbsp;" . $total 
+        . "</b>. Displaying up to $limit results beginning with #" 
+        . ($offset +1) . "\n";
+  print "</div>\n";
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
@@ -325,7 +331,7 @@ print "</tr>\n";
 	# depends on whether "previous" is defined or not 
 	my $prev = 0;
 	if (($offset - $limit + 1) > 0) {
-		my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+		my $newURL = $logurl. "?" . $params_enc
 		. "offset=" . ($offset - $limit + 1);	  
 		
 		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
@@ -336,7 +342,7 @@ print "</tr>\n";
 		if ($prev == 1) {
 			print " | ";
 		}
-		my $newURL = $ENV{"SCRIPT_URI"} . "?" . $params_enc
+		my $newURL = $logurl . "?" . $params_enc
 		. "&offset=" . ($offset + $limit + 1);	  
 		
 		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
@@ -443,7 +449,7 @@ HERE
 sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
-  my $tableURL = $ENV{"SCRIPT_URI"};
+  my $tableURL = $Opts->{'table-url'};
   my @t = split('log.pl',$tableURL);
   $tableURL = @t[0] . "table.pl";
 
