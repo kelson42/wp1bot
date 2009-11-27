@@ -10,6 +10,9 @@ our $Opts;
 my $App = $Opts->{'appname'}
     or die "Must specify application name\n";
 
+my $Version = $Opts->{'version'}
+    or die "Must specify version\n";
+
 my $indexURL = $Opts->{'index-url'};
 my $table2URL = $Opts->{'table2-url'};
 my $tableURL = $Opts->{'table-url'};
@@ -20,8 +23,11 @@ my $serverURL = $Opts->{'server-url'};
 
 my $namespaceIDs;
 
-require 'init_cache.pl';
-my $cacheFile = init_cache();
+use DBI;
+require "database_www.pl";
+our $dbh = db_connect_rw($Opts);
+require 'cache.pl';
+
 my $cacheMem = {};
 
 require Mediawiki::API;
@@ -113,6 +119,9 @@ HERE
 #######################################################################
 
 sub layout_footer {
+
+my $version = $Opts->{'version'};
+
 my $discussionPage = $Opts->{'discussion-page'} 
    || die "Must specify discussion-page in configuration file\n";
 
@@ -124,7 +133,7 @@ bot.<br/>
 Please comment or file bug reports at the 
 <a href="$discussionPage">discussion page</a>.
 <hr/>
-Current version:<br/>
+Current version: $Version<br/>
 HERE
 
 # system "ssh", "login.toolserver.org", "/home/cbm/wp10.2g/alpha/revinfo.pl";
@@ -343,25 +352,25 @@ sub get_cached_td_background {
   my $class = shift;
 
   if ( defined $cacheMem->{$class} ) { 
-    print " <!-- hit $class in memory cache --> ";
+    print "<!-- hit $class in memory cache -->\n";
     return $cacheMem->{$class};
   }
 
   my $key = "CLASS:" . $class;
-  my $data;
+  my ($data, $expiry);
 
-  if ( $cacheFile->exists($key) ) { 
-     print " <!-- hit $class in file cache, expires " 
-           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
-           . " --> ";
-    $data = $cacheFile->get($key);
+  if ( $expiry = cache_exists($key) ) { 
+     print "<!-- hit $class in file cache, expires " 
+           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
+           . " -->\n";
+    $data = cache_get($key);
     $cacheMem->{$class} = $data;
     return $data;
   }
 
   $data = get_td_background($class);
 
-  $cacheFile->set($key, $data, '12 hours');
+  cache_set($key, $data, 12*60*60); # expires in 12 hours
   $cacheMem->{$class} = $data;
   return $data;
 }
@@ -390,25 +399,25 @@ sub get_cached_review_icon {
 	my $class = shift;
 	
 	if ( defined $cacheMem->{$class . "-icon"} ) { 
-		print " <!-- hit {$class}-icon in memory cache --> ";
+		print "<!-- hit {$class}-icon in memory cache -->\n";
 		return $cacheMem->{$class . "-icon"};
 	}
 	
 	my $key = "CLASS:" . $class . "-icon";
-	my $data;
+	my ($expiry, $data);
 	
-	if ( $cacheFile->exists($key) ) { 
-		print " <!-- hit {$class}-icon in file cache, expires " 
-		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($cacheFile->expiry($key)))
-		. " --> ";
-		$data = $cacheFile->get($key);
+	if ( $expiry = cache_exists($key) ) { 
+		print "<!-- hit {$class}-icon in file cache, expires " 
+		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
+		. " -->\n";
+		$data = cache_get($key);
 		$cacheMem->{$class} = $data;
 		return $data;
 	}
 	
 	$data = get_review_icon($class);
 	
-	$cacheFile->set($key, $data, '12 hours');
+	cache_set($key, $data, '12 hours');
 	$cacheMem->{$class . "-icon"} = $data;
 	return $data;
 }

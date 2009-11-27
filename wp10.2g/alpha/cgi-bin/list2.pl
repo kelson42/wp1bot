@@ -60,10 +60,9 @@ if ( defined $Opts->{'log-dir'}
   close LOG;
 }
 
-
 my $proj = $param{'project'} || $ARGV[0];
 
-our $dbh = db_connect($Opts);
+our $dbh = db_connect_rw($Opts);  # needs read-write access for cache
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
@@ -197,6 +196,15 @@ HERE
     push @qparamc, $importance;
   }
 
+  my $score = $params->{'score'};
+  if ( defined $score && $score =~ /\d/ ) { 
+    $score =~ s/[^\d]//;
+    $query .= " AND r_score >= ?";
+    $queryc .= " AND r_score >= ?";
+    push @qparam, $score;
+    push @qparamc, $score;
+  }
+
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
@@ -219,8 +227,8 @@ HERE
 
   $queryc =~ s/WHERE\s*$//;
 
- print "<pre>Q:\n$query</pre>\n";
- print join "<br/>", @qparam;
+# print "<pre>Q:\n$query</pre>\n";
+# print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
 
@@ -434,6 +442,14 @@ HERE
     push @qparamc, $importanceb;
   }
 
+  my $score = $params->{'score'};
+  if ( defined $score && $score =~ /\d/ ) { 
+    $score =~ s/[^\d]//;
+    $query .= " AND r_score >= ?";
+    $queryc .= " AND r_score >= ?";
+    push @qparam, $score;
+    push @qparamc, $score;
+  }
 
   my $pagename = $params->{'pagename'};
 
@@ -470,7 +486,7 @@ HERE
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-  print "<pre>Q: $query</pre><br/>\n";
+#  print "<pre>Q: $query</pre><br/>\n";
 #  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
@@ -581,6 +597,8 @@ sub query_form {
 
   my $quality = $params->{'quality'} || "";
   my $importance = $params->{'importance'} || "";
+  my $score = $params->{'score'} || "";
+  
   my $qualityb = $params->{'qualityb'} || "";
   my $importanceb = $params->{'importanceb'} || "";
   my $limit = $params->{'limit'} || "100";
@@ -641,6 +659,8 @@ sub query_form {
       <td><input type="text" value="$quality" name="quality"/></td></tr>
     <tr><td>Importance</td>
       <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
+    <tr><td>Score</td>
+      <td>\&ge; <input size=\"5\" type=\"text\" value="$score" name="score"/></td></tr>
     <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
       Treat page name as a 
       <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>

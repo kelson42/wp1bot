@@ -16,24 +16,23 @@ our $Opts = read_conf();
 
 require 'database_www.pl';
 require 'layout.pl';
-require 'init_cache.pl';
+
+use DBI;
+require "database_www.pl";
+our $dbh = db_connect_rw($Opts);
+
 require Mediawiki::API;
 
 require CGI;
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
 
-require DBI;
 require POSIX;
 POSIX->import('strftime');
 
-my $cacheFile = init_cache();
-my $cacheMem = {};
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
-
-our $dbh = db_connect($Opts);
 
 my $projects = db_get_project_details();
 

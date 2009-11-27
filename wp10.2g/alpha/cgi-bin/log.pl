@@ -54,7 +54,7 @@ if ( defined $Opts->{'log-dir'}
 
 my $proj = $param{'project'} || $ARGV[0];
 
-our $dbh = db_connect($Opts);
+our $dbh = db_connect_rw($Opts); # Needs r-w access for the cache
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 

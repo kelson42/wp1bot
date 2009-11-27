@@ -34,11 +34,13 @@ my $list_url = $Opts->{'list2-url'}
 my $log_url = $Opts->{'log-url'} 
  or die "No 'list2-url' specified in configuration.\n";
 
-
 ########################
 
-require 'init_cache.pl';
-my $cache = init_cache();
+use DBI;
+require "database_www.pl";
+our $dbh = db_connect_rw($Opts);
+
+require 'cache.pl';
 my $cache_sep = "<hr/><!-- cache separator -->\n";
 
 ########################
@@ -53,10 +55,6 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 my $proj = $param{'project'} || $ARGV[0];
 
-use DBI;
-require "database_www.pl";
-
-our $dbh = db_connect($Opts);
 
 
 layout_header('Summary tables');
@@ -89,17 +87,16 @@ sub cached_ratings_table {
   print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
 
   my $key = "TABLE:" . $proj;
-  my $data;
+  my ($data, $expiry);
 
   if ( defined $cgi->{'purge'} ) { 
     print "Purging cached output<br/>\n";
-  } elsif ( $cache->exists($key) ) { 
-    my $expiry = $cache->expiry($key);
+  } elsif ( $expiry = cache_exists($key) ) { 
     print "Cached output expires: " 
         . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
         . "<br/>\n";
 
-    $data = $cache->get($key);
+    $data = cache_get($key);
     my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
 	  split /\Q$cache_sep\E/, $data, 5;
 
@@ -144,7 +141,7 @@ sub cached_ratings_table {
         . $html . $cache_sep 
         . $wikicode;
 
-  $cache->set($key, $data, '1 hour');
+  cache_set($key, $data, 60*60); # expires in 1 hour
 }
 
 

@@ -33,8 +33,11 @@ my $script_url = $Opts->{'list2-url'}
 
 #####################################################################
 
-require 'init_cache.pl';
-my $cache = init_cache();
+use DBI;
+require "database_www.pl";
+our $dbh = db_connect_rw($Opts);
+
+require 'cache.pl';
 my $cache_sep = "<!-- cache separator -->\n";
 
 require CGI;
@@ -44,11 +47,6 @@ my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
-use DBI;
-require "database_www.pl";
-
-our $dbh = db_connect($Opts);
 
 if ( defined $ARGV[0] && $ARGV[0] eq 'force') { 
   cached_ratings_table(1);
@@ -310,19 +308,18 @@ sub cached_ratings_table {
   my $force_regenerate = shift || 0;
 
   my $key = "GLOBAL:TABLE";
-  my $data;
+  my ($expiry, $data);
 
-  if ( $cache->exists($key) && ! $force_regenerate ) { 
+  if ( ($expiry = cache_exists($key)) && ! $force_regenerate ) { 
     print "<div class=\"indent\">\n";
     print "<b>Debugging output</b><br/>\n";
     print "Current time: $timestamp<br/>\n";
 
-    my $expiry = $cache->expiry($key);
     print "Cached output expires: " 
         . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
         . "<br/></div>\n";
 
-    $data = $cache->get($key);
+    $data = cache_get($key);
     my ($c_key, $c_html, $c_wikicode) = 
           split /\Q$cache_sep\E/, $data, 3;
 
@@ -356,7 +353,7 @@ HERE
         . $html . $cache_sep 
         . $wikicode;
 
-  $cache->set($key, $data, '1 week');
+  cache_set($key, $data, 7*24*60*60); # expires in 1 week
 
 
   return ($html, $wikicode);
