@@ -334,5 +334,20 @@ create table if not exists manualselectionlog (
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
+-- Used to cache content for the web interface
 
+create table if not exists cache ( 
+
+  c_key varchar(255) not null,
+
+  c_expiry binary(12) not null,
+
+  c_content blob,
+
+  primary key (c_key),
+
+  key (c_expiry)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
 

@@ -1,0 +1,97 @@
+#!/usr/bin/perl
+
+# utility.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
+=head1 SYNOPSIS
+
+A maintenance script to update the selection data table
+
+=cut
+
+binmode STDOUT, ":utf8";
+
+use strict;
+use Encode;
+use Data::Dumper;
+use POSIX;
+use Getopt::Long;
+
+select STDOUT;
+$| = 1;
+
+#############################################################
+# Define global variables and then load subroutines
+
+require 'read_conf.pl';
+our $Opts = read_conf(); # Also initializes library paths
+
+require 'database_routines.pl';
+require 'wp10_routines.pl';
+require 'api_routines.pl';
+
+my $start_time = time();
+
+my $dbh = database_handle();
+
+print "Old rows: " . count_rows($dbh) . "\n";
+
+delete_all($dbh);
+
+insert_from_stdin($dbh);
+
+print "New rows: " . count_rows($dbh) . "\n";
+
+$dbh->commit();
+
+exit;
+
+##################################################################
+
+sub insert_from_stdin {
+  my $dbh = shift;
+  my $sth = $dbh->prepare("insert into selection_data values (?,?,?,?)");
+
+  print "Inserting new data\n";
+
+  my @parts;
+  my $count;
+  my $line;
+  while ( $line = <STDIN> ) { 
+    $count++;
+    if ( 0 == $count %  10000 ) { print "."; }
+    if ( 0 == $count % 500000 ) { print " $count\n"; $dbh->commit(); }
+
+    chomp $line;
+    @parts = split / /, $line, 4;
+    $parts[0] =~ s/_/ /;
+    $sth->execute(@parts);
+  }
+  print " $count\n";
+
+
+}
+
+##################################################################
+
+
+sub delete_all {
+  my $dbh = shift;
+  my $sth = $dbh->prepare("delete from selection_data");
+  my $r = $sth->execute();
+  print "Deleted  $r rows\n";
+  return $r;
+}
+
+
+##################################################################
+
+sub count_rows() { 
+  my $dbh = shift;
+  my $sth = $dbh->prepare("select count(sd_article) from selection_data");
+  my $r = $sth->execute();
+  my @r = $sth->fetchrow_array();
+  return $r[0];
+}
+

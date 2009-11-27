@@ -1,0 +1,38 @@
+This is a set of programs to track assessment information for articles
+on Wikipedia.  This information is used to track article quality,
+to prioritize work, and to select articles for release versions of Wikipedia.
+
+There are two general components: a back end for fetching article data from
+the wiki, and a front end for displaying this data dynamically over CGI.
+
+== Configuration ==
+
+All configuration data is read from ~/.wp10.conf . An example
+configuration is provided in example.wp10.conf.
+
+== Back end ==
+
+The primary interface to the backend is download.pl. 
+
+The assessment data is stored in a mysql database whose schema is in 
+tables.sql.
+
+== Front end (CGI) ==
+
+The front end consists of an interconnected set of CGI scripts:
+
+* index.pl : display an index of all tracked projects
+
+* list2.pl : create and filters lists of assessed articles
+
+* log.pl : track logs of assessment changes
+
+* table.pl : make summary tables of article assessments by project
+
+* table2.pl : make a global summary table
+
+* manualselection.pl : maintain a list of articles that should be 
+   included in release versions even if they do not meet the numeric 
+   criteria.
+
+* selection.pl : create lists of articles for release versions (UNWRITTEN)
