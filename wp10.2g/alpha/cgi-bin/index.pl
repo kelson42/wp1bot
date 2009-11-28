@@ -119,14 +119,10 @@ sub project_index_link {
   $line .= "</td>";
 
   if ( $data->{'p_count'} != 0 ) { 
-#    $line .= "<table style=\"background: transparent; border: 0\">" 
-#             . "<tr><td>\nQuality:";		
     $line .= "<td>";
     $line .= print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
-#    $line .= "</td><td>Importance:";
     $line .= "</td><td>";
     $line .= print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
-#  $line .= "</td></tr></table>";
     $line .= "</td>";
   }
 	
@@ -135,8 +131,7 @@ sub project_index_link {
 }
 
 #####################################################################
-# TODO: figure out how the [[fr:Template:Avacement]] template works, and
-# copy it to enwiki
+
 sub print_progress_bar {
   my $number = shift;
 
@@ -148,9 +143,10 @@ sub print_progress_bar {
   # Get the color of the bar
   my $color = get_bar_color($number);
 	
-  # Format the input to two decimal digits
-  my $rounded = sprintf("%.2f", $number);
-		
+  # Round down to nearest integer. We want 100% to mean "everything",
+  # so that it is easy to distinguish "everything" from "not everything"
+  my $rounded = int($number); 
+	
   return << "HERE";
     <div class="progress_cell" style="">
     <div class="progress_bar" style="background:#$color; width:$rounded%;">

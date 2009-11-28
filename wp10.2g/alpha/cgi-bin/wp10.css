@@ -236,7 +236,7 @@ div.footer {
 	line-height: 1em;
 	margin: -0.5em 0 0;
 	padding: 0;
-	position: relative;
+	position: absolute;
 	text-align: center;
 	top: 50%;
 	width: 100px;
