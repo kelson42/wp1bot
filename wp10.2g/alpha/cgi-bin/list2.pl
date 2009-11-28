@@ -122,8 +122,23 @@ SELECT r_project, r_namespace, r_article, r_importance,
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
        ISNULL(rev_value) as null_rev, r_score
-FROM ratings as ra
 HERE
+
+my $show_external = ($params->{'showExternal'} eq "on");
+
+if ( $show_external ) { 
+  $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount \n";
+}
+
+  $query .= << "HERE";
+   FROM ratings as ra
+HERE
+
+  if ( $show_external ) { 
+    $query .= << "HERE";
+   LEFT JOIN selection_data ON r_namespace = 0 AND r_article = sd_article
+HERE
+  }
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
@@ -227,7 +242,7 @@ HERE
 
   $queryc =~ s/WHERE\s*$//;
 
-# print "<pre>Q:\n$query</pre>\n";
+ print "<pre>Q:\n$query</pre>\n";
 # print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
@@ -266,8 +281,42 @@ print << "HERE";
     <th><b>Article</b></th>
     <th colspan="2"><b>Importance</b></th>
     <th colspan="2"><b>Quality</b></th>
-    <th colspan="2"><b>Review</b><br/><b>Release</b></th>
-    <th colspan="1"><b>Score</b></th>
+    <th colspan="2">
+      <a class="info">
+        <b>Review</b><br/><b>Release</b>
+        <span>Shows whether this article has been reviewed as a featured 
+              article or good article, and whether the article has been 
+              included in a release version of Wikipedia.
+        </span>
+      </a>
+    </th>
+HERE
+
+if ( $show_external ) { 
+  print << "HERE";
+    <th><a class="info">PL
+          <span>Number of pages that link to this page.</span>
+        </a>
+    </th>  
+    <th><a class="info">LL
+          <span>Number of pages that link to this page.</span>
+        </a>
+    </th>  
+    <th><a class="info">Hits
+          <span>Number of pages that link to this page.</span>
+        </a>
+    </th>  
+HERE
+  }
+
+print << "HERE";
+    <th colspan="1">
+      <a class="info">
+        <b>Score</b>
+        <span>This number is used to automatically select articles for 
+              release versions of Wikipedia.
+        </span>
+    </th>
   </tr>
 HERE
 
@@ -279,7 +328,8 @@ HERE
     if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
     else { $evenodd = "list-odd"; }    
 
-    print "<tr class=\"$evenodd\"><td>$i</td>\n";
+    print "<tr class=\"$evenodd\">";
+    print "    <td class=\"resultnum\">" . $i . "</td>\n";
 
     if (  ! ( $project =~ /\w|\d/ ) ) { 
       print "    <td>" . $row[0] . "</td>\n";
@@ -302,6 +352,18 @@ HERE
       print "<td>" . make_wp05_link($row[7]) . "</td>\n";
     } else { 
       print "<td></td>\n"; 
+    }
+
+    if ( $show_external ) { 
+      my ( $external_pl, $external_ll, $external_hc );
+      $external_pl = $row[12] || "0";
+      $external_ll = $row[13] || "0";
+      $external_hc = $row[14] || "0";
+      print << "HERE";
+       <td class="external">$external_pl</td>
+       <td class="external">$external_ll</td>
+       <td class="external">$external_hc</td>
+HERE
     }
 
     print "<td class=\"score\">" . $row[11] . "</td>\n";
@@ -373,9 +435,7 @@ sub ratings_table_intersect {
 
   if ( $offset > 0 ) { $offset --; }
 
-
   my $query;
-
   my $queryc = "SELECT count(ra.r_article) 
                 FROM ratings as ra 
                 JOIN ratings as rb on rb.r_article = ra.r_article
@@ -391,7 +451,24 @@ SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
        rb.r_importance, rb.r_quality, rel_0p5_category,
        rev_value, ISNULL(rel_0p5_category) as null_rel,
        ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score
-FROM ratings as ra
+HERE
+
+  my $show_external = ($params->{'showExternal'} eq "on");
+  if ( $show_external ) {
+    $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount \n";
+  }
+
+  $query .= << "HERE";
+  FROM ratings as ra
+HERE
+
+  if ( $show_external ) {
+    $query .= << "HERE";
+   LEFT JOIN selection_data ON r_namespace = 0 AND r_article = sd_article
+HERE
+  }
+  
+$query .= << "HERE";
   JOIN ratings as rb ON rb.r_article = ra.r_article 
                     AND ra.r_namespace = rb.r_namespace  
 HERE
@@ -516,10 +593,37 @@ HERE
   <th><b>Result</b></th>
   <th><b>Article</b></th>
   <th colspan="3"><b>$projecta</b></th>
+  <th colspan="1" class="spacer">&nbsp;</th>
   <th colspan="3"><b>$projectb</b></th>
-  <th colspan="2"><b>Review</b><br/><b>Release</b></th>
-</tr>
+  <th colspan="2">
+    <a class="info">
+      <b>Review</b><br/><b>Release</b>
+        <span>Shows whether this article has been reviewed as a featured
+              article or good article, and whether the article has been
+              included in a release version of Wikipedia.
+        </span>
+      </a>
+  </th>
 HERE
+
+if ( $show_external ) {
+  print << "HERE";
+    <th><a class="info">PL
+          <span>Number of pages that link to this page.</span>
+        </a>
+    </th>
+    <th><a class="info">LL
+          <span>Number of interlanguage links to this page.</span>
+        </a>
+    </th>
+    <th><a class="info">Hits
+          <span>A measure of the average daily hitcount of this page, including redirects..</span>
+        </a>
+    </th>
+HERE
+  }
+
+  print "</tr>\n";
 
   my $evenodd;
      
@@ -529,15 +633,17 @@ HERE
     if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
     else { $evenodd = "list-odd"; }    
 
-    print "<tr class=\"$evenodd\">\n<td>$i</td>\n";
+    print "<tr class=\"$evenodd\">\n";
+    print "    <td class=\"resultnum\">" . $i . "</td>\n";
     print "    <td>" . make_article_link($row[0], $row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
     print "<td class=\"score\">$row[10]</td\n";
+    print "<td class=\"spacer\">&nbsp;</td>\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
     print "    " . get_cached_td_background($row[5]) . "\n";
     print "<td class=\"score\">$row[11]</td\n";
-
+    print "<td class=\"spacer\">&nbsp;</td>\n";
 
     if ( defined $row[7] ) { 
       print make_review_link($row[7]) ;
@@ -551,10 +657,22 @@ HERE
       print "<td></td>\n"; 
     }
 
+    if ( $show_external ) {
+      my ( $external_pl, $external_ll, $external_hc );
+      $external_pl = $row[12] || "0";
+      $external_ll = $row[13] || "0";
+      $external_hc = $row[14] || "0";
+      print << "HERE";
+       <td class="external">$external_pl</td>
+       <td class="external">$external_ll</td>
+       <td class="external">$external_hc</td>
+HERE
+    }
+
+
     print "</tr>\n";
-
-
   }
+
   print "</table>\n</center>\n";
 
   my $p;
@@ -606,16 +724,30 @@ sub query_form {
   my $intersect = $params->{'intersect'} || "";
   my $pagename = $params->{'pagename'} || "";
   my $pagenameWC = $params->{'pagenameWC'} || "";
+  my $show_external = $params->{'showExternal'} || "";
+  my $filter_release = $params->{'filterRelease'} || "";
 
   my $intersect_checked = "";
   if ( $intersect eq 'on' ) { 
     $intersect_checked = "checked=\"yes\" ";
   }
 
+  my $filter_release_checked = "";
+  if ( $filter_release eq 'on' ) { 
+    $filter_release_checked = "checked=\"yes\" ";
+  }
+
+
   my $pagename_wc_checked = "";
   if ( $pagenameWC eq 'on' ) { 
     $pagename_wc_checked = "checked=\"yes\" ";
   }
+
+  my $show_external_checked = "";
+  if ( $show_external eq 'on' ) { 
+    $show_external_checked = "checked=\"yes\" ";
+  }
+
 
   my $diffonly_checked = "";
   if ( defined $param{'diffonly'} ) {
@@ -664,6 +796,8 @@ sub query_form {
     <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
       Treat page name as a 
       <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
+    <tr><td colspan="2"><input type="checkbox" $show_external_checked  name="showExternal" />
+      Show external interest data
     <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
   </table>
@@ -710,7 +844,8 @@ sub query_form {
 
   <tr>
     <td class="bottomrow">
-     <input type="checkbox" $intersect_checked  name="intersect"  rel="release"/>
+     <input type="checkbox" $filter_release_checked  name="filterRelease"  
+        rel="release"/>
      <b>Filter release / review data</b><br/>
      <table class=\"subform\" rel="release">
        <tr><td>Not yet implemented</td></tr>
@@ -837,7 +972,7 @@ sub sort_sql {
        || $sort eq 'Score'  ) { 
     # No additional SQL needed
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .=   " JOIN categories AS c$which
+    $query .=   "   JOIN categories AS c$which
                      ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'importance'
                      AND c$which.c_rating = " . $ratings ."r_importance\n ";
