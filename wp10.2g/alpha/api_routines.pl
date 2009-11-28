@@ -268,7 +268,7 @@ sub api_get_move_log {
   my $title = shift;
 
   if ($use_toolserver == 1) { 
-#    print "\tusing toolserver\n";
+    print "\tusing toolserver\n";
     return toolserver_get_move_log($ns, $title);
   }
 

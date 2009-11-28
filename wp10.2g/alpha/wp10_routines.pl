@@ -148,7 +148,7 @@ sub download_project {
       };
 
   if ($@) {
-    print "Transaction aborted: $@";
+    print "Transaction aborted: $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
 
@@ -351,8 +351,10 @@ sub download_project_assessments {
           . $oldrating->{$art} . "'\n";
 
     ($ns, $title) = split /:/, $art, 2;
+print "HERE\n";
     ($new_ns, $new_title, $new_timestamp)
                        = get_new_name($ns, $title, $timestamp);
+print "HERE\n";
 
     if ( defined $new_ns ) {
       print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
@@ -691,7 +693,9 @@ sub get_new_name {
   my $timestamp = shift;
 
   # First try to use move log
+print "GET MOVE LOG\n";
   my $moves = api_get_move_log($ns, $title);
+print "BACK\n";
   my $move;
   my $m_timestamp;
   foreach $move ( @$moves ) { 

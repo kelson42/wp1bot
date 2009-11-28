@@ -9,6 +9,10 @@ use Data::Dumper;
 use POSIX;
 use Getopt::Long;
 
+select STDOUT;
+$| = 1;
+
+
 #############################################################
 # Define global variables and then load subroutines
 

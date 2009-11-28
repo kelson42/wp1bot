@@ -324,8 +324,9 @@ sub toolserver_get_move_log {
                order by log_timestamp DESC";
 
   my $sth = $dbh->prepare($query);
+print "Executing query: '$query' '$ns' '$title' \n";
   my $r = $sth->execute($ns, $title);
-
+print "back from query\n";
   my @row;
 
   my $results = [];

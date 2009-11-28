@@ -61,11 +61,11 @@ sub insert_from_stdin {
   while ( $line = <STDIN> ) { 
     $count++;
     if ( 0 == $count %  10000 ) { print "."; }
-    if ( 0 == $count % 500000 ) { print " $count\n"; $dbh->commit(); }
+    if ( 0 == $count % 100000 ) { print " $count\n"; $dbh->commit(); }
 
     chomp $line;
     @parts = split / /, $line, 4;
-    $parts[0] =~ s/_/ /;
+    $parts[0] =~ s/_/ /g;
     $sth->execute(@parts);
   }
   print " $count\n";

@@ -2,6 +2,6 @@ Goals to finish before promoting to beta version:
 
 * Clean up all code, move hardcoded strings to conf file
 
-* Finish score computations in the update code
-
 * Add filters by score and release version to list2.pl
+
+* Fix layout.pl header code so that it can create headers for all cgi programs

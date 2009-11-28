@@ -387,7 +387,7 @@ sub update_project {
   print "Quality-assessed articles: $qcount\n";
 
   my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	       . "WHERE r_project = ? AND r_importance='Unknown-Class'");
+	       . "WHERE r_project = ? AND (r_importance='Unknown-Class' OR r_importance = 'Unassessed-Class')");
   $sth_icount->execute($project);
 
   @row = $sth_icount->fetchrow_array();
