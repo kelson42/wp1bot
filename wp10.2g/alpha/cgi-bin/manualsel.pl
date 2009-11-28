@@ -124,7 +124,7 @@ sub processlogin {
   if( $authenticated == 1) { 
     print "<b>Login successful</b>";
   }   else  {
-    print "<b>Login unsuccessful; try again</b>";
+    print "<b>Login unsuccessful; try again. $authenticated. </b>";
     auth_form_manual();
   }
  print "<div class=\"clear\">&nbsp;</div>\n";
@@ -135,7 +135,7 @@ sub processlogin {
 sub process_add {
   print "<h2>Processing added articles</h2><br/>\n";
 
-  if ( $authenticated == 0) { 
+  if ( $authenticated != 1 ) { 
     print << "HERE";
     <span class="notauthenticatederror">Action not performed: You must log in to perform this action.</span>
 
@@ -212,7 +212,7 @@ HERE
 sub process_removes {
   print "<h2>Processing removed articles</h2><br/>\n";
 
-  if ( $authenticated == 0) { 
+  if ( $authenticated != 1) { 
     print << "HERE";
     <span class="notauthenticatederror">Error: You must log in to perform this action.</span>
 
@@ -594,22 +594,28 @@ sub check_auth {
   my $user = shift;
   my $pass = shift;
 
-  my $users = { 
-     'CBM' => 'fbbe7e01ed8b949d214a0734b7c7e46b',
-     'Joe' => '93a8f2d59dd65d78ce96fc9df5d403d4' 
-   };
+  if ( ! $user =~ /./ ) { 
+    return 0;
+  }
 
   my $md5sum = Digest::MD5->new();
-
   $md5sum->add($user);
   $md5sum->add($pass);
   
   my $d = $md5sum->hexdigest();
 
-  if ( $users->{$user} eq $d ) {
+  my $sth = $dbh->prepare("SELECT pw_password FROM passwd WHERE pw_user = ?");
+  my $r = $sth->execute($user);
+
+  if ( $r == 0) { 
+    return -1;
+  }
+
+  my @res = $sth->fetchrow_array();
+  if ( $res[0] eq $d ) {
     return 1;
   } else {
-    return 0;
+    return -2;
   }
 }
 
