@@ -351,3 +351,18 @@ create table if not exists cache (
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
+
+
+-- Passwords for manually-maintained data
+
+create table if not exists passwd ( 
+
+  pw_user varchar(255) not null,
+
+  pw_password binary(32) not null,
+
+  primary key (c_user)
+
+) default character set 'utf8' collate 'utf8_bin'
+  engine = InnoDB;
+
