@@ -801,8 +801,7 @@ sub query_form {
     <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
   </table>
-</td>
-</tr>
+</td></tr>	
 <tr>
 <td class="bottomrow"><b>Output options</b><br/>
 <table class="subform">

@@ -1,82 +1,4 @@
-/* 
-http://colorschemedesigner.com/#3-31TsOsOK-K-
-Primary Color:
-2626A1		343464		04044C		7979E7		AEAEE7
-Secondary Color A:
-E6D317		8F883F		6D6303		F9EC6D		F9F2B0
-Secondary Color B:
-E68D17		8F6D3F		6D4003		F9BD6D		F9D9B0
-*/
-body { 
-  margin: 0px;
-  padding: 0px;
-  background: #8f8f8f;
-  font-family: sans-serif;
-}
 
-div.head {
-  background: #0404CC none repeat scroll 0 0;
-  color:  #FFF;
-  line-height: 1.3em;
-  font-family: sans-serif;
-  font-size: 125%;
-  font-weight: bold;
-  margin: 0;
-  padding: 0 0 1pt 0.5em;
-  width: 100%;
-}
-
-div.superhead {
-  background: #2626A1 none repeat scroll 0 0;
-  font-style: italic;
-  color:  #FFF;
-  line-height: 1.3em;
-  font-family: sans-serif;
-  font-size: 125%;
-  font-weight: bold;
-  margin: 0;
-  padding: 0 0 1pt 0.5em;
-  width: 100%;
-}
-
-
-div.subhead { 
-  background: #7979E7  none repeat scroll 0 0;
-  border-bottom:0 none;
-  color:#FFF;
-  font-size:90%;
-/*   font-variant:small-caps; */
-/*   font-weight:bold;  */
-  height:1.3em;
-  line-height:1.5em;
-  padding:0 0 1pt 0.5em;
-  width:100%;
-}
-
-div.content { 
-  background: #fff;
-  margin-top: 1em;
-  padding: 1em 0em 1em 0em;
-  border-top: 1px solid #000;
-  border-bottom: 2px solid #000;
-  padding-left: 1em;
-}
-
-div.content { 
-  padding-top: 0em !important;
-}
-
-
-h1 { 
-  font-size: 150%;
-  padding-left: 1em;
-  margin-top: 0em;
-}
-
-h2 { 
-  font-size: 125%;
-  padding-left: 1em;
-}
 
 table.mainform { 
   background: #eee;
@@ -132,32 +54,6 @@ table.wikitable th {
   background: #fff;
 }
 
-#poweredbyicon {
-  border: 0 none;
-  float: right;
-  font-size: smaller;
-  margin-left: 5px;
-  margin-right: 0.3em;
-  margin-top: 0.3em;
-  position: relative;
-  text-align: right;
-}
-
-div.navbox {
-  border: 1px solid #aaaaaa;
-  background-color: #F9F2B0;
-  background-position: 0 0;
-  margin: 0px;
-  margin-bottom: 1em;
-  margin-right: 1em; 
-  margin-top: 1em;
-  padding: 0px;
-  text-align:center;
-/*  width:100%; */
-  font-size: 100%;
-  line-height: 1.5em;
-}
-
 td.note { 
   font-size: 90%;
 }
@@ -165,7 +61,6 @@ td.note {
 table.space { 
   border: none;
 }
-
 
 td.toprow {
   padding-bottom: .5em !important;
@@ -195,16 +90,6 @@ table.mainform td {
 input.submitButton { 
   font-weight: bold;
 }
-
-div.footer { 
-  padding: 1pt 2pt 1pt 0.5em;
-  margin: 0 0 0 0;
-  background: #eee;
-  display: table;
-  border: 1px solid black;
-  border-top: none;
-}
-
 
 .progress_cell {
 	background: #D3D3D3 none repeat scroll 0 0;
@@ -242,18 +127,9 @@ div.footer {
 	width: 100px;
 }
 
-div.subhead a { 
-  color: white;  
-  text-decoration: none;
-}
-
-div.subhead span.selectedtool a{
-  color: yellow;
-  font-weight: bold;
-}
-
 img { 
   border: none;
+  vertical-align: middle;
 }
 
 td.external { 
@@ -276,15 +152,12 @@ div.auth {
   border: 1px solid black;
   padding: 0em; 
   width: 3in;
-
   position: relative;
   top: 0px;
   left: -1px;
-
   margin: 1em;
   border-bottom: 2px solid black;
 }
-
 
 div.auth h2 { 
   background: #7979E7  none repeat scroll 0 0;
@@ -302,14 +175,20 @@ div.loginform form {
 
 div.clear { clear: both; }
 
-div.authline { 
-  width: 2.5in;
-  float: right; 
-  text-align: right;
-/*  border: 1px solid black; */
-  padding: 0.5em;
+span.authmsg { 
+  background-color: white;
+  border: 1px solid grey;
 }
 
+div.authline { 
+  width: 100%;
+  text-align: right;
+/*  border: 1px solid black; */
+  padding-right: 1em;
+  padding-bottom: 2px;
+  padding-top: 2px;
+  vertical-align: middle;
+}
 
 span.notauthenticatederror { 
   font-size: 125%;
@@ -322,26 +201,7 @@ legend {
 
 fieldset.manual { 
   width: 3in;
-  margin-bottom: 1em;
   text-align: right;
-  margin-top: 0.5em;
-}
-
-
-div.superhead a { 
-  text-decoration: none;
-  color: #fff;
-}
-
-
-div.superhead a:hover { 
-  color: yellow;
-  text-decoration: underline; 
-}
-
-div.subhead a:hover { 
-  color: yellow;
-  text-decoration: underline; 
 }
 
 a.info { position: relative; }
@@ -364,16 +224,184 @@ a.info:hover span{ /*the span will display just on :hover state*/
     text-align: center
 }
 
-
-
-
 td.note { 
   font-style: italic;
   padding-top: 6px !important;
 }
 
-
 td.spacer { 
   border-bottom: none;
   border-top: none;
+}
+
+
+/* Layout */
+
+/* 
+http://colorschemedesigner.com/#3-31TsOsOK-K-
+*/
+
+body { 
+  margin: 0em;
+  padding: 0em;
+  border: none;
+  background: white;
+  font-family: sans-serif;
+}
+
+#container {
+  width: 100%;
+  margin: 0;
+  background-color: #fff;
+  color: #333;
+  border: 1px solid gray;
+  border-left: none;
+/*  line-height: 130%; */
+}
+
+#head {
+  padding: 0;
+  margin: 0;
+  background-color: #003366;
+  line-height: 30pt;
+  width: 100%;
+  border-bottom: 1px solid gray;
+}
+
+#head h1 {
+  padding: 0; 
+  padding-left: 0.5em;
+  padding-top: 2px;
+  margin: 0;
+  color: white;
+  font-family: sans-serif;
+  font-size: 14pt;
+  font-weight: bold;
+}
+
+#subhead { 
+/*  background: #2626A1; */
+  background-color: #3c78b5;
+  padding: 0;
+  margin: 0;
+  padding-left: 0em;
+  margin: 0em;
+  line-height: 12pt;
+  clear: right;
+  text-align: right;
+ padding-right: 2em;
+  color: white;
+}
+
+#leftnav {
+  float: left;
+  width: 180px;
+  margin: 0;
+  padding: 0em;
+  background-color: #f0f0f0;
+/*  background-color: #04044C; */
+  border-right: 1px solid gray;
+  border-bottom: 1px solid gray; 
+  padding-bottom: 0.5em;
+}
+
+#content {
+  margin-left: 180px;
+  border-left: 1px solid grey;
+  padding: 1em;
+/*  max-width: 36em; */
+  background: white;
+}
+
+#footerbar { 
+  clear: both;
+  margin: 0;
+  padding: 0;
+  background: url(http://toolserver.org/~cbm/footer-grad.png) repeat-x 0 0;
+  line-height: 8px;
+}
+
+#footer {
+  clear: both;
+  margin: 0;
+  padding: .5em;
+  padding-top: 1em;
+  color: #333;
+  background-color: #ddd;
+  border-bottom: 1px solid grey;
+}
+
+#leftnav p { margin: 0 0 1em 0; }
+#content h2 { margin: 0 0 .5em 0; }
+
+
+#poweredbyicon {
+  margin-top: 0.5em;
+  float: right;
+}
+
+
+h5.menu1 { 
+  background-color: #dddddd;
+  margin: 0 0 0 0;
+  font-weight: bold;
+  border-bottom: solid 1px #3c78b5;
+  height: 1.3em;
+  padding-top: 2px;
+  padding-bottom: 2px;
+  padding-left: 0.5em;
+}
+
+h5.later {
+  margin-top: 1em;
+}
+
+ul {
+  list-style-image: url(http://toolserver.org/~cbm/bullet.gif);
+}
+
+
+#leftnav ul {
+  margin: 0 1em 0 1.5em;
+  padding: 0 0 0 0;
+}
+
+#leftnav ul li { 
+  padding-top: 2px;
+}
+
+div.navbox {
+  border: 1px solid black;
+/*  background-color: #8ABAEC; */
+/*   background-color: #CEA05E; */
+  background-color: #CAE1FF;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding: 0px;
+  text-align:center;
+  font-size: 100%;
+  line-height: 1.5em;
+}
+
+#leftnav a { 
+  text-decoration: none;
+}
+
+#leftnav a:visited { 
+  text-decoration: none;
+}
+
+#leftnav a:hover { 
+  text-decoration: underline;
+}
+
+#leftnav li.selected a { 
+  font-weight: bold;
+  color: black;
+
+}
+
+
+div.version { 
+  margin-top: 1em;
 }

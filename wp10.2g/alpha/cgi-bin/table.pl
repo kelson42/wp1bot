@@ -55,9 +55,7 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 my $proj = $param{'project'} || $ARGV[0];
 
-
-
-layout_header('Summary tables');
+layout_header('Project summary tables');
 my $projects = query_form($proj);
 
 if ( defined $proj && defined $projects->{$proj} ) {

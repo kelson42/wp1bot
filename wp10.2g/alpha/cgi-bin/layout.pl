@@ -18,6 +18,7 @@ my $table2URL = $Opts->{'table2-url'};
 my $tableURL = $Opts->{'table-url'};
 my $logURL = $Opts->{'log-url'};
 my $listURL = $Opts->{'list2-url'};
+my $manualURL = $Opts->{'manual-url'};
 my $versionURL = $Opts->{'version-url'};
 my $serverURL = $Opts->{'server-url'};
 
@@ -38,8 +39,14 @@ $api->base_url('http://en.wikipedia.org/w/api.php');
 
 ##################################################
 
+
 sub layout_header {
-  my $subtitle = shift;
+  my $title = shift;
+  my $subhead = shift || '&nbsp;';
+  my $longtitle = shift;
+
+  my $realtitle = $title;
+  if ( defined $longtitle) { $realtitle = $longtitle; }
 
   my $stylesheet = $Opts->{'wp10.css'}
     or die "Must specify configuration value for 'wp10.css'\n";
@@ -53,7 +60,7 @@ sub layout_header {
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
 <head>
   <base href="http://en.wikipedia.org">
-  <title>$subtitle - $App</title>
+  <title>$title - $App</title>
   <style type="text/css" media="screen">
      \@import "$stylesheet";
   </style>
@@ -61,58 +68,96 @@ sub layout_header {
 <script type="text/javascript"  src="http://toolserver.org/~cbm/foo.js"></script>
 </head>
 <body>
-<div class="head">
-<a href="http://toolserver.org">
-  <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" 
-       src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
-</a>	
-$App
+
+<div id="container">
+  <div id="head">
+    <a href="http://toolserver.org">
+      <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver"
+         src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
+    </a>
+  <h1>$App</h1>
+  </div>
+
+  <div id="subhead">
+  $subhead
+  </div>
+
 </div>
-<div class="subhead">
 HERE
 
-print "<!-- '$subtitle' -->\n";
+  layout_leftnav($title);
 
-if ( $subtitle eq "Project index" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$indexURL\">" 
-      . "Project index</a></span> &middot; \n";
-} else {
-  print "<a href=\"$indexURL\">Project index</a> &middot; \n";
-}
-
-if ( $subtitle eq "Overall summary table" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$table2URL\">" 
-      . "Overall summary table</a></span> &middot; \n";
-} else {
-  print "<a href=\"$table2URL\">Overall summary table</a> &middot; \n";
-}
-
-if ( $subtitle eq "Summary tables" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$tableURL\">" 
-      . "Project summary tables</a></span> &middot; \n";
-} else {
-  print "<a href=\"$tableURL\">Project summary tables</a> &middot; \n";
-}
-
-if ( $subtitle eq "Article lists" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$listURL\">" 
-      . "Article lists</a></span> &middot; \n";
-} else {
-  print "<a href=\"$listURL\">Article lists</a> &middot; \n";
-}
-
-if ( $subtitle eq "Assessment logs" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$logURL\">" 
-      . "Assessment logs</a></span> \n";
-} else {
-  print "<a href=\"$logURL\">Assessment logs</a> \n";
-}
-
-print << "HERE";
+  print << "HERE";
 </div>
-
-<div class="content">
+<div id="content">
+<h2>$realtitle</h2>
 HERE
+
+}
+
+#######################################################################
+
+sub layout_leftnav { 
+  my $title = shift;
+
+  my @AssessmentData = (
+     "Project index" =>          $indexURL,
+     "Overall summary table" =>  $table2URL,
+     "Project summary tables" => $tableURL,
+     "Article lists" =>          $listURL,
+     "Assessment logs" =>        $logURL
+    );
+
+
+  my @ManualSelection = (
+     "List manual selection" => $manualURL . "mode=list",
+     "Add articles" =>          $manualURL . "mode=add",
+     "Changelog" =>             $manualURL . "mode=logs",
+     "Log in" =>                $manualURL . "mode=login"
+    );
+
+  print << "HERE";
+<div id="leftnav">
+<h5 class="menu1 menu1start">Assessment data</h5>
+HERE
+
+  nav_list($title, \@AssessmentData);
+
+
+  print << "HERE";
+<h5 class="menu1 later">Manual selection</h5>
+HERE
+
+  nav_list($title, \@ManualSelection);
+
+
+}
+#######################################################################
+
+
+sub nav_list { 
+  my $title = shift;
+  my $items = shift;
+
+  print "<ul>\n";
+
+  my ($i, $j, $selected);
+  $i = 0;
+  while ( $i < scalar @{$items} ) { 
+    $j = $i + 1;
+    $selected = "";
+    if ( $title eq $items->[$i] ) { 
+      $selected = "selected";
+    }
+
+    print "<li class=\"$selected\">" 
+          . "<a href=\"" . $items->[$j] . "\">"
+         . $items->[$i] . "</a></li>\n";
+
+    $i += 2;
+  }
+
+  print "</ul>\n";
 
 }
 
@@ -127,13 +172,17 @@ my $discussionPage = $Opts->{'discussion-page'}
 
 print << "HERE";
 </div>
-<div class="footer">
+<div id="footerbar">&nbsp;</div>
+
+<div id="footer">
 This is an <b>alpha</b> version of the second generation WP 1.0 
 bot.<br/>
 Please comment or file bug reports at the 
 <a href="$discussionPage">discussion page</a>.
-<hr/>
-Current version: $Version<br/>
+<br/>
+<div class="version">
+Current version: $Version
+</div>
 HERE
 
 # system "ssh", "login.toolserver.org", "/home/cbm/wp10.2g/alpha/revinfo.pl";

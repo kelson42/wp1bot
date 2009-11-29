@@ -55,7 +55,7 @@ if ( $authenticated == 1) {
   $authline = << "HERE";
 <div class="authline loggedin">
 <img src="http://upload.wikimedia.org/wikipedia/commons/4/4d/Lock-open.png">
-You are logged in as <b>$user</b>.
+You are logged in as <b>$user</b>
 </div>
 HERE
 
@@ -70,7 +70,7 @@ HERE
   $authline = << "HERE";
 <div class="authline notloggedin">
 <img src="http://upload.wikimedia.org/wikipedia/commons/1/1b/Lock-closed.png"> 
-You are not logged in.
+You are not logged in
 </div>
 HERE
 
@@ -84,39 +84,32 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8', -cookie=>[$logincookiep
 
 my $mode = $param{'mode'};
 
+
 if ( $mode eq 'add' ) {
-  layout_header_manual("Add articles");
-  print($authline);
+  layout_header("Add articles", $authline, "Add articles to the manual selection");
   do_add();
 } elsif ( $mode eq 'processadd' ) {
-  layout_header_manual("Add articles");
-  print($authline);
   process_add();
 } elsif ( $mode eq 'processremoves' ) {
-  layout_header_manual("List manual selection");
-  print($authline);
+  layout_header("Remove articles", $authline, "Remove articles from the manual selection");
   process_removes();
 } elsif ( $mode eq 'logs' ) { 
-  layout_header_manual("Changelog");
-  print($authline);
+  layout_header("Changelog", $authline, "Manual selection changelog");
   do_log();
 } elsif ( $mode eq 'login' ) { 
-  layout_header_manual("Log in");
-  print($authline);
+  layout_header("Log in", $authline);
   auth_form_manual();
 } elsif ( $mode eq 'processlogin' ) { 
-  layout_header_manual("Log in");
-  print($authline);
+  layout_header("Log in", $authline);
   processlogin();
 } else { 
-  layout_header_manual("List manual selection");
-  print($authline);
+  layout_header("List manual selection", $authline);
   do_list();
 }
 
 layout_footer();
-exit;
 
+exit;
 
 ############################################################################
 
@@ -279,8 +272,6 @@ print "</table>";
 sub do_add {
 
   my $show_login = shift;
-
-  print "<h2>Add articles to the manual selection</h2><br/>\n";
 
   print << "HERE";
     <form action="$url">
@@ -497,7 +488,6 @@ HERE
 
   $dbh  = db_connect($Opts);
 
-
   my @params;
   
   my $query = "select * from manualselectionlog";
@@ -526,7 +516,21 @@ HERE
 
   my $sth = $dbh->prepare($query);
 
-  $sth->execute(@params);
+  my $r = $sth->execute(@params);
+
+  my $message;
+  if ( $r eq "0E0" ) { 
+    $message = "No more log entries to display";
+  } else { 
+    my $initial = $offset + 1;
+    $message = "showing $r log entries starting with #$initial"
+  }
+
+print << "HERE";
+<div class="results navbox">
+<b>Changelog:</b> $message.
+</div>
+HERE
 
   print << "HERE";
   <center>
@@ -565,7 +569,6 @@ print << "HERE";
 </center>
 HERE
 
-
 my $poffset = $offset - $pagesize;
 
 if ( $poffset < 0) { $poffset = 0 };
@@ -579,11 +582,12 @@ HERE
 
 }
 
-print << "HERE";
+if ( $r eq $pagesize) { 
+  print << "HERE";
   <a href="$url?mode=logs&offset=$noffset&farticle=$artenc&fuser=$userenc">Next $pagesize &rarr;</a>
 </div>
 HERE
-
+}
 
 }
 
@@ -621,90 +625,11 @@ sub check_auth {
 
 ##################################################################
 
-sub layout_header_manual {
-  my $subtitle = shift;
-
-  $App = "Manual selection maintenance";
-  my $App2 = "Wikipedia Release Version Data";
-
-  my $stylesheet = $Opts->{'wp10.css'}
-    or die "Must specify configuration value for 'wp10.css'\n";
-
-  my $usableforms = $Opts->{'usableforms.js'}
-    or die "Must specify configuration value for 'usableforms.js'\n";
-  
-  print << "HERE";
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
-          "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
-<head>
-  <base href="http://en.wikipedia.org">
-  <title>$subtitle - $App</title>
-  <style type="text/css" media="screen">
-     \@import "$stylesheet";
-  </style>
-<script type="text/javascript"  src="$usableforms"></script>
-<script type="text/javascript"  src="http://toolserver.org/~cbm/foo.js"></script>
-</head>
-<body>
-<div class="superhead">
-<a href="http://toolserver.org">
-  <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver" 
-       src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
-</a>    
-<a href="index.html">$App2</a>
-</div>
-<div class="head">
-$App 
-</div>
-<div class="subhead">
-HERE
-print "<!-- '$subtitle' -->\n";
-
-if ( $subtitle eq "List manual selection" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$url?mode=list\">" 
-      . "List manual selection</a></span> &middot; \n";
-} else {
-  print "<a href=\"$url?mode=list\">List manual selection</a> &middot; \n";
-}
-
-if ( $subtitle eq "Add articles" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$url?mode=add\">" 
-      . "Add articles</a></span> &middot; \n";
-} else {
-  print "<a href=\"$url?mode=add\">Add articles</a> &middot; \n";
-}
-
-if ( $subtitle eq "Changelog" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$url?mode=logs\">" 
-      . "Changelog</a></span> &middot; \n";
-} else {
-  print "<a href=\"$url?mode=logs\">Changelog</a> &middot; \n";
-}
-
-
-if ( $subtitle eq "Log in" ) { 
-  print "<span class=\"selectedtool\"><a href=\"$url?mode=login\">" 
-      . "Log in</a></span> \n";
-} else {
-  print "<a href=\"$url?mode=login\">Log in</a> \n";
-}
-
-print << "HERE";
-</div>
-
-<div class="content content-manual">
-HERE
-
-}
-
-##################################################################
-
 sub auth_form_manual { 
   print << "HERE";
   <form action="$url" method="post"><br/>
   <fieldset class="manual">
-  <legend>Log in</legend>
+  <legend>Manual selection login</legend>
   <input type="hidden" name="mode" value="processlogin">
   User:&nbsp;<input type="text" name="user" value="$user"><br/>
   Password:&nbsp;<input type="password" name="pass" value="$value"><br/>
