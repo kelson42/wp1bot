@@ -23,6 +23,8 @@ require CGI;
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
 
+use Date::Parse 'strptime';
+
 require DBI;
 require POSIX;
 POSIX->import('strftime');
@@ -94,12 +96,8 @@ sub log_table {
    $newerthan = $params->{'newerthan'} || "";
    $olderthan = $params->{'olderthan'} || "";
 
-   $newerthan =~ s/\s//g;
-   $newerthan =~ s/[:-]//;
-
-   $olderthan=~ s/\s//g;
-   $olderthan=~ s/[:-]//g;
-
+   my $olderthandate =   format_date($olderthan);
+   my $newerthandate =   format_date($newerthan);
   
    if ( $offset > 0) { $offset--; }
    if ( $limit > 1000 ) { $limit = 1000; } 
@@ -127,8 +125,6 @@ sub log_table {
  FROM logging
 HERE
 	  
-
-
    $query .= " WHERE ";
    $queryc .= " WHERE ";
   
@@ -148,18 +144,18 @@ HERE
      }
    }
   
-   if ( $olderthan =~ /\w|\d/ ) {
+   if ( $olderthandate =~ /\w|\d/ ) {
      $query .=  " AND l_revision_timestamp <= ?";
      $queryc .= " AND l_revision_timestamp <= ?";
-     push @qparam, $olderthan;
-     push @qparamc, $olderthan;
+     push @qparam, $olderthandate;
+     push @qparamc, $olderthandate;
    }
 
-   if ( $newerthan =~ /\w|\d/ ) {
+   if ( $newerthandate =~ /\w|\d/ ) {
      $query .=  " AND l_revision_timestamp >= ?";
      $queryc .= " AND l_revision_timestamp >= ?";
-     push @qparam, $newerthan;
-     push @qparamc, $newerthan;
+     push @qparam, $newerthandate;
+     push @qparamc, $newerthandate;
    }
 
    if ( $oldrating =~ /\w|\d/) {
@@ -226,22 +222,54 @@ HERE
    $queryc =~ s/WHERE\s*$//;
 
 #   print "<pre>Q:\n$queryc</pre>\n";
-#   @params = @qparamc;
-#   print join "<br/>", map { $_ = "'" . $_ . "'" } @params;
+#   my @lparam = @qparamc;
+#   print join "<br/>", map { $_ = "'" . $_ . "'" } @lparam;
 
   my $sthcount = $dbh->prepare($queryc);
-  $sthcount->execute(@qparamc);
+  my $res = $sthcount->execute(@qparamc);
   	
+#  print "<br/>Res: $res <br/>\n";
+
   my @row = $sthcount->fetchrow_array() ;
+#  print join "<br/>", map { $_ = "'" . $_ . "'" } @row;
+#  print "<br/>--<br/>\n";
+
   my $total = $row[0];
   
   print "<div class=\"navbox\">\n";
   print_header_text($project);
 
-  print "<br/><b>Total results:&nbsp;" . $total 
-        . "</b>. Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "\n";
+  my ($displaystartdate, $displayenddate);
+
+  if ( $newerthandate eq "" ) { 
+    $displaystartdate = "beginning of project";
+  } else { 
+    $displaystartdate = $newerthandate;
+    $displaystartdate =~ s/T/ /g;    
+    $displaystartdate =~ s/Z//g;
+    $displaystartdate = "<i>$displaystartdate</i>";
+  }
+
+  if ( $olderthandate eq "" ) { 
+    $displayenddate = "present";
+  } else { 
+    $displayenddate = $olderthandate;
+    $displayenddate =~ s/T/ /g;
+    $displayenddate =~ s/Z//g;
+    $displayenddate = "<i>$displayenddate</i>";
+  }
+
+  print "&nbsp;&nbsp;<b>Total results:&nbsp;" . $total 
+        . "</b><br/> Displaying up to $limit results beginning with #" 
+        . ($offset +1) . "<br/>\n"
+        . "Displaying results from $displaystartdate to $displayenddate.\n";
+   
   print "</div>\n";
+
+
+#  print "RQ: '$query'<br/>\n";
+#  my @lparam = @qparam;
+#  print join "<br/>", map { $_ = "'" . $_ . "'" } @lparam;
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
@@ -348,8 +376,6 @@ print "</tr>\n";
 		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
 	}
 	print "\n";	
-
-   print "<hr/>\n";
 
    get_previous_name($params->{'ns'}, $params->{'pagename'});
 	
@@ -512,5 +538,24 @@ HERE
 
  return;
 }
+
+###########################################################
+
+sub format_date {
+  my $date = shift;
+
+  if ( $date eq "" ) { return ""};
+
+  my @dateparts = strptime($date);
+
+  return sprintf("%4d-%02d-%02dT%02d:%02d:%02dZ",
+                 1900 + $dateparts[5],
+                 1 + ($dateparts[4] || 0) ,
+                 $dateparts[3] || 1,
+                 $dateparts[2] || 0,
+                 $dateparts[1] || 0,
+                 $dateparts[0] || 0 );
+}
+
 
 1;
