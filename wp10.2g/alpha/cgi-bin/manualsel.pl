@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-my $url = "http://localhost/~veblen/cgi-bin/wp10.2g/cgi-bin/manualsel.pl";
 my $App = "Manual selection maintenance";
 
 # manualsel.pl
@@ -21,6 +20,9 @@ my $pagesize = 5;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
+
+my $url = $Opts->{"manual-url"} || die "Manual-url must be specified\n";
+$url =~ s/\?$//;
 
 require 'layout.pl';
 
@@ -89,6 +91,7 @@ if ( $mode eq 'add' ) {
   layout_header("Add articles", $authline, "Add articles to the manual selection");
   do_add();
 } elsif ( $mode eq 'processadd' ) {
+  layout_header("Processing added articles", $authline);
   process_add();
 } elsif ( $mode eq 'processremoves' ) {
   layout_header("Remove articles", $authline, "Remove articles from the manual selection");
@@ -126,7 +129,6 @@ sub processlogin {
 ############################################################################
 
 sub process_add {
-  print "<h2>Processing added articles</h2><br/>\n";
 
   if ( $authenticated != 1 ) { 
     print << "HERE";
@@ -203,8 +205,6 @@ HERE
 ############################################################################
 
 sub process_removes {
-  print "<h2>Processing removed articles</h2><br/>\n";
-
   if ( $authenticated != 1) { 
     print << "HERE";
     <span class="notauthenticatederror">Error: You must log in to perform this action.</span>
@@ -233,13 +233,13 @@ HERE
 
   my ($p, $art, $reason, $r1, $r2);
   foreach $p ( keys %param ) {
-    print $p . " &rarr; ".  $param{$p} . "<br/>";
+#    print $p . " &rarr; ".  $param{$p} . "<br/>";
 
     next unless ( $p =~ /^key:(.*)$/);
     $art = uri_unescape($1);
     $reason = $param{"reason:$1"};
 
-    print "SEE: " . $art . " &rarr; ".  $reason . "<br/>";
+ #   print "SEE: " . $art . " &rarr; ".  $reason . "<br/>";
 
     my $error = "OK";
 
@@ -274,7 +274,7 @@ sub do_add {
   my $show_login = shift;
 
   print << "HERE";
-    <form action="$url">
+    <form action="$url" method="post">
       <input type="hidden" name="user" value="$user">
       <input type="hidden" name="pass" value="$pass">
       <input type="hidden" name="mode" value="processadd">
@@ -387,7 +387,7 @@ print << "HERE";
 HERE
 
 if ( $count > 0 ) { 
-  print "Showing $count results starting with #$offset<br/>";
+  print "Showing $count results starting with #" . ($offset + 1) . "<br/>";
 } else { 
   print "No more results<br/>\n";
 }
