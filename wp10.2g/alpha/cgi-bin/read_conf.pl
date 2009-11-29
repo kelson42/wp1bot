@@ -4,72 +4,91 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+Routines to parse configuration variables from a settings file
+
+=over
+
+=cut
+
 use strict;
 use Data::Dumper;
 
 my $Settings = read_conf();
 
-sub read_conf { 
-	my $filename;
-	my $settings;
-	my $homedir = (getpwuid($<))[7];
 
- $homedir = "/home/veblen";
+#####################################################################
+
+=item B<read_conf>()
+
+Read the configuration file from F<~/.wp10.conf>.
+Return a hash references with all the settings.
+Set up the include path from the I<lib> setting. 
+
+=cut
+
+sub read_conf { 
+  my $filename;
+  my $settings;
+  my $homedir = (getpwuid($<))[7];
 	
-	if ( defined $ENV{'WP10_CREDENTIALS'} ) {
-		$filename = $ENV{'WP10_CREDENTIALS'};
-	} else { 
-		$filename = $homedir . "/.wp10.conf";
-	}
-	
-	die "Can't open configuration file '$filename'\n"
+  if ( defined $ENV{'WP10_CREDENTIALS'} ) {
+    $filename = $ENV{'WP10_CREDENTIALS'};
+  } else { 
+    $filename = $homedir . "/.wp10.conf";
+  }
+
+  die "Can't open configuration file '$filename'\n"
     unless -r $filename;
-	
-	#print "Reading configuration file '$filename'\n";
-	
-	open CONF, "<", $filename 
+		
+  open CONF, "<", $filename 
     or die "Can't open configuration file '$filename': $!\n";
 	
-	my $text = "";
-	my $line;
+  my $text = "";
+  my $line;
 	
-	while ( $line = <CONF> ) {
-		$text .= $line;
-	}
-	close CONF;
+  while ( $line = <CONF> ) {
+    $text .= $line;
+  }
+  close CONF;
 	
-	$settings = eval '{ ' . $text . ' }';
+  $settings = eval '{ ' . $text . ' }';
 	
-	if ( $@ ) { 
-		die "\nError parsing configuration file '$filename':\n  $@\n";
-	}
-	
-	
-	foreach $line ( @{$settings->{'lib'}} ) {
-		push @INC, $line;
-	}
+  if ( $@ ) { 
+    die "\nError parsing configuration file '$filename':\n  $@\n";
+  }
 	
 	
-	local $Data::Dumper::Terse = 1;
-	local $Data::Dumper::Sortkeys = 1;
-	#print "Configuration settings: \n";
-	#print Dumper($settings);
+  foreach $line ( @{$settings->{'lib'}} ) {
+    push @INC, $line;
+  }	
+
+  local $Data::Dumper::Terse = 1;
+  local $Data::Dumper::Sortkeys = 1;
+  #print "Configuration settings: \n";
+  #print Dumper($settings);
 	
-	#print "Include path (\@INC):\n\t";
-	#print (join "\n\t", @INC) . "\n";
-	
-	
-	
-	return $settings;
-	
+  #print "Include path (\@INC):\n\t";
+  #print (join "\n\t", @INC) . "\n";
+
+  return $settings;	
 }
+
+###########################################################################
+
+#####################################################################
+
+=item B<get_conf>(KEY)
+
+Return the configuration value with key I<key>.
+
+=cut
 
 sub get_conf { 
-	my $var = shift;
-	return $Settings->{$var};
+  my $var = shift;
+  return $Settings->{$var};
 }
-
-
 
 # Load successfully
 1;
