@@ -148,7 +148,7 @@ sub download_project {
       };
 
   if ($@) {
-    print "Transaction aborted: $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
+    print "Transaction aborted (updateng '$project'): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
 
@@ -524,7 +524,7 @@ sub download_review_data {
   };
 
   if ($@) {
-    print "Transaction aborted: $@";
+    print "Transaction aborted (getting review data): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
 }
@@ -606,7 +606,7 @@ sub download_release_data {
   };
 
   if ($@) {
-    print "Transaction aborted: $@";
+    print "Transaction aborted (getting release data): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
 }

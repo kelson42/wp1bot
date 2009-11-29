@@ -361,7 +361,7 @@ create table if not exists passwd (
 
   pw_password binary(32) not null,
 
-  primary key (c_user)
+  primary key (pw_user)
 
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;

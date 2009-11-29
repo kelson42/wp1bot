@@ -144,15 +144,14 @@ sub update_article_moved {
   $sth = $dbh->prepare("SELECT count(*) FROM moves       
                                 WHERE m_timestamp = ? 
                                   AND m_old_namespace = ?
-                                  AND m_old_article = ?
-                                  AND m_new_namespace = ?
-                                  AND m_new_article = ?");
+                                  AND m_old_article = ?");
   
-  $sth->execute($rev_timestamp, $old_ns, $old_art, $new_ns, $new_art);
+  $sth->execute($rev_timestamp, $old_ns, $old_art);
   @row = $sth->fetchrow_array();
   $r = $row[0];
 
   if ( '0' eq $r ) { 
+    print "MOVES says '$r'\n";
     $sth = $dbh->prepare("INSERT INTO moves " . 
 				 "values (?,?,?,?,?)");
 
