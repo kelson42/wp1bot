@@ -35,32 +35,40 @@ sub cache_set {
 
   my $timestamp += time() + $expiry;
 
-  my $sth = $dbh->prepare("UPDATE INTO cache 
+  my $sth = $dbh->prepare("UPDATE cache 
                         SET c_expiry = ?, c_content = ? 
                         WHERE c_key = ?");
+
+# print "<!--\n";
+# print "UPDATE\n";
+# print "KEY: '$key'\n";
+# print "EXPIRY: '$expiry'\n";
+# print "-->\n";
 
   my $r = $sth->execute($timestamp, $content, $key);
 
   if ( $r eq '' ) { 
+#   print "<!--\n";
+#   print "INSERT\n";
+#   print "KEY: '$key'\n";
+#   print "EXPIRY: '$expiry'\n";
+#   print "-->\n";
+
     $sth = $dbh->prepare("INSERT INTO cache VALUES (?,?,?)");
     $r = $sth->execute($key, $timestamp, $content);
   }
 
-
-  print "<!-- CACHE INSERT. Result: '$r' -->\n";
-
+#  print "<!-- CACHE INSERT. Result: '$r' -->\n";
 }
 
 
 ###########################################################
-
 
 =item B<cache_purge>()
 
 Purge outdated entries from cache.
 
 =cut
-
 
 sub cache_purge { 
 
@@ -69,7 +77,7 @@ sub cache_purge {
   my $sth = $dbh->prepare("DELETE FROM cache WHERE c_expiry < ?");
   my $r = $sth->execute($timestamp);
 
-  print "<!-- PURGE CACHE. Clear $r entries older than $timestamp -->\n";
+#  print "<!-- PURGE CACHE. Clear $r entries older than $timestamp -->\n";
 }
 
 ###########################################################
@@ -85,7 +93,7 @@ sub cache_exists  {
 
   cache_purge();
 
-  print "<!-- CACHE EXPIRES: key:'$key' -->\n";
+#  print "<!-- CACHE EXPIRES: key:'$key' -->\n";
 
   my $sth = $dbh->prepare("SELECT c_expiry FROM cache WHERE c_key = ?");
   my $r = $sth->execute($key);
@@ -95,6 +103,7 @@ sub cache_exists  {
   my @row = $sth->fetchrow_array();
   return $row[0];
 }
+
 ###########################################################
 
 =item B<cache_get>(KEY)
@@ -111,7 +120,7 @@ sub cache_get  {
   my $sth = $dbh->prepare("SELECT c_content FROM cache WHERE c_key = ?");
   my $r = $sth->execute($key);
 
-  print "<!-- CACHE GET: key:'$key' -->\n";
+#  print "<!-- CACHE GET: key:'$key' -->\n";
 
   if ( $r = 0 ) { return undef; } 
 
