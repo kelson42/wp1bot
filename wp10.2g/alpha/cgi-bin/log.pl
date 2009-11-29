@@ -316,8 +316,8 @@ HERE
       }
 
       print "    <td>" . make_article_link($row[7], $row[1]) . "</td>\n";
-      print "    <td>" . make_history_link($row[7], $row[1],$row[6],"l") 
-          . "</td>\n";
+      print "    <td>" . make_history_link($row[7], $row[1], $row[6],"l",1) 
+            . "</td>\n";
 
      my ($dest_ns, $dest_art) = db_get_move_target($row[7], $row[1], $row[6]);
 #XXXXXXXXXXXXX
@@ -338,7 +338,7 @@ print "</tr>\n";
 
 #     print "    <td>" . $row[3] . "</td>\n";
       print "    <td>" . make_article_link($row[7], $row[1]) . "</td>\n";
-      print "    <td>" . make_history_link($row[7], $row[1],$row[6],"l") 
+      print "    <td>" . make_history_link($row[7], $row[1],$row[6],"l",1) 
           . "</td>\n";
       print "    <td>" . $row[2] . "</td>\n";
       print "    " . get_cached_td_background($row[4]) . "\n";

@@ -302,6 +302,7 @@ sub make_history_link {
   my $title = shift;
   my $ts = shift;
   my $long = shift || "";
+  my $talktoo = shift || "";
 
   my $d = $ts;
 
@@ -314,8 +315,19 @@ sub make_history_link {
     $d =~ s/T.*//;
   }
 
-  return "<a href=\"" . $versionURL . "article=" . uri_escape($art)
+  my $result = 
+       "<a href=\"" . $versionURL . "article=" . uri_escape($art)
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
+
+  if ( $talktoo ) { 
+    my $talk = make_talk_name($ns, $title);
+    $result .=
+       "(<a href=\"" . $versionURL . "article=" . uri_escape($talk)
+       . "&timestamp=" . uri_escape($ts) . "\">t</a>)&nbsp;";
+  }
+
+  return $result;
+
 }
 
 ###########################################################################

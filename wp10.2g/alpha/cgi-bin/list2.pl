@@ -72,7 +72,7 @@ my $projects = list_projects($dbh);
 query_form(\%param, $projects);
 
 
-if ( defined $param{'run'} ) { 
+if ( defined $param{'run'} || defined $ARGV[0]) { 
   ratings_table(\%param, $projects);
 }
 
@@ -242,7 +242,7 @@ HERE
 
   $queryc =~ s/WHERE\s*$//;
 
- print "<pre>Q:\n$query</pre>\n";
+# print "<pre>QQ:\n$query</pre>\n";
 # print join "<br/>", @qparam;
 
 #  print "QC: $queryc<br/>\n";
@@ -337,9 +337,11 @@ HERE
 
     print "    <td>" . make_article_link($row[1], $row[2]) . "</td>\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
-    print "    <td>" . make_history_link($row[1],$row[2],$row[4]) . "</td>\n";
+    print "    <td>" . make_history_link($row[1],$row[2],$row[4],0,1) 
+                     . "</td>\n";
     print "    " . get_cached_td_background($row[5]) . "\n";
-    print "    <td>" . make_history_link($row[1],$row[2],$row[6]) . "</td>";
+    print "    <td>" . make_history_link($row[1],$row[2],$row[6],0,1) 
+                     . "</td>";
 
 
     if ( defined $row[8] ) { 
@@ -563,7 +565,7 @@ HERE
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-#  print "<pre>Q: $query</pre><br/>\n";
+#  print "<pre>QQ: $query</pre><br/>\n";
 #  print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
