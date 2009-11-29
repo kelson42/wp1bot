@@ -44,16 +44,15 @@ my $table = sort_projects($projects);
 
 my $project_count = scalar keys %$projects;
 
-# Fix this
-my $uri = "http://toolserver.org/~cbm//cgi-bin/wp10.2g/alpha/cgi-bin";
+my $table2url = $Opts->{'table2-url'};
 
 print "<div class=\"navbox\">\n";
 print "Index of <b>$project_count</b> projects \n";
-print " (<a href=\"$uri/table2.pl\">Overall ratings table</a>)<hr/>\n"; 
+print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n"; 
 
 my $letter;
 foreach $letter ( sort {$a cmp $b} keys %$table ) {
-  print "<a href=\"$uri/index.pl#" . $letter . "\">$letter</a> ";
+  print "<a href=\"" . $Opts->{'index-url'}  . "#" . $letter . "\">$letter</a> ";
 }
 print "</div>\n";
 
