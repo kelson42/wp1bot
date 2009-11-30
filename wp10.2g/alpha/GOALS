@@ -2,6 +2,21 @@ Goals to finish before promoting to beta version:
 
 * Clean up all code, move hardcoded strings to conf file
 
-* Add filters by score and release version to list2.pl
+* Add filters by review status and release version to list2.pl
 
-* Fix layout.pl header code so that it can create headers for all cgi programs
+* Rewrite all input forms to use fieldsets and not tables
+
+* Write FAQ page on wiki, and add headers to CGI programs that link 
+  to it
+
+* Expand the information produced by table.pl to make it into a 
+  "project homepage". 
+
+-----
+Goals to finish before promoting the beta version to production:
+
+* Rewrite release tracking system to permit additional releases
+
+* Implement queued request system for project updates
+
+* Set up shared project on toolserver. Set up JIRA for this. 
