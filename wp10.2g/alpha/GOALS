@@ -6,8 +6,7 @@ Goals to finish before promoting to beta version:
 
 * Rewrite all input forms to use fieldsets and not tables
 
-* Write FAQ page on wiki, and add headers to CGI programs that link 
-  to it
+* Write FAQ page on wiki, and add headers to CGI programs that link to it
 
 * Expand the information produced by table.pl to make it into a 
   "project homepage". 

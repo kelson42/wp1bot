@@ -20,7 +20,7 @@ my $c = 0;
 my $d = 0;
 
 open IN, "<", $ARGV[0];
-print "Mathematics: ";
+print "$ARGV[0]: ";
 select STDOUT; 
 $| = 1;
 while ( $line = <IN> ) { 
