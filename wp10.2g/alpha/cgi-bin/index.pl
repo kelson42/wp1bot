@@ -4,12 +4,15 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+CGI to display index of all projects
+
+=cut
+
 use strict;
 use Encode;
 use URI::Escape;
-
-# WP 1.0 bot - second generation
-# CGI to display table of ratings information
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -29,7 +32,6 @@ CGI::Carp->import('fatalsToBrowser');
 
 require POSIX;
 POSIX->import('strftime');
-
 
 my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
@@ -52,7 +54,8 @@ print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n";
 
 my $letter;
 foreach $letter ( sort {$a cmp $b} keys %$table ) {
-  print "<a href=\"" . $Opts->{'index-url'}  . "#" . $letter . "\">$letter</a> ";
+  print   "<a href=\"" . $Opts->{'index-url'}  . "#" 
+        . $letter . "\">$letter</a> ";
 }
 print "</div>\n";
 
@@ -97,7 +100,6 @@ sub project_index_link {
   my $catp = "/wiki/Category:" . uri_escape($project)
              . " articles by quality";
   
-
   my $name = $project;
   if ( defined $data->{'p_shortname'} ) { 
     $name = $data->{'p_shortname'};
@@ -109,8 +111,8 @@ sub project_index_link {
   }
 
   my $line =  "<tr><td><b>$name</b></td>"
-            . "<td style=\"text-align: right;\">" . 
-               commify($data->{'p_count'}) . "</td>" 
+            . "<td style=\"text-align: right;\">"  
+            . commify($data->{'p_count'}) . "</td>" 
             . "<td>&nbsp;<a href=\"$tablep\">table</a>, "
             . "<a href=\"$listp\">list</a>, "
             . "<a href=\"$logp\">log</a>, "
@@ -167,6 +169,9 @@ sub sort_projects {
     if ( defined $projects->{$p}->{'p_shortname'} ) { 
       $name = $projects->{$p}->{'p_shortname'};
     }
+
+    # The following gets the first character of $name,
+    # which may be a multibyte character in utf8
     $letter = substr(decode("utf8", $name), 0, 1) ;
     $letter = encode("utf8", $letter);
 
@@ -183,18 +188,18 @@ sub sort_projects {
     }
 
     $table->{$letter}->{$p} =  $projects->{$p};
-
   }
 
   return $table;
-
 }
 
 #####################################################################
+
 sub commify {
 	# commify a number. Perl Cookbook, 2.17, p. 64
 	my $text = reverse $_[0];
 	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
 	return scalar reverse $text;
 }
+
 #####################################################################

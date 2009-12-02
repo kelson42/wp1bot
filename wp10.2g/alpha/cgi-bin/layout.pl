@@ -4,6 +4,12 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+Routines for the CGI programs re page layout and link formatting
+
+=cut
+
 use strict;
 
 our $Opts;
@@ -39,6 +45,27 @@ $api->base_url('http://en.wikipedia.org/w/api.php');
 
 ##################################################
 
+=item B<layout_header>(TITLE, SUBHEAD, LONGTITLE)
+
+Print to STDOUT the top part of the page HTML 
+
+=over
+
+=item TITLE 
+
+the title of the program running. 
+
+=item SUBHEAD 
+
+HTML for the second bar (light blue) on the page
+
+=item LONGTITLE 
+
+A longer form of the title to display as a headline
+
+=back
+
+=cut
 
 sub layout_header {
   my $title = shift;
@@ -96,6 +123,7 @@ HERE
 }
 
 #######################################################################
+# Internal: write the left-side navbox for layout_header
 
 sub layout_leftnav { 
   my $title = shift;
@@ -134,6 +162,7 @@ HERE
 }
 #######################################################################
 
+# internal: format a navigation list in the navbox
 
 sub nav_list { 
   my $title = shift;
@@ -163,14 +192,18 @@ sub nav_list {
 
 #######################################################################
 
+=item B<layout_header>(TITLE, SUBHEAD, LONGTITLE)
+
+Print to STDOUT bottom top part of the page HTML 
+
+=cut
+
 sub layout_footer {
+  my $version = $Opts->{'version'};
+  my $discussionPage = $Opts->{'discussion-page'} 
+     || die "Must specify discussion-page in configuration file\n";
 
-my $version = $Opts->{'version'};
-
-my $discussionPage = $Opts->{'discussion-page'} 
-   || die "Must specify discussion-page in configuration file\n";
-
-print << "HERE";
+  print << "HERE";
 </div>
 <div id="footerbar">&nbsp;</div>
 
@@ -187,7 +220,7 @@ HERE
 
 # system "ssh", "login.toolserver.org", "/home/cbm/wp10.2g/alpha/revinfo.pl";
 
-print << "HERE";
+  print << "HERE";
 </div>
 </body>
 </html>
@@ -237,12 +270,25 @@ sub round {
 
 #######################################################################
 
+=item B<make_table_link>(PROJECT)
+
+Make the URL to link to the project table for PROJECT
+
+=cut
+
 sub make_table_link {
   my $project = shift;
   return $tableURL . "project=" . uri_escape($project);
 }
 
 #######################################################################
+
+=item B<make_list_link>(ARGS)
+
+Make the URL to link to the article list. ARGS is a hash
+of KEY => VALUE pairs to be sent as arguments the list program
+
+=cut
 
 sub make_list_link { 
   my $opts = shift;
@@ -258,6 +304,13 @@ sub make_list_link {
 
 #######################################################################
 
+=item B<make_log_link>(ARGS)
+
+Make the URL to link to the article list. ARGS is a hash
+of KEY => VALUE pairs to be sent as arguments the list program
+
+=cut
+
 sub make_log_link { 
   my $opts = shift;
   my @encoded;
@@ -271,6 +324,12 @@ sub make_log_link {
 }
 
 #######################################################################
+
+=item B<make_article_link>(NS, PAGE)
+
+Make HTML for links to wiki pages about NS:PAGE
+
+=cut
 
 sub make_article_link {
 
@@ -294,8 +353,26 @@ sub make_article_link {
          . "\">l</a>)";
 }
 
-
 ###########################################################################
+
+=item B<make_history_link>(NS, PAGE, TIMESTAMP, LONG, TALKLINK)
+
+Make the URL to link to the revision of NS:PAGE at TIMESTAMP
+
+=over
+
+=item LONG
+
+If this is nonzero, the timestamp will be displayed with seconds. Otherwise, only the year, month, and day are displayed in the link text.
+
+=item TALKLINK
+
+If this is nonzero, the HTML also includes a link to the revision of the
+corresponding talk page at TIMESTAMP
+
+=back
+
+=cut
 
 sub make_history_link {
   my $ns = shift;
@@ -327,10 +404,16 @@ sub make_history_link {
   }
 
   return $result;
-
 }
 
 ###########################################################################
+
+=item B<make_page_name>(NS, PAGE)
+
+Returns the formatted name of NS:PAGE, replacing the numeric NS with
+the text version 
+
+=cut
 
 sub make_page_name {
   my $ns = shift;
@@ -347,6 +430,15 @@ sub make_page_name {
   }
 }
 
+
+=item B<make_talk_name>(NS, PAGE)
+
+Returns the formatted name of the talk page 
+corresponding to NS:PAGE. Talk pages correspond
+to themselves, for other pages NS is incremented by 1. 
+
+=cut
+
 sub make_talk_name {
   my $ns = shift;
   my $title = shift;
@@ -361,6 +453,8 @@ sub make_talk_name {
 
 ###########################################################################
 
+# internal function to load list of namespaces
+
 sub init_namespaces {
 
   my $namespaces = db_get_namespaces();
@@ -373,6 +467,12 @@ sub init_namespaces {
 }
 
 ###########################################################################
+
+=item B<get_link_from_api>(TEXT)
+
+Parses TEXT using the API and returns the parsed HTML.
+
+=cut
 
 sub get_link_from_api {
   my $text = shift;
@@ -393,6 +493,12 @@ sub get_link_from_api {
 
 ###########################################################################
 
+=item B<list_projects>()
+
+Returns a list reference of all projects in the database
+
+=cut
+
 sub list_projects { 
   my $dbh = shift;
   my @row;
@@ -404,10 +510,17 @@ sub list_projects {
   while ( @row = $sth->fetchrow_array ) { 
     $projects->{$row[0]} = 1;
   }
+
   return $projects;
 }
 
 ###########################################################################
+
+=item B<get_cached_td_background>(CLASS)
+
+Returns the formatted HTML for a CLASS-Class table cell
+
+=cut
 
 sub get_cached_td_background { 
   my $class = shift;
@@ -438,6 +551,8 @@ sub get_cached_td_background {
 
 ###########################################################################
 
+# internal function to get td background from the wiki
+
 sub get_td_background { 
   my $class = shift;
   my $r =  $api->parse('{{' . $class . '}}');
@@ -455,6 +570,13 @@ sub get_td_background {
 }
 
 ###########################################################################
+
+=item B<get_cached_review_icon>(REVIEWCLASS)
+
+Gets formatted HTML for a table cell for a REVIEWCLASS article,
+including the icon for that REVIEWCLASS. 
+
+=cut
 
 sub get_cached_review_icon { 
 	my $class = shift;
@@ -485,6 +607,8 @@ sub get_cached_review_icon {
 
 ###########################################################################
 
+# internal function to get review icon from API
+
 sub get_review_icon { 
 	my $class = shift;
 	my $r =  $api->parse('{{' . $class . '-Class}}');
@@ -509,6 +633,13 @@ sub get_review_icon {
 
 ###########################################################################
 
+=item B<make_wp05_link>(CAT)
+
+Returns a link to the Wikipedia 0.5 page for review category
+CAT (which coult be Arts, Geography, etc.)
+
+=cut
+
 sub make_wp05_link { 
   my $cat = shift;
   my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
@@ -530,12 +661,20 @@ sub make_wp05_link {
 
 ###########################################################################
 
+=item B<make_review_link>(REVIEWCLASS)
+
+Returns formatted HTML for a table cell for REVIEWCLASS
+
+=cut
+
 sub make_review_link { 
   my $type = shift;
   return get_cached_td_background($type . "-Class") ;
 }
 
 ###########################################################################
+
+# internal function to munge timestamps
 
 sub fix_timestamp { 
   my $t = shift;
@@ -545,5 +684,7 @@ sub fix_timestamp {
            . ":" . substr($t, 10, 2) . ":" . substr($t, 12, 2)  . "Z";
 }
 
+###########################################################################
 
+# Load successfully
 1;

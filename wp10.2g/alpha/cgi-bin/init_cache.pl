@@ -4,6 +4,12 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+Routine to initialize a Cache::File object
+
+=cut
+
 require Cache::File;
 
 our $Opts;

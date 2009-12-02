@@ -4,6 +4,13 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+CGI program that takes a page title and timestamp and redirects
+the browser to the corresponding revision on the wiki
+
+=cut
+
 use strict;
 use Encode;
 use URI::Escape;
@@ -34,16 +41,18 @@ if ( ! defined $rev ) {
  exit;
 }
 
-my $url = "http://en.wikipedia.org/w/index.php?title="
-. uri_escape($param{'article'}) . "&oldid="
-. $rev->{'revid'} . "\n";
-
+my $url =   "http://en.wikipedia.org/w/index.php?title="
+          . uri_escape($param{'article'}) . "&oldid="
+          . $rev->{'revid'} . "\n";
 
 print << "HERE";
 Location: $url
 
 HERE
 exit;
+##############################################################
+
+# XXX move this to database_www.pl and use the toolserver db
 
 sub get_revision { 
   my $api = shift;

@@ -8,8 +8,6 @@
 
 Routines for using a databse table as an HTML cache
 
-=over
-
 =cut
 
 use Data::Dumper;
@@ -71,7 +69,6 @@ Purge outdated entries from cache.
 =cut
 
 sub cache_purge { 
-
   my $timestamp = time();
 
   my $sth = $dbh->prepare("DELETE FROM cache WHERE c_expiry < ?");
@@ -80,11 +77,12 @@ sub cache_purge {
 #  print "<!-- PURGE CACHE. Clear $r entries older than $timestamp -->\n";
 }
 
-###########################################################
+############################################################
 
 =item B<cache_exists>(KEY)
 
-Tells if a cache key exists. Returns exipiry if exists, 0 if doesn't. 
+Tells whether a cache entry for KEY exists. 
+Returns the exipiry if it does; returns undef if it doesn't.
 
 =cut
 
@@ -98,7 +96,7 @@ sub cache_exists  {
   my $sth = $dbh->prepare("SELECT c_expiry FROM cache WHERE c_key = ?");
   my $r = $sth->execute($key);
 
-  if ( $r = 0 ) { return 0; } 
+  if ( $r = 0 ) { return undef; } 
 
   my @row = $sth->fetchrow_array();
   return $row[0];
@@ -128,8 +126,7 @@ sub cache_get  {
   return $row[0];
 }
 
-
-#
+###########################################################
 
 # Load successfully
 1;

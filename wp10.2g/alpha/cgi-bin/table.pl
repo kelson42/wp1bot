@@ -4,11 +4,14 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+CGI program to display table of assessment info for one project
+
+=cut
+
 use strict;
 use Encode;
-
-# WP 1.0 bot - second generation
-# CGI to display table of ratings information
 
 require 'read_conf.pl';
 our $Opts = read_conf();

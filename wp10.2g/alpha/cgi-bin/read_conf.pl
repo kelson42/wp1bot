@@ -8,15 +8,12 @@
 
 Routines to parse configuration variables from a settings file
 
-=over
-
 =cut
 
 use strict;
 use Data::Dumper;
 
 my $Settings = read_conf();
-
 
 #####################################################################
 
@@ -77,8 +74,6 @@ sub read_conf {
 
 ###########################################################################
 
-#####################################################################
-
 =item B<get_conf>(KEY)
 
 Return the configuration value with key I<key>.
@@ -89,6 +84,8 @@ sub get_conf {
   my $var = shift;
   return $Settings->{$var};
 }
+
+#####################################################################
 
 # Load successfully
 1;

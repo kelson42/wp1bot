@@ -4,12 +4,15 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for more information
 
+=head1 SYNOPSIS
+
+CGI program to display lists of assessed articles
+
+=cut
+
 use strict;
 use Encode;
 use URI::Escape;
-
-# WP 1.0 bot - second generation
-# CGI to display table of ratings information
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -78,9 +81,7 @@ if ( defined $param{'run'} || defined $ARGV[0]) {
 
 layout_footer();
 
-
 exit;
-###########################################################################
 ###########################################################################
 
 sub ratings_table { 
@@ -260,8 +261,6 @@ HERE
         . ($offset +1) . "\n";
   print "</div>\n";
 
-
-
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
   my $i = $offset;
@@ -378,8 +377,6 @@ HERE
   # For display purposes - whether we use a pipe between "previous" and "next"
   # depends on whether "previous" is defined or not 
   my $prev = 0;
-
- 
  
   my $p;
   my $params_enc;
@@ -446,7 +443,6 @@ sub ratings_table_intersect {
 
   my @qparam = ($projecta, $projectb);
   my @qparamc = ($projecta, $projectb);
-
 
   $query = << "HERE";
 SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
@@ -551,7 +547,6 @@ HERE
     $queryc .= " AND NOT ra.r_quality = rb.r_quality ";
   }
 
-
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
@@ -582,7 +577,6 @@ HERE
   print "<p><b>Total results: " . $total
         . "</b>.<br/> Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p>\n";
-
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
@@ -671,7 +665,6 @@ HERE
 HERE
     }
 
-
     print "</tr>\n";
   }
 
@@ -739,7 +732,6 @@ sub query_form {
     $filter_release_checked = "checked=\"yes\" ";
   }
 
-
   my $pagename_wc_checked = "";
   if ( $pagenameWC eq 'on' ) { 
     $pagename_wc_checked = "checked=\"yes\" ";
@@ -750,12 +742,10 @@ sub query_form {
     $show_external_checked = "checked=\"yes\" ";
   }
 
-
   my $diffonly_checked = "";
   if ( defined $param{'diffonly'} ) {
     $diffonly_checked = "checked";
   }
-
 
   my $sorts = sort_orders();
   my $s;
@@ -777,7 +767,6 @@ sub query_form {
   print << "HERE";
 <form>
 <input type="hidden" name="run" value="yes"/>
-
 
 <table class="outer">
 <tr><td>
@@ -841,8 +830,6 @@ sub query_form {
        Show only pages with differing quality ratings</input></td></tr>
   </table>
 </td></tr>
-
-
   <tr>
     <td class="bottomrow">
      <input type="checkbox" $filter_release_checked  name="filterRelease"  
@@ -854,14 +841,11 @@ sub query_form {
   </td></tr>
   </table>
 </td></tr>
-
 </tr></table>
 </td></tr>
 </table>
 </form>
-
 HERE
-
 }
 
 ###########################################################################
@@ -892,8 +876,6 @@ sub print_header_text {
   . $Opts->{'table-url'} . "\">summary table</a>)\n";
 }
 
-
-
 ###########################################################################
 
 sub sort_orders { 
@@ -909,7 +891,6 @@ sub sort_orders {
 	    'Review status' => 'rev_value',
             'Score' => 'r_score',
           };
-
 }
 
 ###########################################################################
@@ -953,7 +934,6 @@ sub sort_key {
   }
 
   return $query;
-
 }
 
 ##########################################################################

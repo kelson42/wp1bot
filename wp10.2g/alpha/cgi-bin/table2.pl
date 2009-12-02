@@ -4,7 +4,11 @@
 # Part of WP 1.0 bot 
 # See the files README, LICENSE, and AUTHORS for more information
 
-# CGI to display table of ratings information
+=head1 SYNOPSIS
+
+CGI program to display table of global assessment info
+
+=cut
 
 use strict;
 use Encode;

@@ -4,12 +4,15 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
+=head1 SYNOPSIS
+
+CGI program to display assessment logs
+
+=cut
+
 use strict;
 use Encode;
 use URI::Escape;
-
-# WP 1.0 bot - second generation
-# CGI to display table of ratings information
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -46,7 +49,6 @@ foreach $p ( keys %param ) {
   $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
 }
 
-
 if ( defined $Opts->{'log-dir'} 
      && -d $Opts->{'log-dir'} ) { 
   open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
@@ -74,7 +76,6 @@ if ( ! defined $param{'entry'} || 1 ) {
 layout_footer();
 
 exit;
-
 ###########################################################################
 
 sub log_table { 
@@ -266,7 +267,6 @@ HERE
    
   print "</div>\n";
 
-
 #  print "RQ: '$query'<br/>\n";
 #  my @lparam = @qparam;
 #  print join "<br/>", map { $_ = "'" . $_ . "'" } @lparam;
@@ -276,7 +276,6 @@ HERE
   my $i = $offset;
 
   print "<!-- count: '$c' -->\n";
-
 
 # SELECT l_project, l_article, l_action, l_timestamp, 
 #             0           1       2            3
@@ -320,14 +319,12 @@ HERE
             . "</td>\n";
 
      my ($dest_ns, $dest_art) = db_get_move_target($row[7], $row[1], $row[6]);
-#XXXXXXXXXXXXX
-
-      my $link = make_article_link($dest_ns, $dest_art);
-      print << "HERE";
-<td>redirected</td>
-<td colspan="2">$link</td>
+     my $link = make_article_link($dest_ns, $dest_art);
+     print << "HERE";
+      <td>redirected</td>
+      <td colspan="2">$link</td>
 HERE
-print "</tr>\n";
+      print "</tr>\n";
 
     } else {  # the quality or importance was changed
       print "<tr><td>$i</td>\n";
@@ -348,39 +345,37 @@ print "</tr>\n";
   }
   print "</table>\n</center>\n";
 
-	my $p;
-	my $params_enc;
-	foreach $p ( keys %$params ) { 
-		next if ( $p eq 'offset' ) ;
-		$params_enc .= "$p=" . uri_escape($params->{$p}) . "&";   
-	}
+  my $p;
+  my $params_enc;
+  foreach $p ( keys %$params ) { 
+    next if ( $p eq 'offset' ) ;
+    $params_enc .= "$p=" . uri_escape($params->{$p}) . "&";   
+  }
 
-	# For display purposes - whether we use a pipe between "previous" and "next"
-	# depends on whether "previous" is defined or not 
-	my $prev = 0;
-	if (($offset - $limit + 1) > 0) {
-		my $newURL = $logurl. "?" . $params_enc
-		. "offset=" . ($offset - $limit + 1);	  
-		
-		print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
-		$prev = 1;
-	}
-	
-	if ($limit + $offset < $total){ 
-		if ($prev == 1) {
-			print " | ";
-		}
-		my $newURL = $logurl . "?" . $params_enc
-		. "&offset=" . ($offset + $limit + 1);	  
-		
-		print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
-	}
-	print "\n";	
+  # For display purposes - whether we use a pipe between "previous" and "next"
+  # depends on whether "previous" is defined or not 
+  my $prev = 0;
 
-   get_previous_name($params->{'ns'}, $params->{'pagename'});
+  my $newURL;
+  if (($offset - $limit + 1) > 0) {
+    $newURL =   $logurl. "?" . $params_enc
+              . "offset=" . ($offset - $limit + 1);	  
+    print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
+    $prev = 1;
+  }
 	
+  if ($limit + $offset < $total){ 
+    if ($prev == 1) {
+      print " | ";
+    }
+    $newURL =   $logurl . "?" . $params_enc
+             . "&offset=" . ($offset + $limit + 1);	  
+    print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
+  }
+  print "\n";	
+
+  get_previous_name($params->{'ns'}, $params->{'pagename'});
 }
-
 
 ###########################################################################
 
@@ -442,7 +437,6 @@ sub query_form {
     <tr><td colspan="2" class="note">Note: leave any field blank to 
                        select all values.</td></tr>
 </table>
-
 
 <tr><td colspan="2" class="submit-td">
 <div style="text-align: center;"><input type="submit" value="Generate list"/></div>
@@ -518,32 +512,29 @@ sub get_previous_name {
   if ( $r > 0 ) { 
     print "<b>Previous names:</b><ul>\n";
     print << "HERE";
-<table class="wikitable">
-<tr><th>Article</th>
-<th>Date redirected</th>
-</tr>
+      <table class="wikitable">
+      <tr><th>Article</th>
+      <th>Date redirected</th>
+      </tr>
 HERE
 
     my @row;
-
     while ( @row = $sth->fetchrow_array ) { 
       print "<tr>\n";
       print "  <td>" . make_article_link($row[1], $row[2]) . "</td>\n";
       print "  <td>$row[0]</td>\n";
       print "<tr>\n";
     }
-   print "</table>\n";
- 
+    print "</table>\n";
   }
 
- return;
+  return;
 }
 
 ###########################################################
 
 sub format_date {
   my $date = shift;
-
   if ( $date eq "" ) { return ""};
 
   my @dateparts = strptime($date);
@@ -557,5 +548,7 @@ sub format_date {
                  $dateparts[0] || 0 );
 }
 
+############################################################
 
+# Load successfully
 1;

@@ -1,10 +1,16 @@
 #!/usr/bin/perl
 
-my $App = "Manual selection maintenance";
-
 # manualsel.pl
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for more information
+
+=head1 SYNOPSIS
+
+CGI script to maintain the manual selection
+
+=cut
+
+my $App = "Manual selection maintenance";
 
 use strict;
 use Encode;
@@ -113,7 +119,6 @@ if ( $mode eq 'add' ) {
 layout_footer();
 
 exit;
-
 ############################################################################
 
 sub processlogin {
@@ -148,14 +153,14 @@ HERE
   my ($art, $reason, $result, $r1, $r2);
 
   print << "HERE";
-<center>
-<table class="wikitable">
-<tr>
-<th>#</th>
-<th>Article</th>
-<th>Reason</th>
-<th>Result</th>
-</tr>
+    <center>
+    <table class="wikitable">
+    <tr>
+    <th>#</th>
+    <th>Article</th>
+    <th>Reason</th>
+    <th>Result</th>
+    </tr>
 HERE
 
   my $i;
@@ -193,14 +198,13 @@ HERE
 HERE
   }
 
-$dbh->commit();
+  $dbh->commit();
 
-print << "HERE";
-</table>
+  print << "HERE";
+    </table>
 HERE
 
 }
-
 
 ############################################################################
 
@@ -213,7 +217,6 @@ HERE
     return;
   } 
 
-
   my $dbh = db_connect_rw($Opts);
   my $sthart = $dbh->prepare("DELETE FROM manualselection 
                               WHERE ms_article = ?");
@@ -221,7 +224,6 @@ HERE
                                 VALUES (?,?,?,?,?)");
 
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
-
 
   print << "HERE";
       <table class="wikitable">
@@ -262,8 +264,7 @@ HERE
     </tr>
 HERE
 
-print "</table>";
-
+    print "</table>";
   }
 }
 
@@ -307,7 +308,6 @@ HERE
 HERE
   }
 
-
   print << "HERE";
   <tr>
   <td colspan="3" style="text-align: center;">
@@ -324,10 +324,10 @@ HERE
 #  }
 
   print << "HERE";
-  <input type="submit" value="Add articles">
-  </td></tr>
-  </table></center>
-</form>
+    <input type="submit" value="Add articles">
+    </td></tr>
+    </table></center>
+    </form>
 HERE
 
 }
@@ -377,53 +377,50 @@ HERE
 
   my $poffset = $offset - $pagesize;
 
-if ( $poffset < 0) { $poffset = 0 };
+  if ( $poffset < 0) { $poffset = 0 };
 
-my $noffset = $offset + $pagesize;
-
-
-print << "HERE";
-<div class="results navbox">
-HERE
-
-if ( $count > 0 ) { 
-  print "Showing $count results starting with #" . ($offset + 1) . "<br/>";
-} else { 
-  print "No more results<br/>\n";
-}
-
-if ( $offset > 0 ) { 
-print << "HERE";
-  <a href="$url?mode=list&offset=$poffset&farticle=$artenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
-HERE
-
-}
-
-if ( $count > 0) { 
-print << "HERE";
-  <a href="$url?mode=list&offset=$noffset&farticle=$artenc">Next $pagesize &rarr;</a>
-HERE
-}
-
-print "</div>\n";
-
-if ( $count == 0) { return; }
+  my $noffset = $offset + $pagesize;
 
   print << "HERE";
-<center>
-<form action="$url" method="post">
-<input type="hidden" name="mode" value="processremoves">
+    <div class="results navbox">
+HERE
 
-  <table class="wikitable">
-<tr>
-<th colspan="4">
-</th>
-</tr>
-   <tr>
-    <th>Article</th>
-    <th>Timestamp</th>
-    <th colspan="2">Remove</th>
-   </td>
+  if ( $count > 0 ) { 
+    print "Showing $count results starting with #" . ($offset + 1) . "<br/>";
+  } else { 
+    print "No more results<br/>\n";
+  }
+
+  if ( $offset > 0 ) { 
+    print << "HERE";
+    <a href="$url?mode=list&offset=$poffset&farticle=$artenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
+HERE
+  }
+
+  if ( $count > 0) { 
+    print << "HERE";
+      <a href="$url?mode=list&offset=$noffset&farticle=$artenc">Next $pagesize &rarr;</a>
+HERE
+  }
+
+  print "</div>\n"; 
+
+  if ( $count == 0) { return; }
+    print << "HERE";
+      <center>
+      <form action="$url" method="post">
+      <input type="hidden" name="mode" value="processremoves">
+
+      <table class="wikitable">
+      <tr>
+        <th colspan="4">
+      </th>
+      </tr>
+      <tr>
+        <th>Article</th>
+        <th>Timestamp</th>
+        <th colspan="2">Remove</th>
+     </td>
 HERE
 
   my @row;
@@ -437,25 +434,23 @@ HERE
     my $key = uri_escape($row[0]);
 
     print << "HERE";
-  <tr>
-    <td>$link</td>
-    <td>$ts</td>
-    <td><input type="checkbox" name="key:$key"></td>
-    <td><input type="text" name="reason:$key"></td>
-
-  </tr>
+    <tr>
+      <td>$link</td>
+      <td>$ts</td>
+      <td><input type="checkbox" name="key:$key"></td>
+      <td><input type="text" name="reason:$key"></td>
+    </tr>
 HERE
   }
 
-print << "HERE";
-<tr><td colspan="4" style="text-align: right;">
-<input type="submit" value="Remove checked">
-</td></tr>
-</table>
-</form>
-</center>
+  print << "HERE";
+    <tr><td colspan="4" style="text-align: right;">
+    <input type="submit" value="Remove checked">
+    </td></tr>
+    </table>
+    </form>
+    </center>
 HERE
-
 
 }
 
@@ -564,35 +559,32 @@ HERE
 HERE
   }
 
-print << "HERE";
-</table>
-</center>
-HERE
-
-my $poffset = $offset - $pagesize;
-
-if ( $poffset < 0) { $poffset = 0 };
-
-my $noffset = $offset + $pagesize;
-
-if ( $offset > 0 ) { 
-print << "HERE";
-  <a href="$url?mode=logs&offset=$poffset&farticle=$artenc&fuser=$userenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
-HERE
-
-}
-
-if ( $r eq $pagesize) { 
   print << "HERE";
-  <a href="$url?mode=logs&offset=$noffset&farticle=$artenc&fuser=$userenc">Next $pagesize &rarr;</a>
-</div>
+    </table>
+    </center>
 HERE
-}
 
+  my $poffset = $offset - $pagesize;
+
+  if ( $poffset < 0) { $poffset = 0 };
+
+  my $noffset = $offset + $pagesize;
+
+  if ( $offset > 0 ) { 
+    print << "HERE";
+     <a href="$url?mode=logs&offset=$poffset&farticle=$artenc&fuser=$userenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
+HERE
+  }
+
+  if ( $r eq $pagesize) { 
+    print << "HERE";
+      <a href="$url?mode=logs&offset=$noffset&farticle=$artenc&fuser=$userenc">Next $pagesize &rarr;</a>
+    </div>
+HERE
+  }
 }
 
 ############################################################################
-
 
 sub check_auth { 
   my $user = shift;

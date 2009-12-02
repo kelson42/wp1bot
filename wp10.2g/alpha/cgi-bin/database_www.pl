@@ -8,8 +8,6 @@
 
 Routines for the CGI programs to connect to the database
 
-=over
-
 =cut
 
 use Data::Dumper;
@@ -19,7 +17,7 @@ use Encode;
 
 =item B<db_connect>(OPTS)
 
-Connect to the database, uses the readonly credentials
+Connect to the database using the readonly credentials
 
 =cut
 
@@ -55,7 +53,7 @@ sub db_connect {
 
 =item B<db_connect_rw>(OPTS)
 
-Connect to the database, uses the readwrite credentials
+Connect to the database using the readwrite credentials
 
 =cut
 
@@ -145,13 +143,17 @@ sub db_get_move_target{
   my $old_ns = shift;
   my $old_art = shift;
   my $timestamp = shift;
+
   my $sth = $dbh->prepare("SELECT m_new_namespace, m_new_article " .
                           "FROM moves WHERE m_timestamp = ? " . 
                           "and m_old_namespace = ? " .
                           "and m_old_article = ? ");
 
   my $r = $sth->execute($timestamp, $old_ns, $old_art);
-  print "<!-- move target r: '$r' for '$old_ns' '$old_art' '$timestamp' -->\n";
+
+# print   "<!-- " 
+#        . " move target r: '$r' for '$old_ns' '$old_art' '$timestamp' " 
+#        .  " -->\n";
 
   return $sth->fetchrow_array();
 }
@@ -168,6 +170,7 @@ sub db_get_namespaces {
   my $sth = $dbh->prepare("SELECT ns_id, ns_name " 
                         . "FROM toolserver.namespace where dbname = ?");
   $sth->execute('enwiki_p');
+
   my $input = $sth->fetchall_hashref('ns_id');
   my $output = {};
   my $key;
@@ -178,8 +181,6 @@ sub db_get_namespaces {
 }
 
 ###########################################################
-
-#
 
 # Load successfully
 1;
