@@ -46,11 +46,7 @@ our $dbh = db_connect_rw($Opts);
 
 layout_header("Assessment tools");
 
-
-print get_cached_wiki_page('User:CBM/Sandbox');
-print "<hr/>";
-print get_cached_wiki_page('User:CBM/Sandbox');
-print "<hr/>";
+print get_cached_wiki_page($Opts->{'msg-homepage'});
 
 layout_footer();
 exit;

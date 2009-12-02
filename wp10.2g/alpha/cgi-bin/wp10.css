@@ -245,7 +245,7 @@ body {
   margin: 0em;
   padding: 0em;
   border: none;
-  background: white;
+  background: #eee;
   font-family: sans-serif;
 }
 
@@ -303,6 +303,7 @@ body {
   border-right: 1px solid gray;
   border-bottom: 1px solid gray; 
   padding-bottom: 0.5em;
+  margin-bottom: 1em;
 }
 
 #content {
@@ -311,6 +312,7 @@ body {
   padding: 1em;
 /*  max-width: 36em; */
   background: white;
+  min-height: 20em;
 }
 
 #footerbar { 
