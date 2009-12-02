@@ -27,13 +27,21 @@ our $dbh = db_connect_rw($Opts);
 require Mediawiki::API;
 
 require CGI;
+
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  $cgi = new CGI::Fast;
+} else { 
+  $cgi = new CGI;
+}
+
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
 
 require POSIX;
 POSIX->import('strftime');
 
-my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
 my $projects = db_get_project_details();

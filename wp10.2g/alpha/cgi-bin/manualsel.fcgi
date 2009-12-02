@@ -34,10 +34,17 @@ require 'layout.pl';
 
 require 'database_www.pl';
 
-use CGI ':standard';
+use CGI;
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  $cgi = new CGI::Fast;
+} else {
+  $cgi = new CGI;
+}
+
 CGI::Carp->import('fatalsToBrowser');
 
-my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
 my $pass = $param{'pass'} || CGI::cookie('wp10pass');

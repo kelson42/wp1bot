@@ -21,6 +21,14 @@ require 'database_www.pl';
 require 'layout.pl';
 
 require CGI;
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  $cgi = new CGI::Fast;
+} else {
+  $cgi = new CGI;
+}
+
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
 
@@ -30,7 +38,6 @@ POSIX->import('strftime');
 
 my $Namespaces;
 
-my $cgi = new CGI;
 my %param = %{$cgi->Vars()};
 
 if ( $param{'limit'} > 1000 ) { 

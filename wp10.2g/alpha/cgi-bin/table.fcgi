@@ -51,7 +51,13 @@ my $cache_sep = "<hr/><!-- cache separator -->\n";
 require CGI;
 CGI::Carp->import('fatalsToBrowser');
 
-my $cgi = new CGI;
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  $cgi = new CGI::Fast;
+} else {
+  $cgi = new CGI;
+}
 my %param = %{$cgi->Vars()};
 
 print CGI::header(-type=>'text/html', -charset=>'utf-8');      

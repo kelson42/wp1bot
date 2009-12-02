@@ -11,6 +11,8 @@ Routines for the CGI programs re page layout and link formatting
 =cut
 
 use strict;
+use POSIX 'strftime';
+
 
 our $Opts;
 my $App = $Opts->{'appname'}
@@ -534,7 +536,7 @@ sub get_cached_td_background {
   my ($data, $expiry);
 
   if ( $expiry = cache_exists($key) ) { 
-     print "<!-- hit $class in file cache, expires " 
+     print "<!-- hit $class in database cache, expires " 
            . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
            . " -->\n";
     $data = cache_get($key);
@@ -571,6 +573,56 @@ sub get_td_background {
 
 ###########################################################################
 
+=item B<get_cached_wiki_page>(PAGE)
+
+Returns the formatted HTML for PAGE on the wiki
+
+=cut
+
+sub get_cached_wiki_page { 
+  my $page = shift;
+
+  my $key = "PAGE:" . $page;
+
+  if ( defined $cacheMem->{$key} ) { 
+    print "<!-- hit $key in memory cache -->\n";
+    return $cacheMem->{$key};
+  }
+
+  my ($data, $expiry);
+
+  if ( $expiry = cache_exists($key) ) { 
+     print "<!-- hit $key in database cache, expires " 
+           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
+           . " -->\n";
+    $data = cache_get($key);
+    $cacheMem->{$key} = $data;
+    return $data;
+  }
+
+  print "<!-- missed $key in cache -->\n";
+
+  $data = get_wiki_page($page);
+
+  cache_set($key, $data, 12*60*60); # expires in 12 hours
+  $cacheMem->{$key} = $data;
+  return $data;
+}
+
+###########################################################################
+
+# internal function to get html for a page from the wiki
+
+sub get_wiki_page { 
+  my $page = shift;
+  my $r =  $api->parse('{{' . $page . '}}');
+  my $t = $r->{'text'}->{'content'};
+  return $t;
+}
+
+
+###########################################################################
+
 =item B<get_cached_review_icon>(REVIEWCLASS)
 
 Gets formatted HTML for a table cell for a REVIEWCLASS article,
@@ -590,7 +642,7 @@ sub get_cached_review_icon {
 	my ($expiry, $data);
 	
 	if ( $expiry = cache_exists($key) ) { 
-		print "<!-- hit {$class}-icon in file cache, expires " 
+		print "<!-- hit {$class}-icon in database cache, expiry " 
 		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
 		. " -->\n";
 		$data = cache_get($key);

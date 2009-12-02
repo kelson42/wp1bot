@@ -37,26 +37,28 @@ sub cache_set {
                         SET c_expiry = ?, c_content = ? 
                         WHERE c_key = ?");
 
-# print "<!--\n";
-# print "UPDATE\n";
-# print "KEY: '$key'\n";
-# print "EXPIRY: '$expiry'\n";
-# print "-->\n";
+ print "<!--\n";
+ print "UPDATE\n";
+ print "KEY: '$key'\n";
+ print "EXPIRY: '$expiry'\n";
+ print "-->\n";
 
   my $r = $sth->execute($timestamp, $content, $key);
 
-  if ( $r eq '' ) { 
-#   print "<!--\n";
-#   print "INSERT\n";
-#   print "KEY: '$key'\n";
-#   print "EXPIRY: '$expiry'\n";
-#   print "-->\n";
+print "<!-- result: '$r' -->\n";
+
+  if ( $r eq '' || $r eq '0E0') { 
+   print "<!--\n";
+   print "INSERT\n";
+   print "KEY: '$key'\n";
+   print "EXPIRY: '$expiry'\n";
+   print "-->\n";
 
     $sth = $dbh->prepare("INSERT INTO cache VALUES (?,?,?)");
     $r = $sth->execute($key, $timestamp, $content);
   }
 
-#  print "<!-- CACHE INSERT. Result: '$r' -->\n";
+  print "<!-- CACHE INSERT. Result: '$r' -->\n";
 }
 
 
