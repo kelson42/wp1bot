@@ -1,0 +1,33 @@
+PREREQUISITES
+
+(1) Create counts.lst.gz using the selection tools
+
+(2) Set up a database for the system and a working .my.cnf
+
+(3) Set up a .wp10.cnf file in $HOME
+
+(4) Use parse_logs.pl to download assessment logs from the wiki.
+    It speeds up things later if you sort/uniq the logs.
+
+(5) Perl dependencies include XML::Simple and Mediawiki::API
+
+INSTALLATION
+
+(1) Go to the backend/ directory
+
+(2) Use tables.sql to set up the database
+
+(3) Import counts.lst.gz using selectiondata.pl
+
+(4) Import the old logs using insert_logs.pl
+
+(5) Download the project data with download.pl --all
+
+(6) Download the release with download.pl --releases
+
+(7) Download the review data with download.pl --review
+
+This will leave things in a functional state, but the logs
+will probably need some trimming of duplicate entries
+
+

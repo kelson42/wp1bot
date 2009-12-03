@@ -42,8 +42,7 @@ my $cacheMem = {};
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
-
+$api->base_url($Opts->{'api-url'};
 
 ##################################################
 

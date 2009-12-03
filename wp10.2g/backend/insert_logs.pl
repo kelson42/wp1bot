@@ -34,6 +34,8 @@ while ( $line = <IN> ) {
   $seen{$line} = 1;
   chomp $line;
 
+  $line =~ s/(\d\d\d\d)(\d\d)(\d\d)(\d\d)(\d\d)(\d\d)/$1-$2-$3T$4:$5:$6Z/;
+
   @parts = split /\| /, $line;
 
   if ( $parts[2] eq 'renamed' ) { 

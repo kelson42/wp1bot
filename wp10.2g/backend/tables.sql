@@ -142,8 +142,8 @@ create table if not exists logging (
        -- timestamp when page was edited
        -- a wiki-format timestamp
 
-    key (l_project, l_namespace, l_article, l_action, l_timestamp),
-    key (l_namespace, l_article)
+    primary key (l_project, l_namespace, l_article, l_action, l_timestamp),
+    key (l_article, l_namespace)
 ) default charset 'utf8' collate 'utf8_bin'
   engine = InnoDB;
 
