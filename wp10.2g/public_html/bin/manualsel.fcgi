@@ -33,102 +33,114 @@ $url =~ s/\?$//;
 require 'layout.pl';
 
 require 'database_www.pl';
+our $dbh = db_connect_rw($Opts);
 
 use CGI;
-my $cgi;
-if ( $Opts->{'use_fastcgi'} ) {
-  require CGI::Fast;
-  $cgi = new CGI::Fast;
-} else {
-  $cgi = new CGI;
-}
-
 CGI::Carp->import('fatalsToBrowser');
 
-my %param = %{$cgi->Vars()};
-
-my $pass = $param{'pass'} || CGI::cookie('wp10pass');
-my $user = $param{'user'} || CGI::cookie('wp10user');
-$pass =~ s/^[^a-zA-Z]*//;
-$user =~ s/^[^a-zA-Z]*//;
-
-my $authenticated = 0;
-
-if ( defined($pass)  ) {
-  $authenticated = check_auth($user, $pass);
-}
-
-my $value = '';
-my $authline;
-my $logincookiepass;
-my $logincookieuser;
-
-our $dbh;
-
-if ( $authenticated == 1) { 
-  $value = $pass;
-  $authline = << "HERE";
-<div class="authline loggedin">
-<img src="http://upload.wikimedia.org/wikipedia/commons/4/4d/Lock-open.png">
-You are logged in as <b>$user</b>
-</div>
-HERE
-
-  $logincookiepass = CGI::cookie(-name => 'wp10pass',
-                       -value => $pass, -path=>"/");
-  $logincookieuser = CGI::cookie(-name => 'wp10user',
-                       -value => $user, -path=>"/");
+my $cgi;
+my $loop_counter = 0;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) { 
+    main_loop($cgi);
+  }
 } else {
-  my $pa = Dumper($pass);
-  my $ua = Dumper($user);
+  $cgi = new CGI;
+  main_loop($cgi);
+}
 
-  $authline = << "HERE";
-<div class="authline notloggedin">
-<img src="http://upload.wikimedia.org/wikipedia/commons/1/1b/Lock-closed.png"> 
-You are not logged in
-</div>
+############################################################
+
+sub main_loop { 
+  my $cgi = shift;
+  my %param = %{$cgi->Vars()};
+
+  my $pass = $param{'pass'} || CGI::cookie('wp10pass') || '';
+  my $user = $param{'user'} || CGI::cookie('wp10user') || '';
+  $pass =~ s/^[^a-zA-Z]*//;
+  $user =~ s/^[^a-zA-Z]*//;
+
+  my $authenticated = 0;
+
+  if ( defined($pass)  ) {
+    $authenticated = check_auth($user, $pass);
+  }
+
+  my $value = '';
+  my $authline;
+  my $logincookiepass;
+  my $logincookieuser;
+
+  if ( $authenticated == 1) { 
+    $value = $pass;
+    $authline = << "HERE";
+      <div class="authline loggedin">
+        <img src="http://upload.wikimedia.org/wikipedia/commons/4/4d/Lock-open.png">
+        You are logged in as <b>$user</b>
+      </div>
 HERE
 
-  $logincookiepass = CGI::cookie(-name => 'wp10user',
-                       -value => "", -path=>"/");
-  $logincookieuser = CGI::cookie(-name => 'wp10pass',
-                       -value => "", -path=>"/");
+    $logincookiepass = CGI::cookie(-name => 'wp10pass',
+                                   -value => $pass, -path=>"/");
+    $logincookieuser = CGI::cookie(-name => 'wp10user',
+                                  -value => $user, -path=>"/");
+  } else { 
+    my $pa = Dumper($pass);
+    my $ua = Dumper($user);
+
+    $authline = << "HERE";
+      <div class="authline notloggedin">
+        <img src="http://upload.wikimedia.org/wikipedia/commons/1/1b/Lock-closed.png"> 
+        You are not logged in
+      </div>
+HERE
+
+    $logincookiepass = CGI::cookie(-name => 'wp10user',
+                                   -value => "", -path=>"/");
+    $logincookieuser = CGI::cookie(-name => 'wp10pass',
+                                   -value => "", -path=>"/");
+  }
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8', 
+                    -cookie=>[$logincookiepass,$logincookieuser]);
+
+
+  my $mode = $param{'mode'} || '';
+
+  if ( $mode eq 'add' ) {
+    layout_header("Add articles", $authline, "Add articles to the manual selection");
+    do_add(\%param, 1, $user, $pass);
+  } elsif ( $mode eq 'processadd' ) {
+    layout_header("Processing added articles", $authline);
+    process_add(\%param, $authenticated, $user, $pass);
+  } elsif ( $mode eq 'processremoves' ) {
+    layout_header("Remove articles", $authline, "Remove articles from the manual selection");
+    process_removes(\%param, $authenticated, $user, $pass);
+  } elsif ( $mode eq 'logs' ) { 
+    layout_header("Changelog", $authline, "Manual selection changelog");
+    do_log(\%param);
+  } elsif ( $mode eq 'login' ) { 
+    layout_header("Log in", $authline);
+    auth_form_manual($user, $value);
+  } elsif ( $mode eq 'processlogin' ) { 
+    layout_header("Log in", $authline);
+    processlogin($authenticated);
+  } else { 
+    layout_header("List manual selection", $authline);
+    do_list();
+  }
+
+  $loop_counter++;
+  print "PID $$ has handled $loop_counter requests<br/>\n";
+
+  layout_footer();
 }
 
-print CGI::header(-type=>'text/html', -charset=>'utf-8', -cookie=>[$logincookiepass,$logincookieuser]);
-
-my $mode = $param{'mode'};
-
-
-if ( $mode eq 'add' ) {
-  layout_header("Add articles", $authline, "Add articles to the manual selection");
-  do_add();
-} elsif ( $mode eq 'processadd' ) {
-  layout_header("Processing added articles", $authline);
-  process_add();
-} elsif ( $mode eq 'processremoves' ) {
-  layout_header("Remove articles", $authline, "Remove articles from the manual selection");
-  process_removes();
-} elsif ( $mode eq 'logs' ) { 
-  layout_header("Changelog", $authline, "Manual selection changelog");
-  do_log();
-} elsif ( $mode eq 'login' ) { 
-  layout_header("Log in", $authline);
-  auth_form_manual();
-} elsif ( $mode eq 'processlogin' ) { 
-  layout_header("Log in", $authline);
-  processlogin();
-} else { 
-  layout_header("List manual selection", $authline);
-  do_list();
-}
-
-layout_footer();
-
-exit;
 ############################################################################
 
 sub processlogin {
+  my $authenticated = shift;
   if( $authenticated == 1) { 
     print "<b>Login successful</b>";
   }   else  {
@@ -141,17 +153,19 @@ sub processlogin {
 ############################################################################
 
 sub process_add {
+  my $params = shift;
+  my $authenticated = shift;
+  my $user = shift;
+  my $pass= shift;
 
   if ( $authenticated != 1 ) { 
     print << "HERE";
     <span class="notauthenticatederror">Action not performed: You must log in to perform this action.</span>
-
 HERE
-    do_add(1);
+    do_add($params, 1, $user, $pass);
     return;
   }
 
-  my $dbh = db_connect_rw($Opts);
   my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?)");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
                                 VALUES (?,?,?,?,?)");
@@ -173,12 +187,12 @@ HERE
   my $i;
 
   for ( $i = 1; $i < $maxadds+1; $i++ ) {
-    next unless ( defined $param{"addart$i"} );
-    $art = $param{"addart$i"};
+    next unless ( defined $params->{"addart$i"} );
+    $art = $params->{"addart$i"};
     $art =~ s/^\s*//;
     $art =~ s/\s*$//;
     next if ( $art eq '');
-    $reason = $param{"addreason$i"};
+    $reason = $params->{"addreason$i"};
     $reason =~ s/^\s*//;
     $reason =~ s/\s*$//;
 
@@ -216,6 +230,10 @@ HERE
 ############################################################################
 
 sub process_removes {
+  my $params = shift;
+  my $authenticated = shift;
+  my $user = shift;
+
   if ( $authenticated != 1) { 
     print << "HERE";
     <span class="notauthenticatederror">Error: You must log in to perform this action.</span>
@@ -224,7 +242,6 @@ HERE
     return;
   } 
 
-  my $dbh = db_connect_rw($Opts);
   my $sthart = $dbh->prepare("DELETE FROM manualselection 
                               WHERE ms_article = ?");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
@@ -241,12 +258,12 @@ HERE
 HERE
 
   my ($p, $art, $reason, $r1, $r2);
-  foreach $p ( keys %param ) {
-#    print $p . " &rarr; ".  $param{$p} . "<br/>";
+  foreach $p ( keys %{$params} ) {
+#    print $p . " &rarr; ".  $params->{$p} . "<br/>";
 
     next unless ( $p =~ /^key:(.*)$/);
     $art = uri_unescape($1);
-    $reason = $param{"reason:$1"};
+    $reason = $params->{"reason:$1"};
 
  #   print "SEE: " . $art . " &rarr; ".  $reason . "<br/>";
 
@@ -278,8 +295,10 @@ HERE
 ############################################################################
 
 sub do_add {
-
+  my $params = shift;
   my $show_login = shift;
+  my $user = shift;
+  my $pass = shift;
 
   print << "HERE";
     <form action="$url" method="post">
@@ -301,8 +320,8 @@ HERE
   push @reasons, "";
 
   for ( $i = 1; $i < $maxadds+1; $i++) { 
-    push @arts, $param{"addart$i"};
-    push @reasons, $param{"addreason$i"};
+    push @arts, $params->{"addart$i"};
+    push @reasons, $params->{"addreason$i"};
   }
 
  for ( $i = 1; $i < $maxadds+1; $i++ ) { 
@@ -342,11 +361,10 @@ HERE
 ############################################################################
 
 sub do_list {
+  my $params = shift;
 
-  $dbh  = db_connect($Opts);
-
-  my $offset = $param{'offset'} || 0;
-  my $farticle = $param{'farticle'} || "";  
+  my $offset = $params->{'offset'} || 0;
+  my $farticle = $params->{'farticle'} || "";  
   $farticle =~ s/^\s*//;
   $farticle =~ s/\s*$//;
 
@@ -363,22 +381,22 @@ sub do_list {
     </form>
 HERE
 
-  my @params;
+  my @qparams;
   
   my $query = "select * from manualselection ";
 
    if ( 0 < length $farticle ) { 
      $query .= " where ms_article regexp ? ";
-     push @params, $farticle;
+     push @qparams, $farticle;
    }
 
   $query .= " order by ms_timestamp desc limit ? offset ? ";
-  push @params, $pagesize;
-  push @params, $offset;
+  push @qparams, $pagesize;
+  push @qparams, $offset;
 
   my $sth = $dbh->prepare($query);
 
-  my $count = $sth->execute(@params);
+  my $count = $sth->execute(@qparams);
 
   if ( $count eq '0E0') { $count = 0; }
 
@@ -464,10 +482,11 @@ HERE
 ############################################################################
 
 sub do_log {
+  my $params = shift;
 
-  my $offset = $param{'offset'} || 0;
-  my $fuser = $param{'fuser'} || "";  
-  my $farticle = $param{'farticle'} || "";  
+  my $offset = $params->{'offset'} || 0;
+  my $fuser = $params->{'fuser'} || "";  
+  my $farticle = $params->{'farticle'} || "";  
   $fuser =~ s/^\s*//;
   $fuser =~ s/\s*$//;
   $farticle =~ s/^\s*//;
@@ -488,37 +507,34 @@ print << "HERE";
   </form>
 HERE
 
-  $dbh  = db_connect($Opts);
-
-  my @params;
-  
+  my @qparams;  
   my $query = "select * from manualselectionlog";
 
   if ( 0 < length $fuser ) { 
     $query .= " where ms_user regexp ? ";
-    push @params, $fuser;
+    push @qparams, $fuser;
 
     if ( 0 < length $farticle ) { 
       $query .= " and ms_article regexp ? ";
-      push @params, $farticle;
+      push @qparams, $farticle;
     }
   } else { 
     if ( 0 < length $farticle ) { 
       $query .= " where ms_article regexp ? ";
-      push @params, $farticle;
+      push @qparams, $farticle;
     }
   }
 
   $query .= " order by ms_timestamp desc limit ? offset ? ";
-  push @params,  $pagesize;
-  push @params, $offset;
+  push @qparams,  $pagesize;
+  push @qparams, $offset;
 
 # print "Query: $query<br/>Params: ";
 #  print (join "<br/>", @params);
 
   my $sth = $dbh->prepare($query);
 
-  my $r = $sth->execute(@params);
+  my $r = $sth->execute(@qparams);
 
   my $message;
   if ( $r eq "0E0" ) { 
@@ -625,6 +641,11 @@ sub check_auth {
 ##################################################################
 
 sub auth_form_manual { 
+  my $user = shift;
+  my $value = shift;
+  $user = uri_escape($user);
+  $value = uri_escape($value);  
+
   print << "HERE";
   <form action="$url" method="post"><br/>
   <fieldset class="manual">

@@ -48,45 +48,54 @@ require CGI;
 CGI::Carp->import('fatalsToBrowser');
 
 my $cgi;
+my $loop_counter = 0;
 if ( $Opts->{'use_fastcgi'} ) {
   require CGI::Fast;
-  $cgi = new CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) { 
+    main_loop($cgi);
+  }
 } else {
   $cgi = new CGI;
+  main_loop($cgi);
 }
-
-my %param = %{$cgi->Vars()};
-
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
-if ( defined $ARGV[0] && $ARGV[0] eq 'force') { 
-  cached_ratings_table(1);
-  exit;
-}
-
-layout_header('Overall summary table');
-
-my ($html, $wikicode) = cached_ratings_table();
-
-if ( 0 < length $html ) { 
-
-  #print Dumper(cached_ratings_table());
-
-  print "<div class=\"navbox\">\n";
-  print_header_text();
-  print "</div>\n<center>\n";
-  print $html;
-  print "</center>\n";
-  print "\n";
-}
-
-#print "<div class=\"indent\"><pre>";
-#print $wikicode;
-#print "</pre></div>\n";
-
-layout_footer();
 
 exit;
+
+############################################################
+
+sub main_loop {
+  my $cgi = shift;
+  my %param = %{$cgi->Vars()};
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+  if ( defined $ARGV[0] && $ARGV[0] eq 'force') { 
+    cached_ratings_table(1);
+    exit;
+  }
+ 
+  layout_header('Overall summary table');
+  $loop_counter++;
+  print "PID $$ has handled $loop_counter requests\n";
+
+  my ($html, $wikicode) = cached_ratings_table();
+
+  if ( (defined $html) && 0 < length $html ) { 
+    #print Dumper(cached_ratings_table());
+    print "<div class=\"navbox\">\n";
+    print_header_text();
+    print "</div>\n<center>\n";
+    print $html;
+    print "</center>\n";
+    print "\n";
+  }
+
+  #print "<div class=\"indent\"><pre>";
+  #print $wikicode;
+  #print "</pre></div>\n";
+
+  layout_footer();
+}
 
 #####################################################################
 #####################################################################

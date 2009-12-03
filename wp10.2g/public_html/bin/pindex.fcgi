@@ -28,55 +28,71 @@ require Mediawiki::API;
 
 require CGI;
 
-my $cgi;
-if ( $Opts->{'use_fastcgi'} ) {
-  require CGI::Fast;
-  $cgi = new CGI::Fast;
-} else { 
-  $cgi = new CGI;
-}
-
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
 
 require POSIX;
 POSIX->import('strftime');
 
-my %param = %{$cgi->Vars()};
+my $loop_counter = 0;
 
-my $projects = db_get_project_details();
-
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
-layout_header("Project index");
-
-my $table = sort_projects($projects);
-
-my $project_count = scalar keys %$projects;
-
-my $table2url = $Opts->{'table2-url'};
-
-print "<div class=\"navbox\">\n";
-print "Index of <b>$project_count</b> projects \n";
-print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n"; 
-
-my $letter;
-foreach $letter ( sort {$a cmp $b} keys %$table ) {
-  print   "<a href=\"" . $Opts->{'index-url'}  . "#" 
-        . $letter . "\">$letter</a> ";
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) {
+    main_loop($cgi);
+  }  
+} else { 
+  $cgi = new CGI;
+  $loop_counter = -5;
+  main_loop($cgi);
 }
-print "</div>\n";
 
-print "<center><table class=\"wikitable\">\n";
+exit;
 
-foreach $letter ( sort {$a cmp $b} keys %$table ){
-print << "HERE";
-  <tr>
-    <th colspan="5" style="text-align: center; padding-top: 1em;"">
+############################################################
+
+sub main_loop { 
+  my $cgi = shift;
+  $loop_counter++;
+
+  my %param = %{$cgi->Vars()};
+
+  my $projects = db_get_project_details();
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+  layout_header("Project index");
+
+  my $table = sort_projects($projects);
+
+  my $project_count = scalar keys %$projects;
+
+  my $table2url = $Opts->{'table2-url'};
+
+  print " PID $$ has served $loop_counter requests <br/>\n";
+
+  print "<div class=\"navbox\">\n";
+  print "Index of <b>$project_count</b> projects \n";
+  print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n"; 
+
+  my $letter;
+  foreach $letter ( sort {$a cmp $b} keys %$table ) {
+    print   "<a href=\"" . $Opts->{'index-url'}  . "#" 
+        . $letter . "\">$letter</a> ";
+  }
+  print "</div>\n";
+
+  print "<center><table class=\"wikitable\">\n";
+
+  foreach $letter ( sort {$a cmp $b} keys %$table ){
+    print << "HERE";
+    <tr>
+      <th colspan="5" style="text-align: center; padding-top: 1em;"">
          &mdash;&nbsp;<B>$letter</B>&nbsp;&mdash;<a name="$letter"/>
-    </th>
-  </tr>
-  <tr>
+      </th>
+    </tr>
+    <tr>
         <th>Project</th>
         <th>Articles</th>
         <th>Data</th>
@@ -85,16 +101,16 @@ print << "HERE";
    </tr>
 HERE
 
-  my $project;
-  foreach $project ( sort {$a cmp $b} keys %{$table->{$letter}} ){
-    project_index_link($project, $projects->{$project});
+    my $project;
+    foreach $project ( sort {$a cmp $b} keys %{$table->{$letter}} ){
+      project_index_link($project, $projects->{$project});
+    }
+    print "</td></tr>\n";
   }
-  print "</td></tr>\n";
-}
 
-print "</table></center>\n";
-layout_footer();
-exit;
+  print "</table></center>\n";
+  layout_footer();
+}
 
 #####################################################################
 

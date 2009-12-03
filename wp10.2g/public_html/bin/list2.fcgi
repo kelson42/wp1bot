@@ -21,13 +21,6 @@ require 'database_www.pl';
 require 'layout.pl';
 
 require CGI;
-my $cgi;
-if ( $Opts->{'use_fastcgi'} ) {
-  require CGI::Fast;
-  $cgi = new CGI::Fast;
-} else {
-  $cgi = new CGI;
-}
 
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
@@ -36,59 +29,78 @@ require DBI;
 require POSIX;
 POSIX->import('strftime');
 
-my $Namespaces;
-
-my %param = %{$cgi->Vars()};
-
-if ( $param{'limit'} > 1000 ) { 
-  $param{'limit'} = 1000;
-}
-
-if ( ! defined $param{'sorta'} ) { 
-  $param{'sorta'} = 'Importance';
-}
-
-if ( ! defined $param{'sortb'} ) { 
-  $param{'sortb'} = 'Quality';
-}
-
-my $p;
-my $logFile = "list2." . time() . "." . $$;
-my $logEntry = $logFile;
-
-foreach $p ( keys %param ) { 
-  $param{$p} =~ s/^\s*//;
-  $param{$p} =~ s/\s*$//;
-  $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
-}
-
-
-if ( defined $Opts->{'log-dir'} 
-     && -d $Opts->{'log-dir'} ) { 
-  open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
-  print LOG $logEntry . "\n";
-  close LOG;
-}
-
-my $proj = $param{'project'} || $ARGV[0];
-
 our $dbh = db_connect_rw($Opts);  # needs read-write access for cache
 
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
-layout_header("Article lists");
-
-my $projects = list_projects($dbh);
-query_form(\%param, $projects);
-
-
-if ( defined $param{'run'} || defined $ARGV[0]) { 
-  ratings_table(\%param, $projects);
+my $cgi;
+my $loop_counter = 0;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) { 
+    main_loop($cgi);
+  }
+} else {
+  $cgi = new CGI;
+  main_loop($cgi);
 }
 
-layout_footer();
-
 exit;
+
+############################################################
+
+sub main_loop { 
+  my $cgi = shift;
+  my $Namespaces;
+
+  my %param = %{$cgi->Vars()};
+
+  if ( $param{'limit'} > 1000 ) { 
+    $param{'limit'} = 1000;
+  }
+
+  if ( ! defined $param{'sorta'} ) { 
+    $param{'sorta'} = 'Importance';
+  }
+
+  if ( ! defined $param{'sortb'} ) { 
+    $param{'sortb'} = 'Quality';
+  }
+
+  my $p;
+  my $logFile = "list2." . time() . "." . $$;
+  my $logEntry = $logFile;
+
+  foreach $p ( keys %param ) { 
+    $param{$p} =~ s/^\s*//;
+    $param{$p} =~ s/\s*$//;
+    $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+  }
+
+  if ( defined $Opts->{'log-dir'} 
+       && -d $Opts->{'log-dir'} ) { 
+    open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
+    print LOG $logEntry . "\n";
+    close LOG;
+  }
+
+  my $proj = $param{'project'} || $ARGV[0];
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+  layout_header("Article lists");
+
+  $loop_counter++;
+  print "PID $$ has served $loop_counter requests\n";
+
+  my $projects = list_projects($dbh);
+  query_form(\%param, $projects);
+
+  if ( defined $param{'run'} || defined $ARGV[0]) { 
+    ratings_table(\%param, $projects);
+  }
+
+  layout_footer();
+}
+
 ###########################################################################
 
 sub ratings_table { 
@@ -106,7 +118,7 @@ sub ratings_table {
 
   if (($params->{'intersect'} eq 'on') && 
       ($params->{'projecta'} ne $params->{'projectb'})) { 
-		ratings_table_intersect($params);
+		ratings_table_intersect($params, $projects);
 		return;
   } 
 	
@@ -415,6 +427,7 @@ HERE
 
 sub ratings_table_intersect { 
   my $params = shift;
+  my $projects = shift;
 
   my $projecta = $params->{'projecta'};
 
@@ -549,7 +562,7 @@ HERE
     }
   }
 
-  if ( defined $param{'diffonly'} ) { 
+  if ( defined $params->{'diffonly'} ) { 
     $query .= " AND NOT ra.r_quality = rb.r_quality ";
     $queryc .= " AND NOT ra.r_quality = rb.r_quality ";
   }
@@ -750,7 +763,7 @@ sub query_form {
   }
 
   my $diffonly_checked = "";
-  if ( defined $param{'diffonly'} ) {
+  if ( defined $params->{'diffonly'} ) {
     $diffonly_checked = "checked";
   }
 
@@ -761,10 +774,10 @@ sub query_form {
   foreach $s ( sort {$a cmp $b} keys %$sorts ) {
     $sort_html .=  "<option value=\"$s\"";
     $sort_htmlb .=  "<option value=\"$s\"";
-    if ( $s eq $param{'sorta'} ) { 
+    if ( $s eq $params->{'sorta'} ) { 
       $sort_html .= " selected"; 
     }
-    if ( $s eq $param{'sortb'} ) { 
+    if ( $s eq $params->{'sortb'} ) { 
       $sort_htmlb .= " selected"; 
     }
     $sort_html .= ">$s</option>\n";
@@ -773,85 +786,73 @@ sub query_form {
 
   print << "HERE";
 <form>
-<input type="hidden" name="run" value="yes"/>
+  <input type="hidden" name="run" value="yes"/>
 
-<table class="outer">
-<tr><td>
-<table class="mainform">
-<tr>
-<td id="projecta" class="toprow"><b>First project</b><br/>
-  <table class="subform">
-    <tr><td>Project name</td>
-      <td><input type="text" value="$projecta" name="projecta"/></td></tr>
-    <tr><td>Page name</td>
-      <td><input type="text" value="$pagename" name="pagename"/></td></tr>
-    <tr><td>Quality</td>
-      <td><input type="text" value="$quality" name="quality"/></td></tr>
-    <tr><td>Importance</td>
-      <td><input type=\"text\" value="$importance" name="importance"/></td></tr>
-    <tr><td>Score</td>
-      <td>\&ge; <input size=\"5\" type=\"text\" value="$score" name="score"/></td></tr>
-    <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  name="pagenameWC" />
-      Treat page name as a 
-      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td></tr>
-    <tr><td colspan="2"><input type="checkbox" $show_external_checked  name="showExternal" />
-      Show external interest data
-    <tr><td colspan="2" class="note">Note: leave any field blank to 
-                       select all values.</td></tr>
-  </table>
-</td></tr>	
-<tr>
-<td class="bottomrow"><b>Output options</b><br/>
-<table class="subform">
-  <tr><td>Results per page</td>
-      <td><input type="text" value="$limit" name="limit"/></td></tr>
-  <tr><td>Start with result #</td>
-      <td><input type="text" value="$offset" name="offset"/></td></tr>
-  <tr><td>Primary sort by</td><td><select name="sorta">
+<div class="formfirstcolumn">
+<fieldset class="inner">
+  <legend>First project</legend>
+  Project name: <input type="text" value="$projecta" name="projecta"/><br/>
+  Page name: <input type="text" value="$pagename" name="pagename"/><br/>
+  Quality:  <input type="text" value="$quality" name="quality"/><br/>
+  Importance: <input type="text" value="$importance" name="importance"/><br/>
+  Score: &ge; <input size="5" type="text" value="$score" name="score"/><br/>
+  <input type="checkbox" $pagename_wc_checked name="pagenameWC" />
+      Treat page name as a
+      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular 
+           expression</a><br/>
+  <input type="checkbox"  name="showExternal" />
+      Show external interest data<br/>
+  <div class="note">Note: leave any field blank to select all values.</div>
+  <div class="submit">
+    <input type="submit"  value="Generate list"/>
+  </div>
+</fieldset>
+
+<fieldset class="inner">
+  <legend>Second project</legend>
+  <input type="checkbox"  name="intersect"  rel="secondproj"/>
+    <b>Specify second project</b><br/>
+  <div rel="secondproj">
+    Project name <input type="text" value="$projectb" name="projectb"/><br/>
+    Quality <input type="text" value="$qualityb" name="qualityb"/><br/>
+    Importance <input type="text" value="$importanceb" 
+                      name="importanceb"/><br/>
+    <input type="checkbox" name="diffonly" $diffonly_checked>
+       Show only pages with differing quality ratings</input><br/>
+  </div>
+</fieldset>
+
+</div> <!-- formfirstcolumn -->
+<div class="formsecondcolumn">
+
+<fieldset class="inner">
+  <legend>Output options</legend>
+  Results per page: <input type="text" value="$limit" name="limit"/><br/>
+  Start with result # <input type="text" value="$offset" name="offset"/><br/>
+  Primary sort by <select name="sorta">
       $sort_html
-      </select></td></tr>
-  <tr><td>Secondary sort by</td><td><select name="sortb">
+      </select><br/>
+  Secondary sort by <select name="sortb">
       $sort_htmlb
-      </select></td></tr>
-  <tr><td colspan="2" class="note">Note: sorting is done 
-            relative to the first project. </td></tr>
-</table>
-<div style="text-align: center;"><input type="submit" value="Generate list"/></div>
-</td>
-</tr>
-</table>
-</td>
-<td style="vertical-align: top;">
-<table class="mainform">
-<td id="projectb" class="toprow"><input type="checkbox" 
-        $intersect_checked  name="intersect"  rel="secondproj"/>
-       <b>Specify second project</b><br/>
-  <table class=\"subform\" rel="secondproj">
-    <tr><td>Project name</td>
-      <td><input type="text" value="$projectb" name="projectb"/></td></tr>
-    <tr><td>Quality</td>
-      <td><input type="text" value="$qualityb" name="qualityb"/></td></tr>
-    <tr><td>Importance</td>
-      <td><input type=\"text\" value="$importanceb" name="importanceb"/></td></tr>
-    <tr><td colspan="2"><input type="checkbox" name="diffonly" $diffonly_checked>
-       Show only pages with differing quality ratings</input></td></tr>
-  </table>
-</td></tr>
-  <tr>
-    <td class="bottomrow">
-     <input type="checkbox" $filter_release_checked  name="filterRelease"  
-        rel="release"/>
-     <b>Filter release / review data</b><br/>
-     <table class=\"subform\" rel="release">
-       <tr><td>Not yet implemented</td></tr>
-      </table>
-  </td></tr>
-  </table>
-</td></tr>
-</tr></table>
-</td></tr>
-</table>
+      </select><br/>
+  <div class="note">
+  Note: sorting is done relative to the first project.</div>
+</fieldset>
+
+<fieldset class="inner">
+  <legend>Release / review data</legend>
+  <input type="checkbox"  $filter_release_checked name="filterRelease" 
+          rel="release"/>
+  <b>Filter release / review data</b><br/>
+  <div rel="release">
+  Not yet implemented
+  </div>
+</fieldset>
+
+<br/>
+</div> <!-- formsecondcolumn -->
 </form>
+<div class="bottomcontent">&nbsp;</div>
 HERE
 }
 

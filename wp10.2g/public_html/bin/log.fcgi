@@ -23,13 +23,6 @@ require 'database_www.pl';
 require 'layout.pl';
 
 require CGI;
-my $cgi;
-if ( $Opts->{'use_fastcgi'} ) {
-  require CGI::Fast;
-  $cgi = new CGI::Fast;
-} else {
-  $cgi = new CGI;
-}
 
 require CGI::Carp; 
 CGI::Carp->import('fatalsToBrowser');
@@ -40,49 +33,73 @@ require DBI;
 require POSIX;
 POSIX->import('strftime');
 
-my %param = %{$cgi->Vars()};
-
-if ( $param{'limit'} > 1000 ) { 
-  $param{'limit'} = 1000;
-}
-
-my $p;
-my $logFile = "log." . time() . "." . $$;
-my $logEntry = $logFile;
-
-foreach $p ( keys %param ) { 
-  $param{$p} =~ s/^\s*//;
-  $param{$p} =~ s/\s*$//;
-  $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
-}
-
-if ( defined $Opts->{'log-dir'} 
-     && -d $Opts->{'log-dir'} ) { 
-  open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
-  print LOG $logEntry . "\n";
-  close LOG;
-}
-
-my $proj = $param{'project'} || $ARGV[0];
-
 our $dbh = db_connect_rw($Opts); # Needs r-w access for the cache
 
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
-layout_header("Assessment logs");
+my $loop_counter = 0;
 
-my $projects = list_projects($dbh);
-query_form(\%param, $projects);
-
-print "<!-- HERE -->\n";
-
-if ( ! defined $param{'entry'} || 1 ) { 
-  log_table(\%param, $projects);
+my $cgi;
+if ( $Opts->{'use_fastcgi'} ) {
+  require CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) { 
+    main_loop($cgi);
+  }
+} else {
+  $cgi = new CGI;
+  $loop_counter = -5;
+  main_loop($cgi);
 }
 
-layout_footer();
-
 exit;
+
+############################################################
+
+sub main_loop {
+  my $cgi = shift;
+  my %param = %{$cgi->Vars()};
+
+  if ( $param{'limit'} > 1000 ) { 
+    $param{'limit'} = 1000;
+  }
+
+  my $p;
+  my $logFile = "log." . time() . "." . $$;
+  my $logEntry = $logFile;
+
+  foreach $p ( keys %param ) { 
+    $param{$p} =~ s/^\s*//;
+    $param{$p} =~ s/\s*$//;
+    $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+  }
+
+  if ( defined $Opts->{'log-dir'} 
+       && -d $Opts->{'log-dir'} ) { 
+    open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
+    print LOG $logEntry . "\n";
+    close LOG;
+  }
+
+  my $proj = $param{'project'} || $ARGV[0];
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+  layout_header("Assessment logs");
+
+  $loop_counter++;
+  print "PID $$ has served $loop_counter requests<br/>\n";
+
+  my $projects = list_projects($dbh);
+  query_form(\%param, $projects);
+
+  print "<!-- HERE -->\n";
+
+  if ( ! defined $param{'entry'} || 1 ) { 
+    log_table(\%param, $projects);
+  }
+
+  layout_footer();
+}
+
 ###########################################################################
 
 sub log_table { 
@@ -415,58 +432,52 @@ sub query_form {
   print << "HERE";
 <form>
 
-<table class="outer">
-<tr><td>
-<table class="mainform">
-<td id="projecta" class="toprow"><b>Project info</b><br/>
-  <table class="subform">
-    <tr><td>Project name</td>
-      <td><input type="text" value="$project" name="project"/></td></tr>
-    <tr><td>Namespace<br/>number</td>
-      <td><input type="text" value="$ns" name="ns"/></td></tr>
-    <tr><td>Page name</td>
-      <td><input type="text" value="$pagename" name="pagename"/></td></tr>
-    <tr><td colspan="2"><input type="checkbox" $pagename_wc_checked  
-                               name="pagenameWC" />
+<div class="formfirstcolumn">
+  <fieldset class="inner">
+    <legend>Project information</legend>
+    Project name
+      <input type="text" value="$project" name="project"/><br/>
+    Namespace #
+      <input type="text" value="$ns" name="ns"/><br/>
+    Page name
+      <input type="text" value="$pagename" name="pagename"/>
+    <br/>
+    <div class="checkbox">
+      <input type="checkbox" $pagename_wc_checked  
+           name="pagenameWC" />
       Treat page name as a 
-      <a href="http://en.wikipedia.org/wiki/Regular_expression">regular expression</a></td>
-    </tr>
+      <a href="http://en.wikipedia.org/wiki/Regular_expression">
+           regular expression</a><br/>
+    </div>
+    Old rating
+      <input type="text" value="$oldrating" name="oldrating"/><br/>
+    New rating
+     <input type=\"text\" value="$newrating" name="newrating"/><br/>
+    Ending date
+      <input type="text" value="$olderthan" name="olderthan"/><br/>
+    Starting date
+      <input type=\"text\" value="$newerthan" name="newerthan"/><br/>
+    <div class="note">Note: leave any field blank to 
+                       select all values.</div>
+    <div class="submit">
+      <input type="submit" value="Generate list"/>
+    </div>
+</fieldset>
 
-    <tr><td>Old rating</td>
-      <td><input type="text" value="$oldrating" name="oldrating"/></td></tr>
-    <tr><td>New rating</td>
-      <td><input type=\"text\" value="$newrating" name="newrating"/></td></tr>
+</div> <!-- formfirstcolumn -->
+<div class="formsecondcolumn">
 
-    <tr><td>Assessments before</td>
-      <td><input type="text" value="$olderthan" name="olderthan"/></td></tr>
-    <tr><td>Assessments after</td>
-      <td><input type=\"text\" value="$newerthan" name="newerthan"/></td></tr>
-    <tr><td colspan="2" class="note">Note: leave any field blank to 
-                       select all values.</td></tr>
-</table>
+<fieldset class="inner">
+  <legend>Output options</legend>
+  Results per page
+      <input type="text" value="$limit" name="limit"/><br/>
+  Start with result #
+     <input type="text" value="$offset" name="offset"/><br/>
+</fieldset>
 
-<tr><td colspan="2" class="submit-td">
-<div style="text-align: center;"><input type="submit" value="Generate list"/></div>
-</td></tr>
-  </table>
-</td>
-
-<td>
-<table class="mainform">
-<tr>
-<td id="output" class="toprow">
-<b>Output options</b><br/>
-<table class="subform">
-  <tr><td>Results per page</td>
-      <td><input type="text" value="$limit" name="limit"/></td></tr>
-  <tr><td>Start with result #</td>
-      <td><input type="text" value="$offset" name="offset"/></td></tr>
-</table>
-</td></tr></table>
-</td>
-</tr>
-</table>
+</div> <!-- formsecondcolumn -->
 </form>
+<div class="bottomcontent">&nbsp;</div>
 HERE
 
 }

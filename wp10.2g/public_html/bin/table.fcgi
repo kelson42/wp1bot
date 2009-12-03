@@ -52,29 +52,39 @@ require CGI;
 CGI::Carp->import('fatalsToBrowser');
 
 my $cgi;
+my $loop_counter;
 if ( $Opts->{'use_fastcgi'} ) {
   require CGI::Fast;
-  $cgi = new CGI::Fast;
+  while ( $cgi = CGI::Fast->new() ) { 
+    main_loop($cgi);
+  }
 } else {
   $cgi = new CGI;
+  main_loop($cgi);
 }
-my %param = %{$cgi->Vars()};
 
-print CGI::header(-type=>'text/html', -charset=>'utf-8');      
-
-my $proj = $param{'project'} || $ARGV[0];
-
-layout_header('Project summary tables');
-my $projects = query_form($proj);
-
-if ( defined $proj && defined $projects->{$proj} ) {
-  cached_ratings_table($proj);
-}	
-
-layout_footer();
 exit;
 
-#######################
+############################################################
+
+sub main_loop { 
+  my %param = %{$cgi->Vars()};
+
+  print CGI::header(-type=>'text/html', -charset=>'utf-8');      
+
+  my $proj = $param{'project'} || $ARGV[0] || '';
+
+  layout_header('Project summary tables');
+  my $projects = query_form($proj);
+
+  if ( defined $proj && defined $projects->{$proj} ) {
+    cached_ratings_table($proj);
+  }	
+
+  layout_footer();
+}
+
+############################################################
 
 sub cached_ratings_table { 
 
