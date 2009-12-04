@@ -219,7 +219,7 @@ group by grq.gr_rating, gri.gr_rating
       if ( $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
                    '[' . $script_url 
-                    . "&importance=" . uri_escape($prio) 
+                    . "?importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . commify($data->{$qual}->{$prio}) . "]");
       } else { 
@@ -240,19 +240,19 @@ group by grq.gr_rating, gri.gr_rating
   foreach $qual ( @QualityRatings ) {
     $table->data($qual, "Total", "'''[" 
                    . $script_url 
-                    . "&quality=" . uri_escape($qual)  . ' ' 
+                    . "?quality=" . uri_escape($qual)  . ' ' 
                     . commify($qualcounts->{$qual}) . "]'''");
   }
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
                 "'''[" . $script_url 
-                    . "&importance=" . uri_escape($prio) 
+                    . "?importance=" . uri_escape($prio) 
                    . ' ' . commify($priocounts->{$prio}) . "]'''");
 
     $table->data("Assessed", $prio, 
                 "'''[" . $script_url 
-                    . "&importance=" . uri_escape($prio) 
+                    . "?importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
                    . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
   }
@@ -261,7 +261,7 @@ group by grq.gr_rating, gri.gr_rating
                    . $script_url  . ' ' . commify($total) . "]'''");
 
   $table->data("Assessed", "Total", 
-                "'''[" . $script_url . "&quality=Assessed" 
+                "'''[" . $script_url . "?quality=Assessed" 
                    . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
 
   my $code = $table->wikicode();

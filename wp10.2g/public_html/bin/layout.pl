@@ -155,6 +155,11 @@ sub layout_leftnav {
      "Log in" =>                $manualURL . "?mode=login"
     );
 
+  my @Interaction = ( 
+    "Guide " => $Opts->{'guide-url'},
+    "FAQ " => $Opts->{'faq-url'},
+  );
+
   print << "HERE";
 <div id="leftnav">
 <h5 class="menu1 menu1start">Assessment data</h5>
@@ -168,6 +173,13 @@ HERE
 HERE
 
   nav_list($title, \@ManualSelection);
+
+
+  print << "HERE";
+<h5 class="menu1 later">Interaction</h5>
+HERE
+
+  nav_list($title, \@Interaction);
 
 
 }

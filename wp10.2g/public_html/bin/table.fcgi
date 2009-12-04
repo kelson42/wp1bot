@@ -271,7 +271,7 @@ sub ratings_table {
 
       if ( $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
-                   '[' . $list_url . "projecta=" . uri_escape($proj) 
+                   '[' . $list_url . "?projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  
                     . "&run=yes" 
@@ -293,7 +293,7 @@ sub ratings_table {
 
   foreach $qual ( @QualityRatings ) {
     $table->data($qual, "Total", "'''[" 
-                   . $list_url . "projecta=" . uri_escape($proj) 
+                   . $list_url . "?projecta=" . uri_escape($proj) 
 #                    . "&importance=" . uri_escape($prio) 
                     . "&quality=" . uri_escape($qual)  . ' ' 
                     . commify($qualcounts->{$qual}) . "]'''");
@@ -301,24 +301,24 @@ sub ratings_table {
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
-                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
 #                    . "&quality=" . uri_escape($qual)  
                    . ' ' . commify($priocounts->{$prio}) . "]'''");
 
     $table->data("Assessed", $prio, 
-                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
                     . "&quality=Assessed" 
                    . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
   }
 
   $table->data("Total", "Total", "'''[" 
-                   . $list_url . "projecta=" . uri_escape($proj) 
+                   . $list_url . "?projecta=" . uri_escape($proj) 
                    . ' ' . commify($total) . "]'''");
 
   $table->data("Assessed", "Total", 
-                "'''[" . $list_url . "projecta=" . uri_escape($proj) 
+                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
                     . "&quality=Assessed" 
                    . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
 
@@ -432,10 +432,10 @@ sub print_header_text {
 	my $project = shift;
 	my ($timestamp, $wikipage, $parent, $shortname);
 	my $listURL = $list_url;
-	$listURL = $listURL . "projecta=" . $project . "&limit=50";
+	$listURL = $listURL . "?projecta=" . $project . "&limit=50";
 	
         my $logURL = $log_url;
-        $logURL = $logURL . "project=" . $project;
+        $logURL = $logURL . "?project=" . $project;
 
 	($project, $timestamp, $wikipage, $parent, $shortname) = 
 	get_project_data($project);

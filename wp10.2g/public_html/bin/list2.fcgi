@@ -98,6 +98,8 @@ sub main_loop {
 
   $loop_counter++;
   layout_footer("Debug: PID $$ has served $loop_counter requests");
+
+  exit if ( $loop_counter >= $Opts->{'max-requests'});
 }
 
 ###########################################################################
@@ -131,7 +133,6 @@ sub ratings_table {
   my $queryc;
   my @qparam;
   my @qparamc;
-
 
   $queryc = "SELECT count(r_article) FROM ratings as ra";
 
@@ -167,6 +168,54 @@ HERE
                      AND r_article = rel_article ";
   $query .= " \n   LEFT JOIN reviews ON r_namespace = 0 
                       AND r_article = rev_article ";
+
+  my $acategory;
+
+  my $tcategory;
+
+  my $filter_cats = $params->{'filterCategory'} || 0;
+  if ( $filter_cats eq 'on' ) { 
+    $filter_cats = 1;
+
+    if ( ! ( defined $params->{'projecta'} && $params->{'projecta'} =~ /\w|\d/ ) ) { 
+      $filter_cats = -3;
+    }
+    if ( ! ( defined $params->{'namespace'} && $params->{'namespace'} =~ /^\d+$/ ) ) { 
+      $filter_cats = -4;
+    }
+  }
+
+  if ( $filter_cats > 0) { 
+    $acategory = $params->{'category'};
+    $tcategory = $params->{'categoryt'};
+  }
+
+  if ( ! $acategory =~ /\w|\d/ ) { $acategory = undef; }
+  if ( ! $tcategory =~ /\w|\d/ ) { $tcategory = undef; }
+
+  my $aquery;
+
+  if ( defined $acategory) { 
+     $acategory =~ s/ /_/g;
+
+     $aquery = "\n join enwiki_p.page as apage on r_namespace = apage.page_namespace 
+                   and r_article = replace(apage.page_title, '_', ' ') 
+                   join enwiki_p.categorylinks as acat on apage.page_id = acat.cl_from ";
+
+     $queryc .= $aquery;
+     $query .= $aquery;
+  }
+
+  if ( defined $tcategory ) { 
+     $tcategory =~ s/ /_/g;
+     $aquery  = "\n join enwiki_p.page as tpage on (1+r_namespace) = tpage.page_namespace 
+                   and r_article = replace(tpage.page_title, '_', ' ') 
+                   join enwiki_p.categorylinks as tcat on tpage.page_id = tcat.cl_from ";
+
+     $queryc .= $aquery;
+     $query .= $aquery;
+  }
+
 
   $query .= " \nWHERE";
   $queryc .= " \nWHERE";
@@ -222,12 +271,36 @@ HERE
     }
   }
 
+  my $namespace = $params->{'namespace'};
+
+  if ( defined $namespace and $namespace =~ /^\d+/ ) { 
+      $query .= " AND r_namespace = ?";
+      $queryc .= " AND r_namespace = ?";
+      push @qparam, $namespace;
+      push @qparamc, $namespace;
+  }
+
+
   my $importance =  $params->{'importance'};
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
     $queryc .= " AND r_importance = ?";
     push @qparam, $importance;
     push @qparamc, $importance;
+  }
+
+  if ( defined $acategory ) { 
+    $query .= " AND acat.cl_to = ? ";
+    $queryc .= " AND acat.cl_to = ? ";
+    push @qparam, $acategory;
+    push @qparamc, $acategory;
+  }
+
+  if ( defined $tcategory ) { 
+    $query .= " AND tcat.cl_to = ? ";
+    $queryc .= " AND tcat.cl_to = ? ";
+    push @qparam, $tcategory;
+    push @qparamc, $tcategory;
   }
 
   my $score = $params->{'score'};
@@ -264,18 +337,55 @@ HERE
 # print "<pre>QQ:\n$query</pre>\n";
 # print join "<br/>", @qparam;
 
-#  print "QC: $queryc<br/>\n";
+# print "QC: $queryc<br/>\n";
+# print join "<br/>", @qparamc;
 
-  my $sthcount = $dbh->prepare($queryc);
-  $sthcount->execute(@qparamc);
+  my $catmsg = "FC: '$filter_cats'";
+
+  if ( $filter_cats < 0 ) { 
+    $catmsg = "<br/> <b>Warning:</b> ignoring category filters in this query. Due to performance problems, 
+                       category filtering is only enabled when both a project and page namespace are specified. $filter_cats <br/>\n";
+  }
+
+  if ( defined $acategory || defined $tcategory ) { 
+    $catmsg = "<br/>Data limited to";
+    my $link;
+
+    if ( defined $acategory ) { 
+      $link = $acategory;
+      $link =~ s/_/ /g;
+      $link = "<a href=\"" . $Opts->{'server-url'} . "?title=Category:" . uri_escape($link) . "\">Category:$link</a>";
+      $catmsg .= " articles in $link";
+      if ( defined $tcategory ) { 
+        $catmsg .= " and ";
+      }
+    }
+    if ( defined $tcategory ) { 
+      $link = $tcategory;
+      $link =~ s/_/ /g;
+
+      $link = "<a href=\"" . $Opts->{'server-url'} . "?title=Category:" . uri_escape($link) . "\">Category:$link</a>";
+      $catmsg .= " articles with talk pages in $link";
+    }
+    $catmsg .= ".<br/>";
+  }
+
+  my $disable_count = $params->{'disableCount'} || "";
+  if ( $disable_count eq 'on' ) { $disable_count = 1; }
+  my $total = 'Disabled';
+  my @row;
+
+  if ( ! $disable_count ) { 
+    my $sthcount = $dbh->prepare($queryc);
+    $sthcount->execute(@qparamc);
   	
-  my @row = $sthcount->fetchrow_array() ;
-  my $total = $row[0];
-  
+    @row = $sthcount->fetchrow_array() ;
+    $total = $row[0] || 'Error';
+  }  
+
   print "<div class=\"navbox\">\n";
   print_header_text($project);
-  print "<br/><b>Total results:&nbsp;" . $total 
-        . "</b>. Displaying up to $limit results beginning with #" 
+  print "<br/><b>Total results:&nbsp;" . $total . "</b>. $catmsg Displaying up to $limit results beginning with #" 
         . ($offset +1) . "\n";
   print "</div>\n";
 
@@ -740,6 +850,20 @@ sub query_form {
   my $pagenameWC = $params->{'pagenameWC'} || "";
   my $show_external = $params->{'showExternal'} || "";
   my $filter_release = $params->{'filterRelease'} || "";
+  my $filter_category = $params->{'filterCategory'} || "";
+
+  my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'} : 0;
+
+  my $category = $params->{'category'} || "";
+  my $tcategory = $params->{'categoryt'} || "";
+
+  my $disable_count = $params->{'disableCount'} || "";
+
+  my $disable_count_checked = "";
+  if ( $disable_count eq 'on' ) { 
+    $disable_count_checked = "checked=\"yes\" ";
+  }
+
 
   my $intersect_checked = "";
   if ( $intersect eq 'on' ) { 
@@ -749,6 +873,11 @@ sub query_form {
   my $filter_release_checked = "";
   if ( $filter_release eq 'on' ) { 
     $filter_release_checked = "checked=\"yes\" ";
+  }
+
+  my $filter_category_checked = "";
+  if ( $filter_category eq 'on' ) { 
+    $filter_category_checked = "checked=\"yes\" ";
   }
 
   my $pagename_wc_checked = "";
@@ -790,8 +919,9 @@ sub query_form {
 <div class="formfirstcolumn">
 <fieldset class="inner">
   <legend>First project</legend>
-  Project name: <input type="text" value="$projecta" name="projecta"/><br/>
-  Page name: <input type="text" value="$pagename" name="pagename"/><br/>
+  Project: <input type="text" value="$projecta" name="projecta"/><br/>
+  Page namespace: <input type="text" value="$namespace" name="namespace"/><br/>
+  Page title: <input type="text" value="$pagename" name="pagename"/><br/>
   Quality:  <input type="text" value="$quality" name="quality"/><br/>
   Importance: <input type="text" value="$importance" name="importance"/><br/>
   Score: &ge; <input size="5" type="text" value="$score" name="score"/><br/>
@@ -847,6 +977,24 @@ sub query_form {
   Not yet implemented
   </div>
 </fieldset>
+
+<fieldset class="inner">
+  <legend>Category filter</legend>
+  <input type="checkbox"  $filter_category_checked name="filterCategory" 
+          rel="category"/>
+  <b>Filter by category</b>
+  <div rel="category">
+  Article category: <input type="text" value="$category" name="category"/><br/>
+  Talk page category: <input type="text" value="$tcategory" name="categoryt"/><br/>
+  <div class="note">Note: Filtering by category is slow and may cause the query to abort before it completes. If possible, specify a particular 
+   project and namespace in the <b>First project</b> area. Enabling the following option may also help a slow query to complete. 
+</div>
+    <input type="checkbox" name="disableCount" $disable_count_checked>
+Don't try to compute an overall count</input><br/>
+
+  </div>
+</fieldset>
+
 
 <br/>
 </div> <!-- formsecondcolumn -->
