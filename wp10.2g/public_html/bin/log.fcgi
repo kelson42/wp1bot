@@ -10,6 +10,9 @@ CGI program to display assessment logs
 
 =cut
 
+select STDOUT;
+$| = 1;
+
 use strict;
 use Encode;
 use URI::Escape;
@@ -58,9 +61,14 @@ sub main_loop {
   my $cgi = shift;
   my %param = %{$cgi->Vars()};
 
-  if ( $param{'limit'} > 1000 ) { 
+  if ( (! defined $param{'limit'}) || $param{'limit'} > 1000 ) { 
     $param{'limit'} = 1000;
   }
+
+  $param{'pagename'} = defined ($param{'pagename'} ) ? 
+                              $param{'pagename'} : $ARGV[0];
+  $param{'ns'} = defined($param{'ns'}) ? 
+                            $param{'ns'} : $ARGV[1];
 
   my $p;
   my $logFile = "log." . time() . "." . $$;
@@ -85,8 +93,7 @@ sub main_loop {
 
   layout_header("Assessment logs");
 
-  $loop_counter++;
-  print "PID $$ has served $loop_counter requests<br/>\n";
+#  print Dumper(%param) . "<br/>\n";
 
   my $projects = list_projects($dbh);
   query_form(\%param, $projects);
@@ -97,7 +104,8 @@ sub main_loop {
     log_table(\%param, $projects);
   }
 
-  layout_footer();
+  $loop_counter++;
+  layout_footer("Debug: PID $$ has served $loop_counter requests");
 }
 
 ###########################################################################
@@ -110,8 +118,8 @@ sub log_table {
        $pagenameWC, $offset, $limit, $ns, $newerthan, $olderthan);
   
    $project = $params->{'project'} || "";
-   $pagename = $params->{'pagename'} || "";
-   $ns = $params->{'ns'} || "";
+   $pagename = defined ( $params->{'pagename'}) ? $params->{'pagename'} : "";
+   $ns = defined ( $params->{'ns'} ) ? $params->{'ns'} : "";
 
    $oldrating = $params->{'oldrating'} || "";
    $newrating = $params->{'newrating'} || "";
@@ -210,7 +218,8 @@ HERE
    }
 
    if ( defined $pagename and $pagename =~ /\w|\d/ ) { 
-     if ( $params->{'pagenameWC'} eq 'on' ) { 
+     if ( ( defined $params->{'pagenameWC'} ) 
+          && $params->{'pagenameWC'} eq 'on' ) { 
        $query .= " AND l_article REGEXP ?";
        $queryc .= " AND l_article REGEXP ?";
        push @qparam, $pagename;

@@ -1,36 +1,5 @@
 
-
-table.mainform { 
-  background: #eee;
-  margin-left: 0em;
-  border: 1px solid black;
-  border-collapse: collapse;
-}
-
-table.mainform td {
-  vertical-align: top;
-  padding-left: 0.5em;
-  padding-right: 0.5em;
-  border-right: 1px solid black; 
-}
-
-table.subform td { 
-  padding-left: 0em;  
-  margin-left: 0em;
-  border: none;
-}
-
-table.subform {
-  background: #eee;
-  width: 100%;
-  margin: 0px;
-  padding-left: 1em;
-/*  border-left: 1px solid #555;
-  border-bottom: 1px solid #555;  */
-
-}
-
-div.indent {
+div.indent{
   padding-left: 1em;
 }
 
@@ -52,10 +21,6 @@ table.wikitable td {
 
 table.wikitable th { 
   background: #fff;
-}
-
-td.note { 
-  font-size: 90%;
 }
 
 table.space { 
@@ -188,6 +153,7 @@ div.authline {
   padding-bottom: 2px;
   padding-top: 2px;
   vertical-align: middle;
+  font-size: 130%;
 }
 
 span.notauthenticatederror { 
@@ -197,11 +163,6 @@ span.notauthenticatederror {
 
 legend { 
   font-weight: bold;
-}
-
-fieldset.manual { 
-  width: 3in;
-  text-align: right;
 }
 
 a.info { position: relative; }
@@ -224,11 +185,6 @@ a.info:hover span{ /*the span will display just on :hover state*/
     text-align: center
 }
 
-td.note { 
-  font-style: italic;
-  padding-top: 6px !important;
-}
-
 td.spacer { 
   border-bottom: none;
   border-top: none;
@@ -247,6 +203,7 @@ body {
   border: none;
   background: #eee;
   font-family: sans-serif;
+  font-size: x-small;
 }
 
 #container {
@@ -256,28 +213,39 @@ body {
   color: #333;
   border: 1px solid gray;
   border-left: none;
-/*  line-height: 130%; */
+  line-height: 130%; 
 }
 
 #head {
   padding: 0;
   margin: 0;
   background-color: #003366;
-  line-height: 30pt;
+  height: 30px;
   width: 100%;
   border-bottom: 1px solid gray;
+  vertical-align: middle;
 }
 
 #head h1 {
   padding: 0; 
   padding-left: 0.5em;
-  padding-top: 2px;
+  padding-top: 8px;
   margin: 0;
   color: white;
   font-family: sans-serif;
-  font-size: 14pt;
+  font-size: 18px;
   font-weight: bold;
 }
+
+#head h1 a { 
+  color: #fff;
+  text-decoration: none;
+}
+
+#head h1 a:hover { 
+  text-decoration: underline;
+}
+
 
 #subhead { 
 /*  background: #2626A1; */
@@ -289,11 +257,12 @@ body {
   line-height: 12pt;
   clear: right;
   text-align: right;
- padding-right: 2em;
+  padding-right: 2em;
   color: white;
 }
 
 #leftnav {
+  font-size: 130%;
   float: left;
   width: 180px;
   margin: 0;
@@ -310,9 +279,12 @@ body {
   margin-left: 180px;
   border-left: 1px solid grey;
   padding: 1em;
+  padding-bottom: 0em;
 /*  max-width: 36em; */
   background: white;
   min-height: 20em;
+  font-size: 130%;
+  line-height: 140%;
 }
 
 #footerbar { 
@@ -329,19 +301,13 @@ body {
   padding: .5em;
   padding-top: 1em;
   color: #333;
-  background-color: #ddd;
+  background-color: #ccc;
   border-bottom: 1px solid grey;
+  font-size: 120%;
 }
 
 #leftnav p { margin: 0 0 1em 0; }
 #content h2 { margin: 0 0 .5em 0; }
-
-
-#poweredbyicon {
-  margin-top: 0.5em;
-  float: right;
-}
-
 
 h5.menu1 { 
   background-color: #dddddd;
@@ -352,16 +318,17 @@ h5.menu1 {
   padding-top: 2px;
   padding-bottom: 2px;
   padding-left: 0.5em;
+  font-size: 110%;
 }
 
 h5.later {
   margin-top: 1em;
+  font-size: 110%;
 }
 
 ul {
   list-style-image: url(http://toolserver.org/~cbm/bullet.gif);
 }
-
 
 #leftnav ul {
   margin: 0 1em 0 1.5em;
@@ -406,4 +373,109 @@ div.navbox {
 
 div.version { 
   margin-top: 1em;
+}
+
+
+fieldset.inner { 
+  text-align: right;
+  width: 3.5in;
+  margin-bottom: 0.5em;
+  padding-bottom: 1em;
+  border: 1px solid #aaa;
+}
+
+legend { 
+  font-weight: bold;
+}
+
+div.formfirstcolumn { 
+  width: 3.8in;  
+  float: left;
+/*  margin-right: 1em; */
+  margin-bottom: 1em;
+}
+
+div.formsecondcolumn { 
+  width: 3.8in;
+  float: left;
+}
+
+input.submit { 
+  float: right;
+}
+
+div.bottomcontent { 
+  clear: both;
+  height: 1px;
+  width: 4in;
+  overflow:hidden;
+  margin: 0;
+  padding: 0;
+}
+
+
+div.note {  
+  padding-top: 4px; 
+  padding-bottom: 4px;
+  font-size: 95%;
+}
+
+div.checkbox { 
+  padding-bottom: 2px;
+}
+
+div.submit { 
+  text-align: center;
+  margin: 0;
+  margin-top: 0.5em;
+}
+
+.tsbutton {
+  height: 28px;
+  padding: 0;
+  margin: 0;
+  float: right;
+  background-color: #fff;  
+  border: 1px solid black;
+}
+
+.tsbuttoninner { 
+  float: left;
+  padding: 0;
+  margin:0;
+  width: 100px;
+}
+
+.tsbutton a { 
+  float: left;
+  text-decoration: none;
+  vertical-align: middle;
+  background: url(btn_stretch.png) repeat-x left top; 
+  padding: 0;
+  color: #000;
+}
+
+.tsbutton a:hover { 
+  text-decoration: underline;
+}
+
+#poweredbyicon {
+  /*  margin-top: 0.5em; */
+  float: left; 
+  vertical-align: middle;
+  height: 25px;
+  margin-top: 1px;
+  margin-left: 5px;
+}
+
+.btntext { 
+  text-align: center;
+  padding: 0;
+  margin-left: 8px;
+  line-height: 14px;
+  font-size: 10px;
+  float: left;
+  height: 30px;
+  width: 60px;
+  vertical-align: top;
 }

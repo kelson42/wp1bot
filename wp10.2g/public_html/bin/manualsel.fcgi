@@ -47,6 +47,7 @@ if ( $Opts->{'use_fastcgi'} ) {
   }
 } else {
   $cgi = new CGI;
+  $loop_counter = -5;
   main_loop($cgi);
 }
 
@@ -132,9 +133,7 @@ HERE
   }
 
   $loop_counter++;
-  print "PID $$ has handled $loop_counter requests<br/>\n";
-
-  layout_footer();
+  layout_footer("Debug: PID $$ has handled $loop_counter requests");
 }
 
 ############################################################################
@@ -372,11 +371,13 @@ sub do_list {
 
   print << "HERE";
     <form action="$url" method="post">
-    <fieldset class="manual">
+    <fieldset class="inner">
     <legend>List articles in the manual selection</legend>
     <input type="hidden" name="mode" value="list">
       Article:&nbsp;<input type="text" name="farticle" value="$artenc">
-    <input type="submit" value="Filter results">
+    <div class="submit">
+      <input type="submit" value="Filter results">
+    </div>
     </fieldset>
     </form>
 HERE
@@ -497,12 +498,14 @@ sub do_log {
 
 print << "HERE";
   <form action="$url" method="post">
-  <fieldset class="manual">
+  <fieldset class="inner">
   <legend>Show changelog for the manual selection</legend>
   <input type="hidden" name="mode" value="logs">
   Article:&nbsp;<input type="text" name="farticle" value="$artenc"><br/>
   User:&nbsp;<input type="text" name="fuser" value="$userenc"><br/>
-  <input type="submit" value="Filter results">
+  <div class="submit>"
+    <input type="submit" value="Filter results">
+  </div>
   </fieldset>
   </form>
 HERE
@@ -648,13 +651,15 @@ sub auth_form_manual {
 
   print << "HERE";
   <form action="$url" method="post"><br/>
-  <fieldset class="manual">
+  <fieldset class="inner">
   <legend>Manual selection login</legend>
   <input type="hidden" name="mode" value="processlogin">
   User:&nbsp;<input type="text" name="user" value="$user"><br/>
   Password:&nbsp;<input type="password" name="pass" value="$value"><br/>
-   <input type="submit" value="Log in">
-   </fieldset>
-   </form>
+  <div class="manual">
+    <input type="submit" value="Log in">
+  </div>
+  </fieldset>
+  </form>
 HERE
 }

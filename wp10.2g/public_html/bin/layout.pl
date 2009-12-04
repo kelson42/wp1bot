@@ -42,7 +42,7 @@ my $cacheMem = {};
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url($Opts->{'api-url'};
+$api->base_url($Opts->{'api-url'});
 
 ##################################################
 
@@ -82,12 +82,17 @@ sub layout_header {
   my $usableforms = $Opts->{'usableforms.js'}
     or die "Must specify configuration value for 'usableforms.js'\n";
   
+  my $basehref = $Opts->{'base-url'} || "";
+  my $toolserverurl = $Opts->{'toolserver-home-url'} || "";
+  my $toolserverbutton = $Opts->{'toolserver-button-url'} || "";
+  my $homepage = $Opts->{'homepage'} || "";
+
   print << "HERE";
 <!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" 
           "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en" dir="ltr">
 <head>
-  <base href="http://en.wikipedia.org">
+  <base href="$basehref">
   <title>$title - $App</title>
   <style type="text/css" media="screen">
      \@import "$stylesheet";
@@ -99,11 +104,16 @@ sub layout_header {
 
 <div id="container">
   <div id="head">
-    <a href="http://toolserver.org">
-      <img id="poweredbyicon" alt="Powered by Wikimedia Toolserver"
-         src="http://toolserver.org/images/wikimedia-toolserver-button.png"/>
-    </a>
-  <h1>$App</h1>
+    <div class="tsbutton">
+       <div class="tsbuttoninner">
+         <a href="$toolserverurl">
+           <img id="poweredbyicon" alt="Wikimedia Toolserver Logo"
+                src="$toolserverbutton" />
+           <div class="btntext"> Wikimedia<br/>Toolserver </div>
+        </a>
+      </div>
+    </div>
+    <h1><a href="$homepage">$App</a></h1>
   </div>
 
   <div id="subhead">
@@ -139,10 +149,10 @@ sub layout_leftnav {
 
 
   my @ManualSelection = (
-     "List manual selection" => $manualURL . "mode=list",
-     "Add articles" =>          $manualURL . "mode=add",
-     "Changelog" =>             $manualURL . "mode=logs",
-     "Log in" =>                $manualURL . "mode=login"
+     "List manual selection" => $manualURL . "?mode=list",
+     "Add articles" =>          $manualURL . "?mode=add",
+     "Changelog" =>             $manualURL . "?mode=logs",
+     "Log in" =>                $manualURL . "?mode=login"
     );
 
   print << "HERE";
@@ -200,6 +210,8 @@ Print to STDOUT bottom top part of the page HTML
 =cut
 
 sub layout_footer {
+  my $debug = shift;
+
   my $version = $Opts->{'version'};
   my $discussionPage = $Opts->{'discussion-page'} 
      || die "Must specify discussion-page in configuration file\n";
@@ -215,7 +227,8 @@ Please comment or file bug reports at the
 <a href="$discussionPage">discussion page</a>.
 <br/>
 <div class="version">
-Current version: $Version
+Current version: $Version<br/>
+$debug
 </div>
 HERE
 
@@ -279,7 +292,7 @@ Make the URL to link to the project table for PROJECT
 
 sub make_table_link {
   my $project = shift;
-  return $tableURL . "project=" . uri_escape($project);
+  return $tableURL . "?project=" . uri_escape($project);
 }
 
 #######################################################################
@@ -300,7 +313,7 @@ sub make_list_link {
     push @encoded, $key . "=" . uri_escape($opts->{$key});
   }
   
-  return $listURL . (join "&", @encoded);
+  return $listURL . "?" . (join "&", @encoded);
 }
 
 #######################################################################
@@ -321,7 +334,7 @@ sub make_log_link {
     push @encoded, $key . "=" . uri_escape($opts->{$key});
   }
   
-  return $logURL . (join "&", @encoded);
+  return $logURL . "?" . (join "&", @encoded);
 }
 
 #######################################################################
@@ -394,13 +407,13 @@ sub make_history_link {
   }
 
   my $result = 
-       "<a href=\"" . $versionURL . "article=" . uri_escape($art)
+       "<a href=\"" . $versionURL . "?article=" . uri_escape($art)
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
 
   if ( $talktoo ) { 
     my $talk = make_talk_name($ns, $title);
     $result .=
-       "(<a href=\"" . $versionURL . "article=" . uri_escape($talk)
+       "(<a href=\"" . $versionURL . "?article=" . uri_escape($talk)
        . "&timestamp=" . uri_escape($ts) . "\">t</a>)&nbsp;";
   }
 

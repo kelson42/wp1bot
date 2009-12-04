@@ -19,7 +19,7 @@ our $Opts = read_conf();
 require Mediawiki::API;
 my $api = new Mediawiki::API;
 $api->debug_level(0); # no output at all 
-$api->base_url('http://en.wikipedia.org/w/api.php');
+$api->base_url($Opts->{'api-url'});
 
 use Data::Dumper;
 use URI::Escape;
@@ -56,6 +56,7 @@ if ( $Opts->{'use_fastcgi'} ) {
   }
 } else {
   $cgi = new CGI;
+  $loop_counter = -5;
   main_loop($cgi);
 }
 
@@ -76,7 +77,6 @@ sub main_loop {
  
   layout_header('Overall summary table');
   $loop_counter++;
-  print "PID $$ has handled $loop_counter requests\n";
 
   my ($html, $wikicode) = cached_ratings_table();
 
@@ -94,7 +94,7 @@ sub main_loop {
   #print $wikicode;
   #print "</pre></div>\n";
 
-  layout_footer();
+  layout_footer("Debug: PID $$ has handled $loop_counter requests");
 }
 
 #####################################################################

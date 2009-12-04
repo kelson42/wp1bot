@@ -70,8 +70,6 @@ sub main_loop {
 
   my $table2url = $Opts->{'table2-url'};
 
-  print " PID $$ has served $loop_counter requests <br/>\n";
-
   print "<div class=\"navbox\">\n";
   print "Index of <b>$project_count</b> projects \n";
   print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n"; 
@@ -109,7 +107,7 @@ HERE
   }
 
   print "</table></center>\n";
-  layout_footer();
+  layout_footer("Debug: PID $$ has served $loop_counter requests");
 }
 
 #####################################################################

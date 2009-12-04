@@ -25,7 +25,7 @@
 /*******************************************************/
 
 
-var containerTag = 'TABLE';
+var containerTag = 'DIV';
 
 var compatible = (
 	document.getElementById && document.getElementsByTagName && document.createElement

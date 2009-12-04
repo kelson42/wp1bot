@@ -14,7 +14,7 @@ use strict;
 use Encode;
 use URI::Escape;
 
-require 'cgi-bin/read_conf.pl';
+require 'bin/read_conf.pl';
 our $Opts = read_conf();
 
 require 'database_www.pl';

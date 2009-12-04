@@ -40,6 +40,7 @@ if ( $Opts->{'use_fastcgi'} ) {
   }
 } else {
   $cgi = new CGI;
+  $loop_counter = -5;
   main_loop($cgi);
 }
 
@@ -88,9 +89,6 @@ sub main_loop {
 
   layout_header("Article lists");
 
-  $loop_counter++;
-  print "PID $$ has served $loop_counter requests\n";
-
   my $projects = list_projects($dbh);
   query_form(\%param, $projects);
 
@@ -98,7 +96,8 @@ sub main_loop {
     ratings_table(\%param, $projects);
   }
 
-  layout_footer();
+  $loop_counter++;
+  layout_footer("Debug: PID $$ has served $loop_counter requests");
 }
 
 ###########################################################################
