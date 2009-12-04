@@ -2,7 +2,7 @@ PREREQUISITES
 
 (1) Create counts.lst.gz using the selection tools
 
-(2) Set up a database for the system and a working .my.cnf
+(2) Set up a database, user, and working .my.cnf
 
 (3) Set up a .wp10.cnf file in $HOME
 
@@ -19,7 +19,9 @@ INSTALLATION
 
 (3) Import counts.lst.gz using selectiondata.pl
 
-(4) Import the old logs using insert_logs.pl
+(4) Import the old logs using insert_logs.pl. There may be a handful of 
+    errors, so search for 'DBD' in the typesript, remove the offending 
+    lines from the log files, and reimport those files
 
 (5) Download the project data with download.pl --all
 
@@ -28,6 +30,6 @@ INSTALLATION
 (7) Download the review data with download.pl --review
 
 This will leave things in a functional state, but the logs
-will probably need some trimming of duplicate entries
+will probably need some trimming of duplicate entries.
 
 

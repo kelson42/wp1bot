@@ -2,7 +2,7 @@ Goals to finish before promoting to beta version:
 
 * Add filters by review status and release version to list2.pl
 
-* Write FAQ page on wiki, and add headers to CGI programs that link to it
+* Write FAQ and GUIDE pages on wiki
 
 * Expand the information produced by table.pl to make it into a 
   "project homepage". 
