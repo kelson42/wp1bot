@@ -103,8 +103,11 @@ sub update_article_data {
 #  $value = encode("utf8", $value);
 #  $oldvalue = encode("utf8", $oldvalue);
 
+# XXX HACK
+
   my $sth_insert_logging = $dbh->prepare_cached("INSERT INTO logging " . 
-                                         "values (?,?,?,?,?,?,?,?)");
+                                         "values (?,?,?,?,?,?,?,?) 
+                                          ON DUPLICATE KEY UPDATE l_article = l_article");
 
 
 #  print "U: '$project' '$art' '$ns' '$table'\n";

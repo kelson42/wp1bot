@@ -46,7 +46,7 @@ sub init_api() {
   $api->maxlag(-1);
   $api->max_retries(20);
 
-  $api->base_url(get_conf('api_url'));
+  $api->base_url(get_conf('api-url'));
   $api->debug_level(4);
 
   my $cred = get_conf('api-credentials');
