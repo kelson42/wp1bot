@@ -135,6 +135,9 @@ sub ratings_table {
   my @qparamc;
 
   $queryc = "SELECT count(r_article) FROM ratings as ra";
+  $queryc .= " \n   LEFT JOIN reviews ON r_namespace = 0 
+                         AND r_article = rev_article ";
+
 
   $query = << "HERE";
 SELECT r_project, r_namespace, r_article, r_importance, 
@@ -280,7 +283,6 @@ HERE
       push @qparamc, $namespace;
   }
 
-
   my $importance =  $params->{'importance'};
   if ( defined $importance && $importance =~ /\w|\d/) {
     $query .= " AND r_importance = ?";
@@ -312,6 +314,11 @@ HERE
     push @qparamc, $score;
   }
 
+  my $review_filter = normalize_review_filter($params->{'reviewFilter'});
+  my ($review_sql, $review_msg) = review_sql($review_filter);
+  $query .= $review_sql;
+  $queryc .= $review_sql;
+
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
@@ -340,7 +347,7 @@ HERE
 # print "QC: $queryc<br/>\n";
 # print join "<br/>", @qparamc;
 
-  my $catmsg = "FC: '$filter_cats'";
+  my $catmsg = ""; # FC: '$filter_cats'<br/>";
 
   if ( $filter_cats < 0 ) { 
     $catmsg = "<br/> <b>Warning:</b> ignoring category filters in this query. Due to performance problems, 
@@ -385,7 +392,9 @@ HERE
 
   print "<div class=\"navbox\">\n";
   print_header_text($project);
-  print "<br/><b>Total results:&nbsp;" . $total . "</b>. $catmsg Displaying up to $limit results beginning with #" 
+  print "<br/><b>Total results:&nbsp;" . $total . "</b> " 
+        .  $catmsg . $review_msg 
+        . " Displaying up to $limit results beginning with #" 
         . ($offset +1) . "\n";
   print "</div>\n";
 
@@ -671,6 +680,11 @@ HERE
     }
   }
 
+  my $review_filter = normalize_review_filter($params->{'reviewFilter'});
+  my ($review_sql, $review_msg) = review_sql($review_filter);
+  $query .= $review_sql;
+  $queryc .= $review_sql;
+
   if ( defined $params->{'diffonly'} ) { 
     $query .= " AND NOT ra.r_quality = rb.r_quality ";
     $queryc .= " AND NOT ra.r_quality = rb.r_quality ";
@@ -703,8 +717,9 @@ HERE
   print "</div>\n";
 
   my $total = $row[0];
-  print "<p><b>Total results: " . $total
-        . "</b>.<br/> Displaying up to $limit results beginning with #" 
+  print "<p><b>Total results: " . $total . "</b>.<br/>\n"
+        . $review_msg
+        . " Displaying up to $limit results beginning with #" 
         . ($offset +1) . "</p>\n";
 
   my $sth = $dbh->prepare($query);
@@ -852,6 +867,15 @@ sub query_form {
   my $filter_release = $params->{'filterRelease'} || "";
   my $filter_category = $params->{'filterCategory'} || "";
 
+  my $review_filter = $params->{'reviewFilter'} || 0;
+  if ( ! (    $review_filter =~ /^\d+$/ 
+           && $review_filter >= 0 
+           && $review_filter <= 5 ) ) { 
+    $review_filter = 0;
+  }
+
+  my $review_html = review_filter_html($review_filter);
+
   my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'} : 0;
 
   my $category = $params->{'category'} || "";
@@ -974,7 +998,8 @@ sub query_form {
           rel="release"/>
   <b>Filter release / review data</b><br/>
   <div rel="release">
-  Not yet implemented
+    Review status $review_html<br/>
+    <div class="note">Filtering by release is not yet implemented</div>
   </div>
 </fieldset>
 
@@ -1124,3 +1149,72 @@ sub sort_sql {
   return $query;
 }
 
+##########################################################################
+
+sub review_filter_html { 
+  my $which = shift;
+  my @types = ( 'All articles',             # 0 
+                'FA, FL, and GA',           # 1
+                'FA and FL' ,               # 2
+                'FA',                       # 3
+                'FL',                       # 4
+                'GA' );                     # 5
+
+  my $html = "<select name=\"reviewFilter\">\n";
+  for ( my $i = 0; $i < scalar @types; $i++ ) { 
+    $html .= "<option value=\"$i\"";
+    if ( $which == $i ) { 
+      $html .= " selected ";
+    }
+    $html .= ">" . $types[$i] . "</option>\n";
+  }
+  $html .= "</select>\n";
+
+}
+
+##########################################################################
+
+sub review_sql { 
+  my $review_filter = shift;
+  my $msg;
+  my $sql;
+
+  if ( $review_filter == 0 )  {
+    # All articles - relax
+    $msg = "";
+    $sql = "";  
+  } elsif ( $review_filter == 1 )  {
+    # FA FL and GA
+    $sql = " AND NOT ISNULL(rev_value) ";
+    $msg = "<br/>Showing FA, FL, and GA articles only.<br/>\n";
+  } elsif ( $review_filter == 2 )  {
+    # FA and FL
+    $sql = " AND (rev_value = 'FA' OR rev_value = 'FL') ";
+    $msg = "<br/>Showing FA and FL articles only.<br/>\n";
+  } elsif ( $review_filter == 3 )  {
+    # FA
+    $sql = " AND (rev_value = 'FA') ";
+    $msg = "<br/>Showing FA articles only.<br/>\n";
+  } elsif ( $review_filter == 4 )  {
+    # FL
+    $sql = " AND (rev_value = 'FL') ";
+    $msg = "<br/>Showing FL articles only.<br/>\n";
+  } elsif ( $review_filter == 5 )  {
+    # GA
+    $msg = "<br/>Showing GA articles only.<br/>\n";
+    $sql = " AND (rev_value = 'GA') ";
+  }
+  return ($sql, $msg);
+}
+
+##########################################################################
+
+sub normalize_review_filter { 
+  my $review_filter = shift || 0;
+  if ( ! (    $review_filter =~ /^\d+$/ 
+           && $review_filter >= 0 
+           && $review_filter <= 5 ) ) { 
+    $review_filter = 0;
+  }
+  return $review_filter;
+}

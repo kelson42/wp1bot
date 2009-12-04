@@ -107,7 +107,7 @@ HERE
                     -cookie=>[$logincookiepass,$logincookieuser]);
 
 
-  my $mode = $param{'mode'} || '';
+  my $mode = $param{'mode'} || $ARGV[0] || '';
 
   if ( $mode eq 'add' ) {
     layout_header("Add articles", $authline, "Add articles to the manual selection");
@@ -134,6 +134,8 @@ HERE
 
   $loop_counter++;
   layout_footer("Debug: PID $$ has handled $loop_counter requests");
+
+  if ( $loop_counter >= $Opts->{'max-requests'} ) { exit; }
 }
 
 ############################################################################
@@ -432,6 +434,7 @@ HERE
   print "</div>\n"; 
 
   if ( $count == 0) { return; }
+
     print << "HERE";
       <center>
       <form action="$url" method="post">
@@ -553,6 +556,8 @@ print << "HERE";
 </div>
 HERE
 
+  if ( $r eq '0E0' ) { return; }
+
   print << "HERE";
   <center>
   <table class="wikitable">
@@ -650,7 +655,7 @@ sub auth_form_manual {
   $value = uri_escape($value);  
 
   print << "HERE";
-  <form action="$url" method="post"><br/>
+  <form action="$url" method="post">
   <fieldset class="inner">
   <legend>Manual selection login</legend>
   <input type="hidden" name="mode" value="processlogin">
