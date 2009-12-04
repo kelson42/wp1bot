@@ -1,17 +1,20 @@
 Goals to finish before promoting to beta version:
 
-* Add filters by review status and release version to list2.pl
-
 * Write FAQ and GUIDE pages on wiki
 
 * Expand the information produced by table.pl to make it into a 
-  "project homepage". 
+  "project homepage"
 
 * JIRA project for shared account
 
 -----
 Goals to finish before promoting the beta version to production:
 
-* Rewrite release tracking system to permit additional releases
+* Rewrite release tracking system to permit additional releases.
+** Database schema change
+** Update download.pl
+** Update list2.pl: displaying data, filtering by release and release category
 
 * Implement queued request system for project updates
+
+* Add pagination to the project index (the HTML is too big)

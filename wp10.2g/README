@@ -1,6 +1,7 @@
 This is a set of programs to track assessment information for articles
 on Wikipedia.  This information is used to track article quality,
-to prioritize work, and to select articles for release versions of Wikipedia.
+to prioritize work, to prioritize work within WikiProjects, and to select 
+articles for release versions of Wikipedia.
 
 There are two general components: a back end for fetching article data from
 the wiki, and a front end for displaying this data dynamically over CGI.
