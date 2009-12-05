@@ -76,14 +76,14 @@ sub main_loop {
   }
  
   layout_header('Overall summary table');
-  $loop_counter++;
 
-  my ($html, $wikicode) = cached_ratings_table();
+  my ($html, $wikicode, $created) = cached_ratings_table();
+  my $currenttime = time();
 
   if ( (defined $html) && 0 < length $html ) { 
     #print Dumper(cached_ratings_table());
     print "<div class=\"navbox\">\n";
-    print_header_text();
+    print_header_text($created);
     print "</div>\n<center>\n";
     print $html;
     print "</center>\n";
@@ -95,6 +95,9 @@ sub main_loop {
   #print "</pre></div>\n";
 
   layout_footer("Debug: PID $$ has handled $loop_counter requests");
+
+  $loop_counter++;
+  if ( $loop_counter >= $Opts->{'max-requests'} ) { exit; }
 }
 
 #####################################################################
@@ -270,7 +273,9 @@ group by grq.gr_rating, gri.gr_rating
 
 #  print Dumper($r);
 
-  return ($r->{'text'}->{'content'}, $code);
+  my $created = time();
+
+  return ($r->{'text'}->{'content'}, $code, $created);
 }
 
 #####################################################################
@@ -314,12 +319,26 @@ sub get_categories {
 #####################################################################
 
 sub print_header_text {
-  my $project = shift;
-  my ($timestamp, $wikipage, $parent, $shortname);
+  my $created = shift;
+
   my $listURL = $script_url;
   
   print "Overall ratings data " 
       . "(<a href=\"" . $listURL . "\">lists</a> | <b>summary table</b>)\n";
+
+  my $diff = time() - $created;
+
+  my $suffix = "s";
+
+  if ( $diff < 24*60*60 ) { 
+    $diff = int($diff / (60*60));
+    if ( $diff == 1 ) { $suffix = ""; }
+    print "<br/>Updated $diff hour$suffix ago.<br/>\n";
+  } else { 
+    $diff = int($diff / (24*60*60));
+    if ( $diff == 1 ) { $suffix = ""; }
+    print "<br/>Updated $diff day$suffix ago.<br/>\n";
+  }
 }
 
 #####################################################################
@@ -332,18 +351,18 @@ sub cached_ratings_table {
 
   if ( ($expiry = cache_exists($key)) && ! $force_regenerate ) { 
     print "<div class=\"indent\">\n";
-    print "<b>Debugging output</b><br/>\n";
-    print "Current time: $timestamp<br/>\n";
+#    print "<b>Debugging output</b><br/>\n";
+#    print "Current time: $timestamp<br/>\n";
 
-    print "Cached output expires: " 
-        . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
-        . "<br/></div>\n";
+#    print "Cached output expires: " 
+#       . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
+#       . "<br/></div>\n";
 
     $data = cache_get($key);
-    my ($c_key, $c_html, $c_wikicode) = 
-          split /\Q$cache_sep\E/, $data, 3;
+    my ($c_key, $c_html, $c_wikicode, $c_created) = 
+          split /\Q$cache_sep\E/, $data, 4;
 
-    return ($c_html, $c_wikicode);
+    return ($c_html, $c_wikicode, $c_created);
   }
 
   if ( ! $force_regenerate ) { 
@@ -360,23 +379,25 @@ HERE
   print "Regenerating table:<br/>\n";
   my $ts = time();
   
-  my ($html, $wikicode) = ratings_table();
+  my ($html, $wikicode, $createdtime) = ratings_table();
 
   print "----\n";
   print "$html\n";
   print "----\n";
 
   $ts = time() - $ts;
-  print "Regenerated in $ts seconds</div>\n";
+  $ts = int(0.5 + $ts / 60);
+  print "Regenerated in $ts minutes</div>\n";
 
-  $data = "GLOBAL:TABLE" . $cache_sep 
-        . $html . $cache_sep 
-        . $wikicode;
+  $data = "GLOBAL:TABLE" 
+        . $cache_sep . $html 
+        . $cache_sep . $wikicode
+        . $cache_sep . $createdtime;
 
   cache_set($key, $data, 7*24*60*60); # expires in 1 week
 
 
-  return ($html, $wikicode);
+  return ($html, $wikicode, $createdtime);
 }
 
 #####################################################################
