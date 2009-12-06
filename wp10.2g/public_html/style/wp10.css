@@ -9,6 +9,22 @@ table.wikitable {
   background: #eee;
 }
 
+table.ratingstable { 
+  max-width: 5.5in;
+  text-align: right;
+}
+
+table.ratingstable td { 
+  padding-right: 0.5em;
+}
+
+.ratingstable th { 
+  text-align: center;
+  border: 1px solid #aaa;
+  padding-left: 0.5em;
+  padding-right: 0.5em;
+}
+
 table.wikitable tr.list-odd { background: #fff; }
 table.wikitable tr.list-even { background: #ffd; }
 

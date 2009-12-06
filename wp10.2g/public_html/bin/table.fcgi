@@ -1,5 +1,6 @@
 #!/usr/bin/perl
 
+
 # table.pl
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
@@ -79,18 +80,19 @@ sub main_loop {
   my $projects = query_form($proj);
 
   if ( defined $proj && defined $projects->{$proj} ) {
-    cached_ratings_table($proj);
+    cached_ratings_table($proj, $cgi);
   }	
 
   $loop_counter++;
   layout_footer("Debug: PID $$ has handled $loop_counter requests");
+  if ( $loop_counter >= $Opts->{'max-requests'} ) { exit; }
 }
 
 ############################################################
 
 sub cached_ratings_table { 
-
   my $proj = shift;
+  my $cgi = shift;
 
   my $sth = $dbh->prepare("select p_timestamp from projects "
                         . "where p_project = ?");
@@ -99,7 +101,7 @@ sub cached_ratings_table {
   my @row = $sth->fetchrow_array();
   my $proj_timestamp = $row[0];
 
-  print " <!-- foo \n";
+  print " <!-- cache debugging  \n";
   print "<div class=\"indent\">\n";
   print "<b>Debugging output x</b><br/>\n";
   print "Current time: $timestamp<br/>\n";
@@ -108,7 +110,7 @@ sub cached_ratings_table {
   my $key = "TABLE:" . $proj;
   my ($data, $expiry);
 
-  if ( defined $cgi->{'purge'} ) { 
+  if ( defined $cgi->{'purge'}  || defined $ARGV[0]) { 
     print "Purging cached output<br/>\n";
   } elsif ( $expiry = cache_exists($key) ) { 
     print "Cached output expires: " 
@@ -122,10 +124,11 @@ sub cached_ratings_table {
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
 
-	  print "</div> --> \n <div class=\"navbox\">\n";
-	  print_header_text($proj);
-	  print "</div>\n<center>\n";
-	  print $c_html;
+      print "</div> --> \n ";
+      print "<div class=\"navbox\">\n";
+      print_header_text($proj); 
+      print "</div>\n<center>\n";
+      print $c_html;
       print "</center>\n";
       print "\n";
 #      print "<hr/><div class=\"indent\"><pre>";
@@ -150,6 +153,7 @@ sub cached_ratings_table {
   print $html;
   print "</center>\n";
   print "\n";
+
 #  print "<hr/><div class=\"indent\"><pre>";
 #  print $wikicode;
 #  print "</pre></div>\n";
@@ -163,6 +167,7 @@ sub cached_ratings_table {
   cache_set($key, $data, 60*60); # expires in 1 hour
 }
 
+############################################################
 
 sub ratings_table { 
   my $proj = shift;
@@ -170,13 +175,13 @@ sub ratings_table {
   # Step 1: fetch totals from DB and load them into the $data hash
 
   my $sth = $dbh->prepare(
-    "select count(r_article), r_quality, r_importance, r_project from ratings" 
-  . " where r_project = ? group by r_quality, r_importance, r_project");
+      "select count(r_article), r_quality, r_importance, r_project from ratings" 
+    . " where r_project = ? group by r_quality, r_importance, r_project");
 
   $sth->execute($proj);
 
-  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
-	get_categories($proj);
+  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
+    = get_categories($proj);
 
   my $data = {};
   my $cols = {};
@@ -213,6 +218,8 @@ sub ratings_table {
     }
   }
 
+  my $colcount =  (scalar keys %$cols) ;
+
   # The 'Assessed' classification is dynamically generated as we go. 
   $data->{'Assessed'} = {};
 
@@ -226,8 +233,9 @@ sub ratings_table {
   use RatingsTable;
   my $table = RatingsTable::new();
 
-  $QualityLabels->{'Total'} = "'''Total'''";
-  $ImportanceLabels->{'Total'} = "'''Total'''";
+  my $TotalWikicode = "style=\"text-align: center;\" | '''Total'''";
+  $QualityLabels->{'Total'} = $TotalWikicode;
+  $ImportanceLabels->{'Total'} = $TotalWikicode;
 
   $table->title("$proj pages by quality and importance");
   $table->columnlabels($ImportanceLabels);
@@ -240,7 +248,19 @@ sub ratings_table {
   my @Q = (@QualityRatings, "Total");
 
   $table->rows(\@Q);
-  $table->columns(\@P);
+
+  # If there are just two colums, they have the same data
+  # So just show the totals
+
+  if ( 2 < scalar @P ) { 
+    $table->columns(\@P);
+  } else { 
+    $table->columns(["Total"]);
+    $table->title("$proj pages by quality");
+    $table->unset_columntitle();
+    $TotalWikicode = "style=\"text-align: center;\" | '''Total pages'''";
+    $ImportanceLabels->{'Total'} = $TotalWikicode;
+  }
 
   my $priocounts = {};  # Used to count total articles for each priority rating
   my $qualcounts = {};  # same, for each quality rating
@@ -337,13 +357,11 @@ sub get_categories {
 
   my $data = {};
 
-
   my $sortQual = {};
   my $sortImp = {};
   my $qualityLabels = {};
   my $importanceLabels = {};
   my $categories = {};
-
 
   my $sth = $dbh->prepare(
     "SELECT c_type, c_rating, c_ranking, c_category FROM categories " . 
@@ -356,10 +374,20 @@ sub get_categories {
   while ( @row = $sth->fetchrow_array() ) {
     if ( $row[0] eq 'quality' ) { 
       $sortQual->{$row[1]} = $row[2];
-      $qualityLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+
+      if ( $row[1] eq 'Unknown-Class' ) { 
+        $qualityLabels->{$row[1]} = " style=\"text-align: center;\" | '''Other'''";
+      } else { 
+        $qualityLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+      }
     } elsif ( $row[0] eq 'importance' ) { 
       $sortImp->{$row[1]} = $row[2];
-      $importanceLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+
+      if ( $row[1] eq 'Unknown-Class' ) { 
+        $importanceLabels->{$row[1]} = "Other";
+      } else { 
+        $importanceLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+      }
     }
   }
 
@@ -377,7 +405,7 @@ sub get_categories {
 
   if ( ! defined $sortQual->{'Assessed'} ) { 
     $sortQual->{'Assessed'} = 20;
-    $qualityLabels->{'Assessed'} = "'''Assessed'''";
+    $qualityLabels->{'Assessed'} = "{{Assessed-Class}}";
   }
 
   return ($sortQual, $sortImp, $qualityLabels, $importanceLabels);
