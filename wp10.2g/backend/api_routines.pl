@@ -47,7 +47,7 @@ sub init_api() {
   $api->max_retries(20);
 
   $api->base_url(get_conf('api-url'));
-  $api->debug_level(4);
+  $api->debug_level(1);
 
   my $cred = get_conf('api-credentials');
 
@@ -189,6 +189,8 @@ sub content_section {
 
   my $t = $api->content_section($art, $sect);
 
+  if ( $t eq "") { return ""; }
+
   return encode("utf8", $t->{'content'});
 
 }
@@ -267,7 +269,8 @@ sub api_get_move_log {
   my $ns = shift;
   my $title = shift;
 
-  if ($use_toolserver == 1) { 
+# Disabled
+  if (0 && ($use_toolserver == 1)) { 
     print "\tusing toolserver\n";
     return toolserver_get_move_log($ns, $title);
   }

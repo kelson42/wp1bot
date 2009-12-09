@@ -88,8 +88,7 @@ sub handle_content {
 #    print "@ '$line' \n";
     print ".";
 
-
-    $line =~ s/No-Class/Unknown-Class/g;
+    $line =~ s/No-Class/NotA-Class/g;
 
     if ( $line =~ /^===(.*)===$/ ) {
       $date = $1;

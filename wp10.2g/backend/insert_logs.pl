@@ -6,6 +6,7 @@
 
 require 'read_conf.pl';
 my $Opts = read_conf();
+my $NotAClass = $Opts->{'not-a-class'};
 
 use DBI;
 my $dbh = db_connect($Opts);
@@ -53,11 +54,11 @@ while ( $line = <IN> ) {
 
     $sth_logging->execute($parts[1], 0, $parts[3], 
                           'quality', $global_timestamp,
-                          'Unknown-Class', $parts[4], $parts[0]);
+                          $NotAClass, $parts[4], $parts[0]);
 
     $sth_logging->execute($parts[1], 0, $parts[3], 
                           'importance', $global_timestamp,
-                          'Unknown-Class', $parts[5], $parts[0]);
+                           $NotAClass, $parts[5], $parts[0]);
 
   } elsif ( $parts[2] eq 'removed' ) { 
 
@@ -65,11 +66,11 @@ while ( $line = <IN> ) {
 
     $sth_logging->execute($parts[1], 0, $parts[3], 
                           'quality', $global_timestamp,
-                          $parts[4], 'Unknown-Class', $parts[0]);
+                          $parts[4], $NotAClass, $parts[0]);
 
     $sth_logging->execute($parts[1], 0, $parts[3], 
                           'importance', $global_timestamp,
-                          $parts[5], 'Unknown-Class', $parts[0]);
+                          $parts[5], $NotAClass, $parts[0]);
 
   } elsif ( $parts[2] eq 'reassessed' ) { 
 

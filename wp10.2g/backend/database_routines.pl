@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-
 # database_routines.pl
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
@@ -59,6 +58,7 @@ use Data::Dumper;
 $Data::Dumper::Sortkeys = 1;
 
 our $Opts;
+my $NotAClass = $Opts->{'not-a-class'};
 
 use DBI;
 my $dbh = db_connect($Opts);
@@ -142,7 +142,7 @@ sub update_article_moved {
 
   my ($r, $sth, @row);
 
-  print "N: $new_ns:$new_art\n";
+#  print "N: $new_ns:$new_art\n";
 
   $sth = $dbh->prepare("SELECT count(*) FROM moves       
                                 WHERE m_timestamp = ? 
@@ -310,27 +310,37 @@ sub update_articles_table {
 
   my $query = <<"HERE";
 REPLACE INTO global_articles
-SELECT r_article, max(qual.gr_ranking), max(imp.gr_ranking), max(r_score)
-FROM ratings
-JOIN categories as ci
-   ON r_project = ci.c_project AND ci.c_type = 'importance'      
-      AND r_importance = ci.c_rating 
-JOIN categories as cq
-   ON r_project = cq.c_project AND cq.c_type = 'quality'      
-      AND r_quality = cq.c_rating
-JOIN global_rankings AS qual 
-  ON qual.gr_type = 'quality' AND qual.gr_rating = cq.c_replacement  
-JOIN global_rankings AS imp 
-  ON imp.gr_type = 'importance' AND imp.gr_rating = ci.c_replacement 
-WHERE r_namespace = 0 and r_project = ? 
-GROUP BY r_article
+SELECT art, max(qrating), max(irating), max(score)
+FROM
+( SELECT art, qrating, irating, score
+  FROM
+    (SELECT a_article as art, a_quality as qrating, a_importance as irating, 
+            a_score as score
+       FROM global_articles
+       JOIN ratings ON r_namespace = 0 AND r_project = ? AND a_article = r_article
+    ) AS tableone
+  UNION
+    (SELECT r_article as art, qual.gr_ranking as qrating, imp.gr_ranking as irating, 
+            r_score as score
+       FROM ratings
+      JOIN categories as ci ON r_project = ci.c_project
+        AND ci.c_type = 'importance' AND r_importance = ci.c_rating
+      JOIN categories as cq ON r_project = cq.c_project
+        AND cq.c_type = 'quality' AND r_quality = cq.c_rating
+      JOIN global_rankings AS qual ON qual.gr_type = 'quality' 
+                              AND qual.gr_rating = cq.c_replacement
+      JOIN global_rankings AS imp  ON imp.gr_type = 'importance' 
+                                 AND imp.gr_rating = ci.c_replacement
+    WHERE r_namespace = 0 and r_project = ? )
+) as tabletwo
+GROUP BY art;
 HERE
 
   my $sth = $dbh->prepare($query);
 
   print "Updating articles table for $project\n";
   my $start = time();
-  my $r = $sth->execute($project);
+  my $r = $sth->execute($project, $project);
   print "  Result: $r rows in "  .(time() - $start) . " seconds\n";
   return;
 }
@@ -381,15 +391,22 @@ sub update_project {
   @row = $sth->fetchrow_array();
   $proj_count = $row[0];
 
+# XXX - hard coded names to detect unassessed quality and importance
+
   my $sth_qcount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	        . "WHERE r_project = ? AND r_quality='Unassessed-Class'");
+	        . "WHERE r_project = ? AND (r_quality = '$NotAClass' 
+                                            OR r_quality= 'Unassessed-Class')");
+
+
   $sth_qcount->execute($project);
   @row = $sth_qcount->fetchrow_array();
   my $qcount = $proj_count - $row[0];
   print "Quality-assessed articles: $qcount\n";
 
   my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	       . "WHERE r_project = ? AND (r_importance='Unknown-Class' OR r_importance = 'Unassessed-Class')");
+	       . "WHERE r_project = ? AND (r_importance='$NotAClass' 
+                     OR r_importance = 'Unknown-Class'
+                     OR r_importance = 'Unassessed-Class')");
   $sth_icount->execute($project);
 
   @row = $sth_icount->fetchrow_array();
@@ -411,10 +428,10 @@ sub update_project {
                            $parent, $shortname, $proj_count, $qcount, $icount);
   }
 
-  update_category_data( $project, 'Unknown-Class', 'quality', 
-                        '', 10, 'Unassessed-Class'); 
-  update_category_data( $project, 'Unknown-Class', 'importance',
-                        '', 10, 'Unassessed-Class');
+  update_category_data( $project, $NotAClass, 'quality', 
+                        '', 21, 'Unassessed-Class'); 
+  update_category_data( $project, $NotAClass, 'importance',
+                        '', 21, 'Unknown-Class');
 
 }
 
@@ -484,7 +501,7 @@ Commit current DB transaction
 =cut
 
 sub db_commit { 
-  print "Commit database\n";
+  print "Commit changes to database\n";
   $dbh->commit();
   return 0;
 }
@@ -511,9 +528,9 @@ Deletes data forr articles that were once assessed but aren't
 anymore. Also gets rid of NULL values in I<ratings> table.
 
 First, delete rows from I<ratings> table for PROJECT where
-quality and importance are both C<Unknown-Class>. Then
-replace any NULL I<ratings> quality or importance values
-with C<Unknown-Class>.
+quality and importance are both nonexistent or unrecognized classes.
+Then replace any NULL I<ratings> quality or importance values
+with a sentinel value.
 
 =cut
 
@@ -525,8 +542,8 @@ sub db_cleanup_project {
   # was once rated but isn't any more, so we delete the row
 
   my $sth = $dbh->prepare("delete from ratings " 
-                        . "where r_quality = 'Unknown-Class' " 
-                        . " and r_importance = 'Unknown-Class' "
+                        . "where r_quality = '$NotAClass' " 
+                        . " and r_importance = '$NotAClass' "
                         . " and r_project = ?");
   my $count = $sth->execute($proj);
   print "  Deleted articles: $count\n";
@@ -534,9 +551,9 @@ sub db_cleanup_project {
   # It's possible for the quality to be NULL if the article has a 
   # rated importance but no rated quality (not even Unassessed-Class).
   # This will always happen if the article has a quality rating that the 
-  # bot doesn't recognize. Change the NULL to 'Unassessed-Class'.
+  # bot doesn't recognize. Change the NULL to sentinel value.
 
-  $sth = $dbh->prepare("update ratings set r_quality = 'Unknown-Class', " 
+  $sth = $dbh->prepare("update ratings set r_quality = '$NotAClass', " 
                      . "r_quality_timestamp = r_importance_timestamp "
                      . "where isnull(r_quality) and r_project = ?");
   $count = $sth->execute($proj);
@@ -544,9 +561,9 @@ sub db_cleanup_project {
 
   # Finally, if a quality is assigned but not an importance, it is
   # possible for the importance field to be null. Set it to 
-  # Unknown-Class in this case.
+  # $NotAClass in this case.
 
-  $sth = $dbh->prepare("update ratings set r_importance = 'Unknown-Class', " 
+  $sth = $dbh->prepare("update ratings set r_importance = '$NotAClass', " 
                      . "r_importance_timestamp = r_quality_timestamp "
                      . "where isnull(r_importance) and r_project = ?");
   $count = $sth->execute($proj);
@@ -773,6 +790,8 @@ sub get_review_data {
   my $value = shift;
   my $sth;
 
+  print "db review\n";
+
   if ( ! defined $value ) {
     $sth = $dbh->prepare ("SELECT rev_article, rev_value
                            FROM reviews");
@@ -783,12 +802,16 @@ sub get_review_data {
     $sth->execute($value);
   }
 
+  print "  back from db\n";
+
   # Iterate through the results
   my $ratings = {};
   my @row;
   while ( @row = $sth->fetchrow_array() ) {
     $ratings->{$row[0]} = $row[1];
   }
+
+  print "db review done\n";
 
   return $ratings;
 }

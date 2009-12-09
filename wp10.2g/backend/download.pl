@@ -29,9 +29,7 @@ my $start_time = time();
 
 my ($mode, $projects) = parse_argv();
 
-if ( $mode eq 'none') { exit; }
-
-print "Mode: $mode\n";
+if ( $mode eq 'none') { usage(); exit; }
 
 my $count = scalar @$projects;
 print "Will update $count projects \n";
@@ -41,7 +39,9 @@ my $project;
 
 foreach $project ( @$projects ) {
   $i++;
-  print "\n-- $i / $count : $project\n";
+  if ( $count > 1) { 
+    printf "\n%%-- %4d / %d : %s\n", $i, $count, $project;
+  }
   update_status($project, $mode, $i, $count);
   download_project($project);
 }
@@ -53,6 +53,9 @@ exit;
 #####################################################################
 
 sub update_status {
+  return;
+# XXX broken, disabled
+
   my $project = shift;
   my $mode = shift;
   my $i = shift;
@@ -117,12 +120,18 @@ sub parse_argv {
   if ( exists $opts->{'releases'} ) {
     print "Download release data\n";
     download_release_data();	
+    exit;
   }
 
   if ( exists $opts->{'reviews'} ) {
     print "Download review data\n";
     download_review_data();	  
+    exit;
   }
+
+  if ( ! ( $mode eq 'new' || $mode eq 'all' || $mode eq 'existing') ) { 
+    return ("none", []);
+  }    
 
   my $project_details = db_get_project_details();
   
@@ -173,9 +182,8 @@ sub parse_argv {
     return ("none", []);
   }
 
-  my @list =  sort { ($projects->{$a} <=> $projects->{b}) || $a cmp $b }
+  my @list =  sort { ($projects->{$a} <=> $projects->{$b}) || $a cmp $b }
               keys %$projects;
-
 
   if ( $mode eq 'existing' ) { 
     if ( exists $opts->{'over'} ) { 
@@ -209,7 +217,7 @@ $0 [--releases] [--review] [--all | --new | --existing] \
    [--over N] [--under N] [--exclude PROJECT] PROJECT 
 
   --releases     : Update data on release versions
-  --review       : Update data on article review (e.g. FA)
+  --reviews      : Update data on article review (e.g. FA)
 
   --all          : Update ratings data for all projects
   --existing     : Update data only for projects already in local database

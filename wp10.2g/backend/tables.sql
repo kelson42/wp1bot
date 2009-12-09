@@ -288,7 +288,8 @@ replace into global_rankings values
    ('importance', 'High-Class',     300),                
    ('importance', 'Mid-Class',      200), 
    ('importance', 'Low-Class',      100),
-   ('importance', 'Unassessed-Class', 0);
+   ('importance', 'NA-Class',        50),
+   ('importance', 'Unknown-Class',    0);
 
 
 

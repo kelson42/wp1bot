@@ -61,6 +61,9 @@ my @Months=("January", "February", "March", "April", "May", "June",
             "July", "August",  "September", "October", "November", 
             "December");
 
+our $Opts;
+my $NotAClass = $Opts->{'not-a-class'};
+
 ######################################################################
 
 =item B<download_project_list>()
@@ -109,29 +112,56 @@ sub download_project {
   print "\n-- Download ratings data for '$project'\n";
   my ($homepage, $parent, $extra, $shortname, $timestamp);
 
+  my ($lt, $dt);
+
   eval {
+
+$lt = time();
+
         update_timestamps();
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> update_timestamps $dt sec\n";
+
 	($homepage, $parent, $extra, $shortname) = 
           get_extra_assessments($project);
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> get_extra_assessments $dt sec\n";
+
         $timestamp = db_get_project_timestamp($project);
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> get_project_timestamp $dt sec\n";
+
 	download_project_assessments($project, $extra, $timestamp,'quality');
+
+$dt = time() - $lt;
+$lt = time();
+print "==> download quality assessments $dt sec\n";
+
 	download_project_assessments($project, $extra, $timestamp,'importance');
+
+$dt = time() - $lt;
+$lt = time();
+print "==> download importance assessments $dt sec\n";
+
 	db_cleanup_project($project);
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> db_cleanup_project $dt sec\n";
+
 	update_project($project, $global_timestamp, $homepage,
                        $parent, $shortname);
 
-#	db_commit();
-#      };
-#
-#  if ($@) {
-#    print "Transaction aborted: $@";
-#    db_rollback();
-#  }
-#
-#temporary hack - split the transaction in half
-#
-#  eval { 
-#
+$dt = time() - $lt;
+$lt = time();
+#print "==> update project $dt sec\n";
+
         # Update release version scores for this project
         # This assumes that the count of articles with an assessed
         # importance is accurate; it's ser via update_project()
@@ -139,16 +169,31 @@ sub download_project {
 
 	update_project_scores($project);
 
+$dt = time() - $lt;
+$lt = time();
+#print "==> update project scores $dt sec\n";
+
         # This updates the global articles table
         # This must come after update_project because update_project
         # sets up the ratings for unassessed articles, which have to 
         # be right before this runs
+
         update_articles_table($project);
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> update articles table $dt sec\n";
+
 	db_commit();
+
+$dt = time() - $lt;
+$lt = time();
+#print "==> commit $dt sec\n";
+
       };
 
   if ($@) {
-    print "Transaction aborted (updateng '$project'): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
+    print "Transaction aborted (updating '$project'): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
 
@@ -185,25 +230,33 @@ sub get_project_quality_categories {
 
   my $cats = pages_in_category($cat, $categoryNS);
   my $value;
+  my $replaces;
+
+print "$project $Articles\n";
 
   foreach $cat ( @$cats ) { 
+print "SCAN '$cat'\n";
+
     if ( defined $extra->{$cat} ) { 
       $qual = $extra->{$cat}->{'title'};
       $qcats->{$qual} = $cat;
-      $value = $extra->{$cat}->{'ranking'};
+      $value = $extra->{$cat}->{'ranking'}; 
+      $replaces = $extra->{$cat}->{'replaces'};
       print "\tCat $qual $value $cat (extra)\n";
-    } elsif ( $cat =~ /\Q$Category\E:(\w+)[\- ]/) {
+    } elsif ( $cat =~ /\Q$Category\E:(\w+)[\- ]/ ) {
       $qual=$1 . '-' . $Class; # e.g., FA-Class
       next unless (defined $Quality{$qual});
       $qcats->{$qual} = $cat;
       $value = $Quality{$qual};
       print "\tCat $qual $value $cat \n";
     } else {
+      print "\tSkip '$cat'\n";
       next;
     }
-    update_category_data( $project, $qual, 'quality', $cat, $value);
+    update_category_data( $project, $qual, 'quality', $cat, $value, $replaces);
   }
- 
+
+#exit; 
   return $qcats;
 }
 
@@ -244,13 +297,15 @@ sub get_project_importance_categories {
       $imp = $extra->{$cat}->{'title'};
       $icats->{$imp} = $cat;
       $value = $extra->{$cat}->{'ranking'};
-      next;
+      print "\tCat $imp $value $cat (extra)\n";
     } elsif ($cat =~ /\Q$Category\E:(\w+)[\- ]/) { 
       $imp=$1 . '-' . $Class; # e.g., Top-Class
       next unless (defined $Importance{$imp});
       $icats->{$imp} = $cat;
       $value = $Importance{$imp};
+      print "\tCat $imp $value $cat \n";
     } else {
+      print "Skip '$cat'\n";
       next;
     }
     update_category_data($project, $imp, 'importance', $cat, $value);
@@ -341,20 +396,20 @@ sub download_project_assessments {
   foreach $art ( keys %$oldrating ) {
     $curArt++;
     next if ( exists $seen->{$art} );
-    next if ( $oldrating->{$art} eq 'Unknown-Class' );
+    next if ( $oldrating->{$art} eq $NotAClass );
 
     # I believe the next thing will only happen on the
     # first run. Prove me wrong. 
 
     next if ( $type eq 'importance' && $oldrating->{$art} eq '' ); 
+
     print "NOT SEEN ($type: $curArt / $totalArts) '$art' '" 
           . $oldrating->{$art} . "'\n";
 
     ($ns, $title) = split /:/, $art, 2;
-print "HERE\n";
+
     ($new_ns, $new_title, $new_timestamp)
                        = get_new_name($ns, $title, $timestamp);
-print "HERE\n";
 
     if ( defined $new_ns ) {
       print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
@@ -363,12 +418,12 @@ print "HERE\n";
 
       $new_art = $new_ns . ":" . $new_art;
       $moved->{$new_art} = 1;
-      next;
+#      next;
     }
 
     update_article_data($global_timestamp, $project, 
 			$ns, $title, $type,
-                        'Unknown-Class', $global_timestamp_wiki, 
+                        $NotAClass, $global_timestamp_wiki, 
                         $oldrating->{$art});
   }
 
@@ -382,14 +437,14 @@ print "HERE\n";
    $curArt++;
     if ( 0 == $curArt % 1000) { print "\t$curArt\n"; }
 
-    if ( ! defined $moved->{$d->{$art}} ) {
+#    if ( ! defined $moved->{$d->{$art}} ) {
 #         print "New: ". Dumper($d);
          update_article_data($global_timestamp, $project,
 			     $d->{'ns'}, $d->{'title'}, $type,
                              $d->{'rating'}, $d->{'timestamp'}, 
-			     'Unknown-Class');
+			     $NotAClass);
 #         exit;
-       }
+#       }
   }
 
   return 0;
@@ -417,7 +472,8 @@ sub get_extra_assessments {
   my $Starter = get_conf('template_start');	
   my $Ender = get_conf('template_end');
 
-  my ($homepage, $parent, $shortname, $line, $param, $num, $left, $right);
+  my ($homepage, $parent, $shortname, $line, $param, 
+      $replaces, $num, $left, $right);
   my $extras = {};
   my $data = {};
 
@@ -450,19 +506,19 @@ sub get_extra_assessments {
         $homepage = substr($right, 0, 255);
       }
 
-	  if ( $left eq 'parent') { 
+      if ( $left eq 'parent') { 
         $parent = substr($right, 0, 255);
-	  }
+      }
 
-	if ( $left eq 'shortname') { 
+      if ( $left eq 'shortname') { 
         $shortname = substr($right, 0, 255);
-	}
-	
+      }
+
       if ( $left =~ /^extra(\d+)-(\w+)$/ ) {
         $num = $1;
         $param = $2;
         if ( ! defined $extras->{$num} ) { 
-          $extras->{$num} = {};
+           $extras->{$num} = {};
         }
         $extras->{$num}->{$param} = $right;
       }       
@@ -519,6 +575,7 @@ Download review data from wiki, which concerns FA, GA, etc. Update database.
 
 sub download_review_data { 
   eval {
+  print "HERE\n";
     download_review_data_internal();
     db_commit();
   };
@@ -550,7 +607,7 @@ sub download_review_data_internal {
   my ($cat, $tmp_arts, $qual, $art, $d);
 
   foreach $qual ( keys %$qcats ) { 
-#    print "\nFetching list for $qual\n";
+    print "\nFetching list for $qual\n";
 
     $tmp_arts = pages_in_category_detailed($qcats->{$qual});
 
@@ -693,13 +750,13 @@ sub get_new_name {
   my $timestamp = shift;
 
   # First try to use move log
-print "GET MOVE LOG\n";
+#print "GET MOVE LOG\n";
   my $moves = api_get_move_log($ns, $title);
-print "BACK\n";
+#print "BACK\n";
   my $move;
   my $m_timestamp;
   foreach $move ( @$moves ) { 
-    print Dumper($move);
+#    print Dumper($move);
 
     $m_timestamp = $move->{'timestamp'};
     $m_timestamp =~ s/[-T:Z]//g;
