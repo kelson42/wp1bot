@@ -1143,7 +1143,7 @@ sub sort_sql {
                      AND c$which.c_type = 'quality'
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
   } else { 
-    die "Unknown sort key in sort_sql\n";
+    die "Unrecognized sort key in sort_sql\n";
   }
   
   return $query;

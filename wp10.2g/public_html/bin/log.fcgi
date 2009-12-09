@@ -449,8 +449,7 @@ sub query_form {
     Namespace #
       <input type="text" value="$ns" name="ns"/><br/>
     Page name
-      <input type="text" value="$pagename" name="pagename"/>
-    <br/>
+      <input type="text" value="$pagename" name="pagename"/><br/>
     <div class="checkbox">
       <input type="checkbox" $pagename_wc_checked  
            name="pagenameWC" />

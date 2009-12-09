@@ -93,7 +93,7 @@ sub cache_exists  {
 
   cache_purge();
 
-#  print "<!-- CACHE EXPIRES: key:'$key' -->\n";
+#  print "<!-- CACHE EXISTS: key:'$key' -->\n";
 
   my $sth = $dbh->prepare("SELECT c_expiry FROM cache WHERE c_key = ?");
   my $r = $sth->execute($key);

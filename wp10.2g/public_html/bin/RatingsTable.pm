@@ -4,16 +4,35 @@
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
-# This class is used to create a table of article rating data,
-# to abstract the table generation code away from the main code
-#
-# * The data for the table goes in a 2D hash, indexed by symbolic tags.
-#
-# * A subset of this data is output, based on parameters.
-#
-# * The symbolic tags are not used for output; there are other parameters
-#   for how to format them.
-#
+=head1 SYNOPSIS
+
+ This class is used to create a table of article rating data,
+ to abstract the table generation code away from the main code
+
+=over 
+
+=item The data for the table goes in a 2D hash, indexed by symbolic 
+tags.
+
+=item  A subset of this data is output, based on parameters.
+
+=item  The symbolic tags are not used for output; there are other 
+parameter for how to format them.
+
+=back
+
+The generate procedure is to set the data using the B<data> method, 
+set the columns and rows to be displayed via B<columns> and B<rows>,
+set the titles via B<columntitles> and B<rowtitles>, and then 
+generate the wikicode via B<wikicode>.
+
+=head1 METHODS
+
+All methods must be passed to a RatingsTable instance $table
+
+=over 
+
+=cut
 
 package RatingsTable;
 use strict;
@@ -22,6 +41,12 @@ use Carp;
 use Data::Dumper;
 
 #######################################
+
+=item B<new>
+
+Standard constructor
+
+=cut
 
 sub new {
   my $self = {};
@@ -36,7 +61,12 @@ sub new {
 }
 
 #######################################
-## Get/set overarching title
+
+=item B<title>([NEWTITLE])
+
+Get/set overarching title
+
+=cut
 
 sub title {
   my $self = shift;
@@ -48,14 +78,25 @@ sub title {
 }
 
 ####################################
-## Clear data
+
+=item B<clear>
+
+Clear the data. Does not clear column or row names or formats
+
+=cut
+
 sub clear {
   my $self = shift;
   $self->{'data'}= {};
 }
 
 ####################################
-## Get/set data for a particular cell
+
+=item B<data>(ROW, COL, [NEWVALUE])
+
+Get/set data for a particular cell
+
+=cut
 
 sub data { 
   my $self = shift;
@@ -76,7 +117,12 @@ sub data {
 
 
 #############################
-## Increment the number in a table cell
+
+=item B<incrdata>
+
+Increment the number in a table cell
+
+=cut
 
 sub incrdata { 
   my $self = shift;
@@ -97,7 +143,13 @@ sub incrdata {
 }
 
 ###############################################################
-###### Get/set labels for columns
+
+=item B<columnlabels>([$ColumnLabels])
+
+Get/set labels for columns. $ColumnLabels is a reference
+to a hash of name => label pairs.
+
+=cut
 
 sub columnlabels {
   my $self = shift;
@@ -111,7 +163,13 @@ sub columnlabels {
 }
 
 ##################################
-### Get/set labels for rows
+
+=item B<rowlabels>([$RowLabels])
+
+Get/set labels for rows. $ColumnLabels is a reference
+to a hash of name => label pairs.
+
+=cut
 
 sub rowlabels {
   my $self = shift;
@@ -125,7 +183,12 @@ sub rowlabels {
 }
 
 #######################################
-## Get/set list of column names to use
+
+=item B<columns>([$ColumnList])
+
+Get/set list of column names to use. $ColumnList is an array reference.
+
+=cut
 
 sub columns {
   my $self = shift;
@@ -139,7 +202,12 @@ sub columns {
 }
 
 ############################################33
-### Get/set list of row names to use
+
+=item B<rows>([$Rows])
+
+Get/set list of row names to use. $Rows is an array reference
+
+=cut
 
 sub rows {
   my $self = shift;
@@ -153,7 +221,12 @@ sub rows {
 }
  
 ######################################################
-#############  A single title over all the columns
+
+=item B<columntitle>([$title])
+
+Get/set the title over all the rating columns. 
+
+=cut
 
 sub columntitle {
   my $self = shift;
@@ -164,8 +237,24 @@ sub columntitle {
  return $self->{'columntitle'};
 }
 
+=item B<unset_columntitle>() 
+
+Remove the title over the rating columns
+
+=cut
+
+sub unset_columntitle { 
+  my $self = shift;
+  delete $self->{'columntitle'};
+}
+
+
 ###########################################################
-### A single title over all the rows
+=item B<rowtitle>([$title])
+
+Get/set the single title over all the rows
+
+=cut
 
 sub rowtitle {
   my $self = shift;
@@ -177,7 +266,12 @@ sub rowtitle {
 }
 
 ########################################################3
-### Generate wiki code
+
+=item B<wikicode>()
+
+ Generate wiki code from current data 
+
+=cut
 
 sub wikicode {
 
@@ -191,13 +285,13 @@ sub wikicode {
   $totalCols = scalar @{$self->{'columns'}} + 1;
 
   $text .= << "HERE";
-{| class="wikitable" style="text-align: center; font-size: 10pt; width: 5.5in;"
+{| class="ratingstable wikitable" 
 HERE
 
   if ( defined $self->{'title'} ) { 
     $text .= << "HERE";
 |- 
-! colspan="$totalCols" | $self->{'title'}
+! colspan="$totalCols" class="ratingstabletitle" | $self->{'title'}
 HERE
   }
 
@@ -210,8 +304,8 @@ HERE
 
       $text .= << "HERE";
 |-
-| rowspan="2" style="vertical-align: bottom" | $self->{'rowtitle'}
-| colspan="$classCols" | $self->{'columntitle'}
+! rowspan="2" style="vertical-align: bottom" | $self->{'rowtitle'}
+! colspan="$classCols" | $self->{'columntitle'}
 |-
 HERE
     } else {
@@ -219,7 +313,7 @@ HERE
 
       $text .= << "HERE";
 |-
-| style="vertical-align: bottom" | $self->{'rowtitle'}
+! style="vertical-align: bottom" | $self->{'rowtitle'}
 HERE
     }
     foreach $col (@{$self->{'columns'}}) { 
@@ -227,7 +321,7 @@ if ( ! defined $self->{'columnlabels'}->{$col} ) {
   carp("No label for column $col\n");
 }
       $text .= << "HERE";
-| $self->{'columnlabels'}->{$col}
+! $self->{'columnlabels'}->{$col}
 HERE
     }
   } else {   # no row title 
@@ -240,7 +334,6 @@ HERE
 |-
 | &nbsp;
 HERE
-
     } else {
       # no row title, no column title
       # Nothing to do in this case
@@ -284,6 +377,12 @@ sub dump {
 }
 
 ############################## End
+
+=pod 
+
+=back
+
+=cut
 
 1; # return true on successful loading of the module
 

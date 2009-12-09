@@ -8,6 +8,8 @@
 
 Routines for the CGI programs re page layout and link formatting
 
+=over
+
 =cut
 
 use strict;
@@ -98,7 +100,6 @@ sub layout_header {
      \@import "$stylesheet";
   </style>
 <script type="text/javascript"  src="$usableforms"></script>
-<script type="text/javascript"  src="http://toolserver.org/~cbm/foo.js"></script>
 </head>
 <body>
 
@@ -158,6 +159,7 @@ sub layout_leftnav {
   my @Interaction = ( 
     "Guide " => $Opts->{'guide-url'},
     "FAQ " => $Opts->{'faq-url'},
+    "Discussion" =>  $Opts->{'discussion-page'}
   );
 
   print << "HERE";
@@ -591,6 +593,7 @@ sub get_td_background {
 
   # XXX hack
   $t =~ s/Bplus/B+/;
+  $t =~ s/NotA/----/;
 
   return $t;
 }
