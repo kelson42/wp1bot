@@ -1,6 +1,5 @@
 #!/usr/bin/perl
 
-
 # table.pl
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
@@ -16,6 +15,7 @@ use Encode;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
+my $NotAClass = $Opts->{'not-a-class'};
 
 require Mediawiki::API;
 my $api = new Mediawiki::API;
@@ -189,7 +189,7 @@ sub ratings_table {
 
   while ( @row = $sth->fetchrow_array ) {
     if ( ! defined $row[1] ) { $row[1] = 'Unassessed-Class'; }
-    if ( ! defined $row[2] ) { $row[2] = 'Unassessed-Class'; }
+    if ( ! defined $row[2] ) { $row[2] = 'Unknown-Class'; }
     if ( ! defined $data->{$row[1]} ) { $data->{$row[1]} = {} };
 
     # The += here is for 'Unssessed-Class' classifications, which 
@@ -287,9 +287,11 @@ sub ratings_table {
 
   foreach $qual ( @QualityRatings ) {
     next if ( $qual eq 'Assessed' );  # nothing in $data for this
-    foreach $prio ( @PriorityRatings ) { 
 
-      if ( $data->{$qual}->{$prio} > 0 ) { 
+    foreach $prio ( @PriorityRatings ) { 
+#      print "<!-- q '$qual' p '$prio' -->\n";
+
+      if ( (defined $data->{$qual}->{$prio}) && $data->{$qual}->{$prio} > 0 ) { 
          $table->data($qual, $prio, 
                    '[' . $list_url . "?projecta=" . uri_escape($proj) 
                     . "&importance=" . uri_escape($prio) 
@@ -300,9 +302,13 @@ sub ratings_table {
          $table->data($qual, $prio, "");
       }
 
-      $qualcounts->{$qual} += $data->{$qual}->{$prio};    
-      $priocounts->{$prio} += $data->{$qual}->{$prio};    
-      $total += $data->{$qual}->{$prio};    
+# print "<!-- qual '$qual' prio '$prio' -->\n";
+
+      if ( defined $data->{$qual}->{$prio} ) { 
+        $qualcounts->{$qual} += $data->{$qual}->{$prio};
+        $priocounts->{$prio} += $data->{$qual}->{$prio};    
+        $total += $data->{$qual}->{$prio};    
+      }
 
       if ( ! ($qual eq 'Unassessed-Class' ) ) { 
         $totalAssessed->{$prio} += $data->{$qual}->{$prio};
@@ -375,7 +381,7 @@ sub get_categories {
     if ( $row[0] eq 'quality' ) { 
       $sortQual->{$row[1]} = $row[2];
 
-      if ( $row[1] eq 'Unknown-Class' ) { 
+      if ( $row[1] eq $NotAClass ) { 
         $qualityLabels->{$row[1]} = " style=\"text-align: center;\" | '''Other'''";
       } else { 
         $qualityLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
@@ -383,7 +389,7 @@ sub get_categories {
     } elsif ( $row[0] eq 'importance' ) { 
       $sortImp->{$row[1]} = $row[2];
 
-      if ( $row[1] eq 'Unknown-Class' ) { 
+      if ( $row[1] eq $NotAClass ) { 
         $importanceLabels->{$row[1]} = "Other";
       } else { 
         $importanceLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";

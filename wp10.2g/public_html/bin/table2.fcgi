@@ -15,6 +15,7 @@ use Encode;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
+my $NotAClass = $Opts->{'not-a-class'};
 
 require Mediawiki::API;
 my $api = new Mediawiki::API;
@@ -87,16 +88,12 @@ sub main_loop {
     print "</div>\n<center>\n";
     print $html;
     print "</center>\n";
-    print "\n";
+    print "</div>\n";
   }
 
-  #print "<div class=\"indent\"><pre>";
-  #print $wikicode;
-  #print "</pre></div>\n";
-
+  $loop_counter++;
   layout_footer("Debug: PID $$ has handled $loop_counter requests");
 
-  $loop_counter++;
   if ( $loop_counter >= $Opts->{'max-requests'} ) { exit; }
 }
 
@@ -134,11 +131,11 @@ group by grq.gr_rating, gri.gr_rating
 #  print Dumper(@row);
 #  print "\n";
 
-    if ( ! defined $row[1] ) { $row[1] = 'Unknown-Class'; }
-    if ( ! defined $row[2] ) { $row[2] = 'Unknown-Class'; }
+    if ( ! defined $row[1] ) { $row[1] = $NotAClass; }
+    if ( ! defined $row[2] ) { $row[2] = $NotAClass; }
     if ( ! defined $data->{$row[1]} ) { $data->{$row[1]} = {} };
 
-    # The += here is for 'Unknown-Class' classifications, which 
+    # The += here is for 'NotA-Class' classifications, which 
     # could happen either as a result of an actual category or as 
     # the result of the if statements above
     $data->{$row[1]}->{$row[2]} += $row[0];
@@ -285,16 +282,17 @@ sub get_categories {
   my $Assessed = "Assessed";
   my $Assessed_Class = "Assessed-Class";
   my $Unassessed_Class = "Unassessed-Class";
+  my $Unknown_Class = "Unknown-Class";
 
   my $sortQual = { 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
                    'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
               'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
-              $Assessed_Class => 20, 'Unknown-Class' => '10', 
+              $Assessed_Class => 20, $NotAClass => '11', 'Unknown-Class' => '10', 
               $Unassessed_Class => 0};
 
   my $sortImp= { 'Top-Class' => 400, 'High-Class' => 300, 
                  'Mid-Class' => 200, 'Low-Class' => 100, 
-                 'Unknown-Class' => 10,  $Unassessed_Class => 0};
+                 $NotAClass => 11, $Unknown_Class => 10, $Unassessed_Class => 0};
 
   my $qualityLabels = {};
   my $importanceLabels = {};
