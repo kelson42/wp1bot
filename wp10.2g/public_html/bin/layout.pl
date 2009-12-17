@@ -18,7 +18,7 @@ use POSIX 'strftime';
 
 our $Opts;
 my $App = $Opts->{'appname'}
-    or die "Must specify application name\n";
+    or die "Error: must specify application name. Did you run this from the command line?\n";
 
 my $Version = $Opts->{'version'}
     or die "Must specify version\n";
@@ -159,7 +159,8 @@ sub layout_leftnav {
   my @Interaction = ( 
     "Guide " => $Opts->{'guide-url'},
     "FAQ " => $Opts->{'faq-url'},
-    "Discussion" =>  $Opts->{'discussion-page'}
+    "Discussion" =>  $Opts->{'discussion-page'},
+    "Bug reports" => $Opts->{'bug-page'}
   );
 
   print << "HERE";
@@ -229,17 +230,18 @@ sub layout_footer {
   my $version = $Opts->{'version'};
   my $discussionPage = $Opts->{'discussion-page'} 
      || die "Must specify discussion-page in configuration file\n";
+  my $bugPage = $Opts->{'bug-page'} 
+     || die "Must specify bug-page in configuration file\n";
 
   print << "HERE";
 </div>
 <div id="footerbar">&nbsp;</div>
 
 <div id="footer">
-This is an <b>alpha</b> version of the second generation WP 1.0 
-bot.<br/>
-Please comment or file bug reports at the 
-<a href="$discussionPage">discussion page</a>.
-<br/>
+This is a <b>beta</b> version of the second generation WP 1.0 
+bot 
+&middot <a href="$discussionPage">Discussion page</a> 
+&middot; <a href="$bugPage">Bug reports</a><br/>
 <div class="version">
 Current version: $Version<br/>
 $debug
