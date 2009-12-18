@@ -187,12 +187,13 @@ create table if not exists global_articles (
         -- article title
 
     a_quality             varchar(63) not null,
-        -- The Wikipedia 0.5 category (Arts, Language, etc.)
+        -- the article's highest quality rating
 
     a_importance          varchar(63) not null,
-        -- The Wikipedia 0.5 category (Arts, Language, etc.)
+        -- The article's highest importance rating
 
     a_score           int(8) unsigned not null,
+        -- The article's highest selection score
 
     primary key (a_article)
 
