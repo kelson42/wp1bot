@@ -397,6 +397,7 @@ fieldset.inner {
   width: 3.5in;
   margin-bottom: 0.5em;
   padding-bottom: 1em;
+  padding-right: 1em;
   border: 1px solid #aaa;
 }
 
@@ -473,6 +474,7 @@ div.submit {
 
 .tsbutton a:hover { 
   text-decoration: underline;
+  color: yellow;
 }
 
 #poweredbyicon {
@@ -495,3 +497,9 @@ div.submit {
   width: 60px;
   vertical-align: top;
 }
+
+div.editfloat { 
+  float: right;
+  font-size: small;
+}
+

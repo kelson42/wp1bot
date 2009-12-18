@@ -44,9 +44,13 @@ print CGI::header(-type=>'text/html', -charset=>'utf-8');
 
 our $dbh = db_connect_rw($Opts);
 
-layout_header("Assessment tools");
+my $msg = $Opts->{'msg-homepage'};
+my $umsg = $Opts->{'server-url'} . "?action=edit&title=" . uri_escape($msg);
+my $pretitle = "<div class=\"editfloat\"><a href=\"$umsg\">[edit]</a></div>";
 
-print get_cached_wiki_page($Opts->{'msg-homepage'});
+layout_header("Assessment tools", undef, undef, $pretitle);
+
+print get_cached_wiki_page($Opts->{'msg-homepage'}, $cgi->{'purge'});
 
 layout_footer();
 exit;

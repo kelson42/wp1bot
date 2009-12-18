@@ -48,7 +48,7 @@ $api->base_url($Opts->{'api-url'});
 
 ##################################################
 
-=item B<layout_header>(TITLE, SUBHEAD, LONGTITLE)
+=item B<layout_header>(TITLE, SUBHEAD, LONGTITLE, PRETITLE)
 
 Print to STDOUT the top part of the page HTML 
 
@@ -66,6 +66,10 @@ HTML for the second bar (light blue) on the page
 
 A longer form of the title to display as a headline
 
+=item PRETITLE
+
+HTML that is put in the main content area before the first headline
+
 =back
 
 =cut
@@ -74,6 +78,7 @@ sub layout_header {
   my $title = shift;
   my $subhead = shift || '&nbsp;';
   my $longtitle = shift;
+  my $pretitle = shift || '';
 
   my $realtitle = $title;
   if ( defined $longtitle) { $realtitle = $longtitle; }
@@ -129,6 +134,7 @@ HERE
   print << "HERE";
 </div>
 <div id="content">
+$pretitle
 <h2>$realtitle</h2>
 HERE
 
@@ -610,18 +616,23 @@ Returns the formatted HTML for PAGE on the wiki
 
 sub get_cached_wiki_page { 
   my $page = shift;
+  my $purge = shift;
 
   my $key = "PAGE:" . $page;
 
-  if ( defined $cacheMem->{$key} ) { 
+  if ( (! defined $purge) && defined $cacheMem->{$key} ) { 
     print "<!-- hit $key in memory cache -->\n";
     return $cacheMem->{$key};
   }
 
   my ($data, $expiry);
+  $expiry = cache_exists($key);
 
-  if ( $expiry = cache_exists($key) ) { 
-     print "<!-- hit $key in database cache, expires " 
+#XXX - broken DB somehowH
+  $expiry =~ s/\0//g;
+
+  if ( (! defined $purge) && $expiry) { 
+     print "<!-- hit $expiry $key in database cache, expires " 
            . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
            . " -->\n";
     $data = cache_get($key);
@@ -629,7 +640,11 @@ sub get_cached_wiki_page {
     return $data;
   }
 
-  print "<!-- missed $key in cache -->\n";
+  if ( defined $purge ) { 
+    print "<!-- purging $key in cache -->\n";
+  } else { 
+    print "<!-- missed $key in cache -->\n";
+  }
 
   $data = get_wiki_page($page);
 
