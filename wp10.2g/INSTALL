@@ -1,39 +1,50 @@
+The steps labeled [Optional] can be skipped, and you will still have a 
+functional system, but with slightly limited functionality. 
+
 PREREQUISITES
 
-(1) Create counts.lst.gz using the selection tools
+(P1) [Optional] Create counts.lst.gz using the selection tools, or download it 
+     from someone else who has made it. 
 
-(2) Set up a database, user, and working .my.cnf
+(P2) Set up a database, user, and working .my.cnf
 
-(3) Set up a .wp10.cnf file in $HOME
+(P3) Set up a .wp10.cnf file in $HOME. You probably want to turn off 
+     fastcgi and turn off use_toolserver
 
-(4) Use parse_logs.pl to download assessment logs from the wiki.
-    It speeds up things later if you sort/uniq the logs.
+(P4) [Optional] Use parse_logs.pl to download assessment logs from the wiki.
+     It speeds up things later if you sort/uniq the logs.
 
-(5) Perl dependencies include XML::Simple and Mediawiki::API
+(P5) Perl dependencies include:
+     * XML::Simple (CPAN) 
+     * Mediawiki::API (http://svn.toolserver.org/svnroot/cbm/mediawiki-api/)
 
-(6) The code uses getpwuid() to get a home directory for the script.
-    The easiest way to make this work is to enable suexec on 
-    your webserver. 
+(P6) The code uses getpwuid() to get a home directory for the script.
+     The easiest way to make this work is to enable suexec on 
+     your webserver. 
+
+(P7) The CGI programs use the .fcgi extension. These will run as 
+     ordinary CGI programs, just tell your webserver to recognize
+     the extension.
 
 INSTALLATION
 
-(1) Go to the backend/ directory
+(I1) Go to the backend/ directory
 
-(2) Use tables.sql to set up the database
+(I2) Create the actual database, grant full permissions to the user from 
+     step P2. Then use tables.sql to set up the database tables. 
 
-(3) Import counts.lst.gz using selectiondata.pl
+(I3) [Optional] Import counts.lst.gz using selectiondata.pl
 
-(4) Import the old logs using insert_logs.pl. There may be a handful of 
-    errors, so search for 'DBD' in the typesript, remove the offending 
-    lines from the log files, and reimport those files
+(I4) [Optional] Import the old logs using insert_logs.pl. There may be a 
+     handful of errors, so search for 'DBD' in the typesript, remove the 
+     offending lines from the log files, and reimport those files.
 
-(5) Download the project data with download.pl --all
+(I5) Download the project data with download.pl --all. You can download
+     just one project with e.g. download.pl Mathematics
 
-(6) Download the release with download.pl --releases
+(I6) [Optional] Download the release with download.pl --releases
 
-(7) Download the review data with download.pl --review
+(I7) [Optional] Download the review data with download.pl --reviews
 
 This will leave things in a functional state, but the logs
 will probably need some trimming of duplicate entries.
-
-
