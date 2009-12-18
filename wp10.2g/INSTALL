@@ -11,6 +11,10 @@ PREREQUISITES
 
 (5) Perl dependencies include XML::Simple and Mediawiki::API
 
+(6) The code uses getpwuid() to get a home directory for the script.
+    The easiest way to make this work is to enable suexec on 
+    your webserver. 
+
 INSTALLATION
 
 (1) Go to the backend/ directory
