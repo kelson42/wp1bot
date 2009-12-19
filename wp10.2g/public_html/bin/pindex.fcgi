@@ -1,6 +1,6 @@
 #!/usr/bin/perl
 
-# index.pl
+# pindex.fgci
 # Part of WP 1.0 bot
 # See the files README, LICENSE, and AUTHORS for additional information
 
@@ -13,6 +13,7 @@ CGI to display index of all projects
 use strict;
 use Encode;
 use URI::Escape;
+use Data::Dumper;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -54,39 +55,106 @@ exit;
 
 sub main_loop { 
   my $cgi = shift;
-  $loop_counter++;
 
   my %param = %{$cgi->Vars()};
 
+  my $iletter = $param{'sec'} || $ARGV[0] || "";
+
   my $projects = db_get_project_details();
+  my $table = sort_projects($projects);
+  my $count;
 
   print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
   layout_header("Project index");
 
-  my $table = sort_projects($projects);
+  if ( $iletter eq '[All]' ) { 
+      $count = scalar keys %$projects;
+      nav_box($iletter, $count, $table);
+      letter_index($projects, $table, $iletter);
+  } elsif ( defined $table->{$iletter} ) { 
+      $count = scalar keys %{$table->{$iletter}};
+      nav_box($iletter, $count, $table);
+      letter_index($projects, $table, $iletter);
+  } else { 
+      $count = scalar keys %$projects;
+      nav_box("", $count, $table);
+  }            
 
-  my $project_count = scalar keys %$projects;
+  $loop_counter++;
+  layout_footer("Debug: PID $$ has served $loop_counter requests");
+  if ( $loop_counter > $Opts->{'max-requests'} ) { 
+      exit;
+  }
+}
 
+#####################################################################
+
+sub nav_box { 
+  my $iletter = shift;
+  my $count = shift;
+  my $table = shift;
   my $table2url = $Opts->{'table2-url'};
 
   print "<div class=\"navbox\">\n";
-  print "Index of <b>$project_count</b> projects \n";
-  print " (<a href=\"$table2url\">Overall ratings table</a>)<hr/>\n"; 
+
+  print "There are <b>$count</b> participating projects";
+
+  if ( ($iletter ne "" ) &&  ( $iletter ne '[All]' ) ) { 
+      print " in section <b>$iletter</b>";
+  } else { 
+      print " overall";
+  }
+
+  print ".<br/>\n";
+
+  if ( $iletter eq "" ) { 
+      print "Please select a section of the index to view.<br/>\n";
+  } else { 
+    print " <b>Section:</b> ";
+  }
 
   my $letter;
   foreach $letter ( sort {$a cmp $b} keys %$table ) {
-    print   "<a href=\"" . $Opts->{'index-url'}  . "#" 
-        . $letter . "\">$letter</a> ";
+    if ( $letter eq $iletter ) { 
+       print   "<b><a href=\"" . $Opts->{'index-url'}  . "?sec=" 
+        . uri_escape($letter) . "\">$letter</a></b> \n";
+    } else { 
+       print   "<a href=\"" . $Opts->{'index-url'}  . "?sec=" 
+        . uri_escape($letter) . "\">$letter</a> \n";
+    }
   }
+
+  if ( $iletter eq '[All]') { 
+    print "<b><a href=\"" . $Opts->{'index-url'}  
+        . "?sec=[All]" . "\">[All]</a></b> \n";
+  } else { 
+     print "<a href=\"" . $Opts->{'index-url'} 
+         . "?sec=[All]" . "\">[All]</a> \n";
+  }
+
   print "</div>\n";
+}
+
+#####################################################################
+
+sub letter_index { 
+  my $projects = shift;
+  my $table = shift;
+  my $iletter = shift;
+
+  my $letter;
+
+  my $project_count = scalar keys %{$table->{$iletter}};
 
   print "<center><table class=\"wikitable\">\n";
 
   foreach $letter ( sort {$a cmp $b} keys %$table ){
+    next if ( ($iletter ne "[All]") && ($letter ne $iletter));
+
     print << "HERE";
     <tr>
-      <th colspan="5" style="text-align: center; padding-top: 1em;"">
+      <th colspan="5" style="text-align: center; padding-top: 1em;">
          &mdash;&nbsp;<B>$letter</B>&nbsp;&mdash;<a name="$letter"/>
       </th>
     </tr>
@@ -107,7 +175,6 @@ HERE
   }
 
   print "</table></center>\n";
-  layout_footer("Debug: PID $$ has served $loop_counter requests");
 }
 
 #####################################################################
@@ -143,9 +210,12 @@ sub project_index_link {
 
   if ( $data->{'p_count'} != 0 ) { 
     $line .= "<td>";
-    $line .= print_progress_bar(($data->{'p_qcount'} / $data->{'p_count'}) * 100);
+    $line .= print_progress_bar(($data->{'p_qcount'} 
+                / $data->{'p_count'}) * 100);
     $line .= "</td><td>";
-    $line .= print_progress_bar(($data->{'p_icount'} / $data->{'p_count'}) * 100);
+
+    $line .= print_progress_bar(($data->{'p_icount'} 
+                / $data->{'p_count'}) * 100);
     $line .= "</td>";
   }
 	
@@ -198,11 +268,11 @@ sub sort_projects {
     $letter = encode("utf8", $letter);
 
     if ( ! ( $letter =~ /[A-Z]/ ) ) { 
-      if ( $letter =~ /[0-9]/ ) { 
-        $letter = '0&ndash;9';
-      } else { 
+#      if ( $letter =~ /[0-9]/ ) { 
+#        $letter = '0&ndash;9';
+#      } else { 
         $letter = "[Other]";
-      }
+#      }
     }
 
     if ( ! defined $table->{$letter} ) { 
