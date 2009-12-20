@@ -218,7 +218,7 @@ sub project_index_link {
                 / $data->{'p_count'}) * 100);
     $line .= "</td>";
   }
-	
+  
   $line .= "</tr>\n";
   print $line;
 }
@@ -232,14 +232,14 @@ sub print_progress_bar {
   # just doesn't do that sort of assessment (particularly with 
   # importance ratings)
   if ( $number == 0 ) { return "";}
-		
+    
   # Get the color of the bar
   my $color = get_bar_color($number);
-	
+  
   # Round down to nearest integer. We want 100% to mean "everything",
   # so that it is easy to distinguish "everything" from "not everything"
   my $rounded = int($number); 
-	
+  
   return << "HERE";
     <div class="progress_cell" style="">
     <div class="progress_bar" style="background:#$color; width:$rounded%;">
@@ -288,10 +288,10 @@ sub sort_projects {
 #####################################################################
 
 sub commify {
-	# commify a number. Perl Cookbook, 2.17, p. 64
-	my $text = reverse $_[0];
-	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
-	return scalar reverse $text;
+  # commify a number. Perl Cookbook, 2.17, p. 64
+  my $text = reverse $_[0];
+  $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+  return scalar reverse $text;
 }
 
 #####################################################################

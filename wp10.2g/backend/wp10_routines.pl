@@ -115,48 +115,48 @@ sub download_project {
   my ($lt, $dt);
 
   eval {
-
+# XXX - performance testing; will remove later
 $lt = time();
 
-        update_timestamps();
+    update_timestamps();
 
 $dt = time() - $lt;
 $lt = time();
 #print "==> update_timestamps $dt sec\n";
 
-	($homepage, $parent, $extra, $shortname) = 
-          get_extra_assessments($project);
+    ($homepage, $parent, $extra, $shortname) = 
+      get_extra_assessments($project);
 
 $dt = time() - $lt;
 $lt = time();
-#print "==> get_extra_assessments $dt sec\n";
+#print "==> get_extra_assessments $dt sec\
 
-        $timestamp = db_get_project_timestamp($project);
+    $timestamp = db_get_project_timestamp($project);
 
 $dt = time() - $lt;
 $lt = time();
 #print "==> get_project_timestamp $dt sec\n";
 
-	download_project_assessments($project, $extra, $timestamp,'quality');
+    download_project_assessments($project, $extra, $timestamp,'quality');
 
 $dt = time() - $lt;
 $lt = time();
 print "==> download quality assessments $dt sec\n";
 
-	download_project_assessments($project, $extra, $timestamp,'importance');
+    download_project_assessments($project, $extra, $timestamp,'importance');
 
 $dt = time() - $lt;
 $lt = time();
 print "==> download importance assessments $dt sec\n";
 
-	db_cleanup_project($project);
+    db_cleanup_project($project);
 
 $dt = time() - $lt;
 $lt = time();
 #print "==> db_cleanup_project $dt sec\n";
 
-	update_project($project, $global_timestamp, $homepage,
-                       $parent, $shortname);
+    update_project($project, $global_timestamp, $homepage,
+                   $parent, $shortname);
 
 $dt = time() - $lt;
 $lt = time();
@@ -167,7 +167,7 @@ $lt = time();
         # importance is accurate; it's ser via update_project()
         # Also this requires the ratings table is accurate, of course
 
-	update_project_scores($project);
+    update_project_scores($project);
 
 $dt = time() - $lt;
 $lt = time();
@@ -178,26 +178,24 @@ $lt = time();
         # sets up the ratings for unassessed articles, which have to 
         # be right before this runs
 
-        update_articles_table($project);
+    update_articles_table($project);
 
 $dt = time() - $lt;
 $lt = time();
 #print "==> update articles table $dt sec\n";
 
-	db_commit();
+    db_commit();
 
 $dt = time() - $lt;
 $lt = time();
 #print "==> commit $dt sec\n";
 
-      };
+  };
 
   if ($@) {
     print "Transaction aborted (updating '$project'): $@  dbi:err: $DBI::err dbi::errstr: $DBI::errstr";
     db_rollback();
   }
-
-
 
   db_unlock("PROJECT:$project");
 
@@ -232,10 +230,10 @@ sub get_project_quality_categories {
   my $value;
   my $replaces;
 
-print "$project $Articles\n";
+  print "$project $Articles\n";
 
   foreach $cat ( @$cats ) { 
-print "SCAN '$cat'\n";
+    print "SCAN '$cat'\n";
 
     if ( defined $extra->{$cat} ) { 
       $qual = $extra->{$cat}->{'title'};
@@ -253,7 +251,8 @@ print "SCAN '$cat'\n";
       print "\tSkip '$cat'\n";
       next;
     }
-    update_category_data( $project, $qual, 'quality', $cat, $value, $replaces);
+    update_category_data( $project, $qual, 'quality', $cat, 
+                          $value, $replaces);
   }
 
 #exit; 
@@ -365,7 +364,8 @@ sub download_project_assessments {
 
     foreach $d ( @$tmp_arts ) {
        $i++;
-       $d->{'ns'}--;  # Talk pages are tagged, we want the NS of the article itself
+       $d->{'ns'}--;  # Talk pages are tagged, 
+                      # we want the NS of the article itself
        next unless (acceptable_namespace($d->{'ns'}));
 
        $art = $d->{'ns'} . ":" . $d->{'title'};
@@ -382,7 +382,7 @@ sub download_project_assessments {
          # No change
        } else {
          update_article_data($global_timestamp, $project,
-			     $d->{'ns'}, $d->{'title'}, $type,
+                             $d->{'ns'}, $d->{'title'}, $type,
                              $qual, $d->{'timestamp'}, $oldrating->{$art} );
        }
     }
@@ -403,18 +403,18 @@ sub download_project_assessments {
 
     next if ( $type eq 'importance' && $oldrating->{$art} eq '' ); 
 
-    print "NOT SEEN ($type: $curArt / $totalArts) '$art' '" 
-          . $oldrating->{$art} . "'\n";
+    print "NOT SEEN ($type: $curArt / $totalArts) '$art' " 
+          . $oldrating->{$art} . "\n"; 
 
     ($ns, $title) = split /:/, $art, 2;
 
     ($new_ns, $new_title, $new_timestamp)
-                       = get_new_name($ns, $title, $timestamp);
+                      = get_new_name($ns, $title, $timestamp);
 
     if ( defined $new_ns ) {
       print "Moved to '$new_ns':'$new_title' at '$new_timestamp'\n";
       update_article_moved($global_timestamp, $project, $ns, $title,
-			   $new_ns, $new_title, $new_timestamp);
+                           $new_ns, $new_title, $new_timestamp);
 
       $new_art = $new_ns . ":" . $new_art;
       $moved->{$new_art} = 1;
@@ -422,7 +422,7 @@ sub download_project_assessments {
     }
 
     update_article_data($global_timestamp, $project, 
-			$ns, $title, $type,
+                        $ns, $title, $type,
                         $NotAClass, $global_timestamp_wiki, 
                         $oldrating->{$art});
   }
@@ -440,9 +440,9 @@ sub download_project_assessments {
 #    if ( ! defined $moved->{$d->{$art}} ) {
 #         print "New: ". Dumper($d);
          update_article_data($global_timestamp, $project,
-			     $d->{'ns'}, $d->{'title'}, $type,
+                             $d->{'ns'}, $d->{'title'}, $type,
                              $d->{'rating'}, $d->{'timestamp'}, 
-			     $NotAClass);
+                             $NotAClass);
 #         exit;
 #       }
   }
@@ -469,7 +469,7 @@ sub get_extra_assessments {
 
   my @lines = split /\n+/, $txt;
 
-  my $Starter = get_conf('template_start');	
+  my $Starter = get_conf('template_start');
   my $Ender = get_conf('template_end');
 
   my ($homepage, $parent, $shortname, $line, $param, 
@@ -622,17 +622,17 @@ sub download_review_data_internal {
 
       # New entry
       if ( ! defined %$oldrating->{$art} ) { 
-	update_review_data($global_timestamp, $art, $qual, 
-			   $d->{'timestamp'}, 'None');
-	next;
+        update_review_data($global_timestamp, $art, $qual, 
+                           $d->{'timestamp'}, 'None');
+        next;
       }
 
       # Old entry, although it could have been updated, so we need to check
       if ( %$oldrating->{$art} eq $qual ) {
-	# No change
+  # No change
       } else {
-	update_review_data($global_timestamp, $art, $qual, 
-			   $d->{'timestamp'}, %$oldrating->{$art});
+        update_review_data($global_timestamp, $art, $qual, 
+                           $d->{'timestamp'}, %$oldrating->{$art});
       } 
     }
   } 
@@ -701,10 +701,10 @@ sub download_release_data_internal {
       $page = $r->{'title'};
 
       if ( defined $oldArts->{$page}
-	   && $oldArts->{$page}->{'0.5:category'} eq $type ) {
+           && $oldArts->{$page}->{'0.5:category'} eq $type ) {
       } else { 
-	print "New: $page // $type\n";
-	db_set_release_data($page, '0.5', $type, $r->{'timestamp'});
+        print "New: $page // $type\n";
+        db_set_release_data($page, '0.5', $type, $r->{'timestamp'});
       }
       $seen->{$page} = 1;
     }
@@ -712,7 +712,7 @@ sub download_release_data_internal {
 
   foreach $page ( keys %$oldArts ) { 
     if ( ( ! defined $seen->{$page} )
-	 && $oldArts->{$page}->{'0.5:category'} ne 'None' ) { 
+        && $oldArts->{$page}->{'0.5:category'} ne 'None' ) { 
 #      print "NOT SEEN: $page\n";
       db_set_release_data($page, '0.5', 'None', $global_timestamp_wiki);
     }
@@ -761,7 +761,8 @@ sub get_new_name {
     $m_timestamp = $move->{'timestamp'};
     $m_timestamp =~ s/[-T:Z]//g;
     if ( $m_timestamp > $timestamp ) { 
-      return ($move->{'dest-ns'}, $move->{'dest-title'}, $move->{'timestamp'});
+      return ($move->{'dest-ns'}, $move->{'dest-title'}, 
+              $move->{'timestamp'});
     }
   }
 

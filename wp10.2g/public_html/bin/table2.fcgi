@@ -119,8 +119,8 @@ group by grq.gr_rating, gri.gr_rating
   
   $sth->execute();
 
-  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) = 
-	get_categories();
+  my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
+    = get_categories();
 
   my $data = {};
   my $cols = {};
@@ -400,9 +400,3 @@ HERE
 
 #####################################################################
 
-sub commify {
-	# commify a number. Perl Cookbook, 2.17, p. 64
-	my $text = reverse $_[0];
-	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
-	return scalar reverse $text;
-}

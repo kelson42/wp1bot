@@ -50,30 +50,30 @@ sub toolserver_connect {
 #     print "Not using toolserver\n";
      return;
     }
-	
-	my $connect = "DBI:mysql"
+   
+   my $connect = "DBI:mysql"
          . ":database=" . get_conf('database_wiki_ts');
-	
-	# For the enwiki_p db, this should be sql-s1
-	if ( defined get_conf('host_wiki_ts') ) {
-			$connect .= ":host=" . get_conf('host_wiki_ts') ;
-	}
-	
-	
+   
+   # For the enwiki_p db, this should be sql-s1
+   if ( defined get_conf('host_wiki_ts') ) {
+         $connect .= ":host=" . get_conf('host_wiki_ts') ;
+   }
+   
+   
         my $username = get_conf('username') || "";
         my $password = get_conf('password') || "";
 
-	if ( defined get_conf('credentials-toolserver') ) {
-		$connect .= ":mysql_read_default_file=" 
-		. get_conf('credentials-toolserver');
-	}
-	
-	my $db = DBI->connect($connect, $username, $password,
-	{'RaiseError' => 1, 
-	'AutoCommit' => 0} )
-	or die "Couldn't connect to database: " . DBI->errstr;
-	
-	get_prefixes(get_conf('database_wiki_ts'));
+  if ( defined get_conf('credentials-toolserver') ) {
+    $connect .= ":mysql_read_default_file=" 
+    . get_conf('credentials-toolserver');
+  }
+  
+  my $db = DBI->connect($connect, $username, $password,
+  {'RaiseError' => 1, 
+  'AutoCommit' => 0} )
+  or die "Couldn't connect to database: " . DBI->errstr;
+  
+  get_prefixes(get_conf('database_wiki_ts'));
 
         return $db;
 }
@@ -92,46 +92,46 @@ toolserver's global database into internal variables
 =cut
 
 sub get_prefixes { 
-	my $db = shift;
-	
-	die "No 'database_ts' given in database conf file\n"
-	unless ( defined get_conf('database_ts') );
-	
-	my $connect = "DBI:mysql" . ":database=" . get_conf('database_ts');
-	
-	if ( defined get_conf('host_ts') ) {
-		$connect .= ":host="     . get_conf('host_ts') ;
-	}
+  my $db = shift;
+  
+  die "No 'database_ts' given in database conf file\n"
+  unless ( defined get_conf('database_ts') );
+  
+  my $connect = "DBI:mysql" . ":database=" . get_conf('database_ts');
+  
+  if ( defined get_conf('host_ts') ) {
+    $connect .= ":host="     . get_conf('host_ts') ;
+  }
 
         my $username = get_conf('username') || "";
         my $password = get_conf('password') || "";
-	
-	if ( defined get_conf('credentials-toolserver') ) {
-		$connect .= ":mysql_read_default_file=" 
-		. get_conf('credentials-toolserver');
-	}
-	
-	my $dbt = DBI->connect($connect, $username, $password,
-	{'RaiseError' => 1, 
-	'AutoCommit' => 0} )
-	or die "Couldn't connect to database: " . DBI->errstr;
-	
-	my $query = "SELECT ns_id, ns_name FROM namespace WHERE dbname = ?";
-	
-	my $sth = $dbt->prepare($query);
-	my $c = $sth->execute($db);
-	
-	my @row;
-	
-	while (@row = $sth->fetchrow_array()) {
-		if ( $row[1] ne "" ) { 
-			$row[1] .= ":";
-		}
-		$Prefix->{$row[0]} = $row[1];
-		$PrefixRev->{$row[1]} = $row[0];
-	}
-	
-	$dbt->disconnect();
+  
+  if ( defined get_conf('credentials-toolserver') ) {
+    $connect .= ":mysql_read_default_file=" 
+    . get_conf('credentials-toolserver');
+  }
+  
+  my $dbt = DBI->connect($connect, $username, $password,
+  {'RaiseError' => 1, 
+  'AutoCommit' => 0} )
+  or die "Couldn't connect to database: " . DBI->errstr;
+  
+  my $query = "SELECT ns_id, ns_name FROM namespace WHERE dbname = ?";
+  
+  my $sth = $dbt->prepare($query);
+  my $c = $sth->execute($db);
+  
+  my @row;
+  
+  while (@row = $sth->fetchrow_array()) {
+    if ( $row[1] ne "" ) { 
+      $row[1] .= ":";
+    }
+    $Prefix->{$row[0]} = $row[1];
+    $PrefixRev->{$row[1]} = $row[0];
+  }
+  
+  $dbt->disconnect();
 }
 
 ######################################################################
@@ -151,38 +151,38 @@ sub get_prefixes {
  
 =cut
 sub toolserver_pages_in_category { 
-	my $cat = shift;
-	my $ns = shift;
-	
-	my $query = "
-	SELECT page_namespace, page_title 
-	FROM page 
-	JOIN categorylinks ON page_id = cl_from
-	WHERE cl_to = ?";
-	
-	my @qparam = ($cat);
-	
-	if ( defined $ns ) {
-		$query .= " AND page_namespace = ?";
-		push @qparam, $ns;
-	};
-	
-	my $sth = $dbh->prepare($query);
-	my $t = time();
-	my $r = $sth->execute(@qparam);
-	print "\tListed $r articles in " . (time() - $t) . " seconds\n";
-	
-	my @row;
-	my @results;
-	my $title;
-	while (@row = $sth->fetchrow_array) { 
-		$title = $Prefix->{$row[0]} . $row[1];
-		#    $title = decode("utf8", $title);
-		$title =~ s/_/ /g;
-		push @results, $title;
-	}                             
-	
-	return \@results;
+  my $cat = shift;
+  my $ns = shift;
+  
+  my $query = "
+  SELECT page_namespace, page_title 
+  FROM page 
+  JOIN categorylinks ON page_id = cl_from
+  WHERE cl_to = ?";
+  
+  my @qparam = ($cat);
+  
+  if ( defined $ns ) {
+    $query .= " AND page_namespace = ?";
+    push @qparam, $ns;
+  };
+  
+  my $sth = $dbh->prepare($query);
+  my $t = time();
+  my $r = $sth->execute(@qparam);
+  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
+  
+  my @row;
+  my @results;
+  my $title;
+  while (@row = $sth->fetchrow_array) { 
+    $title = $Prefix->{$row[0]} . $row[1];
+    #    $title = decode("utf8", $title);
+    $title =~ s/_/ /g;
+    push @results, $title;
+  }                             
+  
+  return \@results;
 }
 
 ######################################################################
@@ -216,56 +216,56 @@ sub toolserver_pages_in_category {
 =cut
 
 sub toolserver_pages_in_category_detailed { 
-	my $cat = shift;
-	my $ns = shift;
-	
-	my $query = "
-	SELECT page_namespace, page_title, page_id, cl_sortkey, cl_timestamp 
-	FROM page 
-	JOIN categorylinks ON page_id = cl_from
-	WHERE cl_to = ?";
-	
-	my @qparam = ($cat);
-	
-	if ( defined $ns ) {
-		$query .= " AND page_namespace = ?";
-		push @qparam, $ns;
-	};
-	
-	my $sth = $dbh->prepare($query);
-	
-	my $t = time();
-	my $r = $sth->execute(@qparam);
-	print "\tListed $r articles in " . (time() - $t) . " seconds\n";
-	
-	my @row;
-	my @results;
-	my $data;
-	my $title;
-	my $ts;
-	while (@row = $sth->fetchrow_array) { 
-		$data = {};
-		$data->{'ns'} = $row[0];
-		# obselete behavior
-		#      $title =  $Prefix->{$row[0]} . $row[1];
-		#      $title = decode("utf8", $title);
-		
-		$title = $row[1];
-		$title =~ s/_/ /g;
-		$data->{'title'} = $title;
-		
-		$data->{'pageid'} = $row[2];
-		$data->{'sortkey'} = $row[3];
-		
-		$ts = $row[4];
-		$ts =~ s/ /T/;
-		$ts = $ts . "Z";
-		#      print "T '$row[4]' '$ts'\n";
-		
-		$data->{'timestamp'} = $ts;
-		push @results, $data;
-	}    
-	return \@results;
+  my $cat = shift;
+  my $ns = shift;
+  
+  my $query = "
+  SELECT page_namespace, page_title, page_id, cl_sortkey, cl_timestamp 
+  FROM page 
+  JOIN categorylinks ON page_id = cl_from
+  WHERE cl_to = ?";
+  
+  my @qparam = ($cat);
+  
+  if ( defined $ns ) {
+    $query .= " AND page_namespace = ?";
+    push @qparam, $ns;
+  };
+  
+  my $sth = $dbh->prepare($query);
+  
+  my $t = time();
+  my $r = $sth->execute(@qparam);
+  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
+  
+  my @row;
+  my @results;
+  my $data;
+  my $title;
+  my $ts;
+  while (@row = $sth->fetchrow_array) { 
+    $data = {};
+    $data->{'ns'} = $row[0];
+    # obselete behavior
+    #      $title =  $Prefix->{$row[0]} . $row[1];
+    #      $title = decode("utf8", $title);
+    
+    $title = $row[1];
+    $title =~ s/_/ /g;
+    $data->{'title'} = $title;
+    
+    $data->{'pageid'} = $row[2];
+    $data->{'sortkey'} = $row[3];
+    
+    $ts = $row[4];
+    $ts =~ s/ /T/;
+    $ts = $ts . "Z";
+    #      print "T '$row[4]' '$ts'\n";
+    
+    $data->{'timestamp'} = $ts;
+    push @results, $data;
+  }    
+  return \@results;
 }
 
 ######################################################################

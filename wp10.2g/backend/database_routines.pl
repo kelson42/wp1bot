@@ -156,7 +156,7 @@ sub update_article_moved {
   if ( '0' eq $r ) { 
     print "MOVES says '$r'\n";
     $sth = $dbh->prepare("INSERT INTO moves " . 
-				 "values (?,?,?,?,?)");
+         "values (?,?,?,?,?)");
 
     $r = $sth->execute($rev_timestamp, $old_ns, $old_art, $new_ns, $new_art);
     print "MOVES inserted $old_ns:$old_art => " 
@@ -272,12 +272,12 @@ sub update_article_rating_data {
 
   my $query = "UPDATE ratings SET r_$type = ?, "
             . "r_" . $type . "_timestamp = ?  " 
-	    . "WHERE r_project = ? and r_namespace = ? and r_article = ?";
+      . "WHERE r_project = ? and r_namespace = ? and r_article = ?";
 
   my $sth = $dbh->prepare_cached($query);
 
   my $count = $sth->execute($rating, $rating_timestamp,
-			    $project, $ns, $article);
+          $project, $ns, $article);
 
   if ( $count eq '0E0' ) { 
     my ($quality, $importance, $qualityTS, $importanceTS);
@@ -394,7 +394,7 @@ sub update_project {
 # XXX - hard coded names to detect unassessed quality and importance
 
   my $sth_qcount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	        . "WHERE r_project = ? AND (r_quality = '$NotAClass' 
+          . "WHERE r_project = ? AND (r_quality = '$NotAClass' 
                                             OR r_quality= 'Unassessed-Class')");
 
 
@@ -404,7 +404,7 @@ sub update_project {
   print "Quality-assessed articles: $qcount\n";
 
   my $sth_icount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
-	       . "WHERE r_project = ? AND (r_importance='$NotAClass' 
+         . "WHERE r_project = ? AND (r_importance='$NotAClass' 
                      OR r_importance = 'Unknown-Class'
                      OR r_importance = 'Unassessed-Class')");
   $sth_icount->execute($project);
@@ -412,7 +412,7 @@ sub update_project {
   @row = $sth_icount->fetchrow_array();
   my $icount = $proj_count - $row[0];
   print "Importance-assessed articles: $icount\n";
-	
+  
   my $sth = $dbh->prepare ("UPDATE projects SET p_timestamp  = ?, "
                          . " p_wikipage = ?, p_parent = ?, p_shortname = ?," 
                          . " p_count  = ?, p_qcount = ?, p_icount  = ? "
@@ -420,7 +420,7 @@ sub update_project {
 
   my $count = $sth->execute($timestamp, $wikipage, $parent, 
                             $shortname, $proj_count, $qcount, 
-			    $icount, $project);
+          $icount, $project);
 
   if ( $count eq '0E0' ) { 
     $sth = $dbh->prepare ("INSERT INTO projects VALUES (?,?,?,?,?,?,?,?,0)");
@@ -718,33 +718,33 @@ Update review status (FA, FL, GA) for ARTICLE.
 =cut
 
 sub update_review_data {
-	# Process all the parameters
-	my $global_timestamp = shift;
-	my $art = shift;
-	my $value = shift;
-	my $timestamp = shift;
-	my $oldvalue = shift;
-	
-	unless ( ($value eq 'GA') || ($value eq 'FA') || ($value eq 'FL') ) {
-		print "Unrecognized review state: $value \n"; 
-		return -1;
-	};
-		
-	my $sth = $dbh->prepare ("UPDATE reviews SET rev_value = ?, " 
-	. "rev_timestamp = ? WHERE rev_article = ?");
-	
-	# Executes the UPDATE query. If there are no entries matching the 
+  # Process all the parameters
+  my $global_timestamp = shift;
+  my $art = shift;
+  my $value = shift;
+  my $timestamp = shift;
+  my $oldvalue = shift;
+  
+  unless ( ($value eq 'GA') || ($value eq 'FA') || ($value eq 'FL') ) {
+    print "Unrecognized review state: $value \n"; 
+    return -1;
+  };
+    
+  my $sth = $dbh->prepare ("UPDATE reviews SET rev_value = ?, " 
+  . "rev_timestamp = ? WHERE rev_article = ?");
+  
+  # Executes the UPDATE query. If there are no entries matching the 
         # article's name in the table, the query will return 0, allowing us 
         # to create an INSERT query instead.
-	my $count = $sth->execute($value, $timestamp, $art);
-	
-	if ( $count eq '0E0' ) { 
-		$sth = $dbh->prepare ("INSERT INTO reviews VALUES (?,?,?)");
-		$count = $sth->execute($value, $art, $timestamp);
-	}
-	
-#	print "U:" . "$art // $value // $timestamp // was '$oldvalue'\n";
-	
+  my $count = $sth->execute($value, $timestamp, $art);
+  
+  if ( $count eq '0E0' ) { 
+    $sth = $dbh->prepare ("INSERT INTO reviews VALUES (?,?,?)");
+    $count = $sth->execute($value, $art, $timestamp);
+  }
+  
+#  print "U:" . "$art // $value // $timestamp // was '$oldvalue'\n";
+  
 }
 
 ############################################################
@@ -757,22 +757,22 @@ Removes ARTICLE from I<reviews> table. Asserts RATING='None'.
 =cut
 
 sub remove_review_data {
-	# Process all the parameters
-	my $art = shift;
-	my $value = shift;
-	my $oldvalue = shift;
+  # Process all the parameters
+  my $art = shift;
+  my $value = shift;
+  my $oldvalue = shift;
 
-	unless ( ($value eq 'None') ) {
-		print "Unrecognized review state: $value \n"; 
-		return -1;
-	}
+  unless ( ($value eq 'None') ) {
+    print "Unrecognized review state: $value \n"; 
+    return -1;
+  }
 
-	my $sth = $dbh->prepare ("DELETE FROM reviews
+  my $sth = $dbh->prepare ("DELETE FROM reviews
                                   WHERE rev_value = ? AND rev_article = ?");
-	# Executes the DELETE query. 
-	my $count = $sth->execute($oldvalue, $art);
+  # Executes the DELETE query. 
+  my $count = $sth->execute($oldvalue, $art);
 
-#	print "U:" . "$art // $value // removed // was '$oldvalue'\n";
+#  print "U:" . "$art // $value // removed // was '$oldvalue'\n";
 
 }
 
@@ -872,24 +872,24 @@ The release category - C<Arts> etc.
 =cut
 
 sub db_set_release_data { 
-    my $art = shift;
-    my $type = shift;
-    my $cat = shift;
-    my $timestamp = shift;
+  my $art = shift;
+  my $type = shift;
+  my $cat = shift;
+  my $timestamp = shift;
 
-    if ( $type ne '0.5' ) { 
-	die "Bad type: $type\n";
-    }
+  if ( $type ne '0.5' ) { 
+    die "Bad type: $type\n";
+  }
 
-    my $sth = $dbh->prepare("UPDATE releases
-                             SET rel_0p5_category = ?, rel_0p5_timestamp = ?
-                             WHERE rel_article = ?");
-    my $res = $sth->execute($cat, $timestamp, $art);
+  my $sth = $dbh->prepare("UPDATE releases
+                           SET rel_0p5_category = ?, rel_0p5_timestamp = ?
+                           WHERE rel_article = ?");
+  my $res = $sth->execute($cat, $timestamp, $art);
 
-    if ( $res eq '0E0' ) { 
-      $sth = $dbh->prepare("INSERT INTO releases VALUES (?,?,?)");
-      $sth->execute($art, $cat, $timestamp);
-    }                     
+  if ( $res eq '0E0' ) { 
+       $sth = $dbh->prepare("INSERT INTO releases VALUES (?,?,?)");
+       $sth->execute($art, $cat, $timestamp);
+  }                     
 
 }
 
@@ -903,12 +903,12 @@ included in any release versions.
 =cut
 
 sub db_cleanup_releases { 
-    my $sth = $dbh->prepare("DELETE FROM releases 
-                             WHERE rel_0p5_category = 'None'");
+  my $sth = $dbh->prepare("DELETE FROM releases 
+                           WHERE rel_0p5_category = 'None'");
 
-    my $count = $sth->execute();
+  my $count = $sth->execute();
 
-    print "Cleanup releases table: $count rows removed\n";
+  print "Cleanup releases table: $count rows removed\n";
 }
 
 ############################################################

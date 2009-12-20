@@ -32,7 +32,7 @@ create table if not exists projects (
         -- how many pages have importance assessments in the project 
 
     p_scope    int unsigned not null default 0,
-        -- the "scope points" for the project, used to compute selection scores
+        -- the project's "scope points", used to compute selection scores
    
     primary key (p_project)
 
@@ -86,7 +86,7 @@ create table if not exists categories (
     c_project         varchar(63)  not null,
         -- project name
 
-    c_type	      varchar(16)  not null,
+    c_type        varchar(16)  not null,
         -- what type of rating - 'quality' or 'importance'
 
     c_rating          varchar(63)  not null,
@@ -164,7 +164,7 @@ create table if not exists reviews (
 
     rev_timestamp     binary(20),
         -- time when review was completed and the article was tagged 
-		-- with the proper talk page banner
+  -- with the proper talk page banner
         --   NOTE: a revid can be obtained from timestamp via API
         --  a wiki-format timestamp
 
@@ -218,7 +218,7 @@ create table if not exists releases (
         -- time when article was added to a 0.5 release category
         -- NOTE: a revid can be obtained from timestamp via API
         -- a wiki-format timestamp
-	
+  
     primary key (rel_article),
     key         (rel_0p5_category)
 
@@ -257,7 +257,7 @@ create table if not exists moves (
 
 create table if not exists global_rankings (
 
-    gr_type	      varchar(16)  not null,
+    gr_type            varchar(16)  not null,
         -- what type of rating - 'quality' or 'importance'
 
     gr_rating          varchar(63)  not null,

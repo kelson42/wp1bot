@@ -81,7 +81,7 @@ sub main_loop {
 
   if ( defined $proj && defined $projects->{$proj} ) {
     cached_ratings_table($proj, $cgi);
-  }	
+  }  
 
   $loop_counter++;
   layout_footer("Debug: PID $$ has handled $loop_counter requests");
@@ -119,7 +119,7 @@ sub cached_ratings_table {
 
     $data = cache_get($key);
     my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
-	  split /\Q$cache_sep\E/, $data, 5;
+    split /\Q$cache_sep\E/, $data, 5;
 
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "Cached output valid<br/>\n";
@@ -146,7 +146,7 @@ sub cached_ratings_table {
   print "Regenerating output<br/>\n";
 
   my ($html, $wikicode) = ratings_table($proj);
-	
+  
   print "</div> --> \n <div class=\"navbox\">\n";
   print_header_text($proj);
   print "</div>\n<center>\n";
@@ -463,55 +463,43 @@ sub query_form {
 
 
 sub print_header_text {
-	my $project = shift;
-	my ($timestamp, $wikipage, $parent, $shortname);
-	my $listURL = $list_url;
-	$listURL = $listURL . "?projecta=" . $project . "&limit=50";
-	
+  my $project = shift;
+  my ($timestamp, $wikipage, $parent, $shortname);
+  my $listURL = $list_url;
+  $listURL = $listURL . "?projecta=" . $project . "&limit=50";
+  
         my $logURL = $log_url;
         $logURL = $logURL . "?project=" . $project;
 
-	($project, $timestamp, $wikipage, $parent, $shortname) = 
-	get_project_data($project);
-	if ( ! defined $wikipage) 
-	{
-		print "Data for <b>$project</b> "; 	
-	}
-	elsif ( ! defined $shortname) 
-	{
-		print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
-	}
-	else
-	{
-		print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> "; 		
-	}
+  ($project, $timestamp, $wikipage, $parent, $shortname) = 
+  get_project_data($project);
+  if ( ! defined $wikipage)   {
+    print "Data for <b>$project</b> ";   
+  }  elsif ( ! defined $shortname)   {
+    print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
+  }  else  {
+    print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> ";     
+  }
 
-	print "(<a href=\"" . $listURL . "\">lists</a> | "
+  print "(<a href=\"" . $listURL . "\">lists</a> | "
            .  "<a href=\"" . $logURL . "\">log</a> | "
            . " <b>summary table</b>)\n";
-	
+  
 }
 
 sub get_link_from_api { 
-	my $text = shift;
-	my $r =  $api->parse($text);
-	my $t = $r->{'text'};
-	
-	# TODO: internationalize this bare URL
-	my $baseURL = "http://en.wikipedia.org";
-	$t =~ s!^<p>!!;
-	my @t = split('</p>',$t);
-	$t = @t[0];
-	
+  my $text = shift;
+  my $r =  $api->parse($text);
+  my $t = $r->{'text'};
+  
+  # TODO: internationalize this bare URL
+  my $baseURL = "http://en.wikipedia.org";
+  $t =~ s!^<p>!!;
+  my @t = split('</p>',$t);
+  $t = @t[0];
+  
     @t = split('"',$t,2);
     $t = @t[0] . "\"" . $baseURL .  @t[1];
-	
-	return $t;
-}
-
-sub commify {
-	# commify a number. Perl Cookbook, 2.17, p. 64
-	my $text = reverse $_[0];
-	$text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
-	return scalar reverse $text;
+  
+  return $t;
 }

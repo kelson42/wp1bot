@@ -94,10 +94,10 @@ Return data from the I<projects> table for PROJECT
 
 sub get_project_data {
   my $project = shift;
-	
+  
   my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?"); 
   $sth->execute($project);
-	
+  
   my @row;
   # There really shouldn't be more than one row here,
   # so a while loop is not needed

@@ -269,38 +269,38 @@ HERE
 # 0%: #D10000 = (209, 0, 0) and 100%: 33CC00 = (51, 204, 0).
 # There's probably a more efficient way of doing this...
 sub get_bar_color {  
-	my $percent = shift; 
-	my $color;
-	
-	if ($percent >= 0) { $color='D10000' }
-	if ($percent >= 2.5) { $color='F10000' }
-	if ($percent >= 7.5) { $color='FF1600' }
-	if ($percent >= 12.5) { $color='FF3700' }
-	if ($percent >= 17.5) { $color='FF6500' }
-	if ($percent >= 22.5) { $color='FF8F00' }
-	if ($percent >= 27.5) { $color='FFB900' }
-	if ($percent >= 32.5) { $color='FFD800' }
-	if ($percent >= 37.5) { $color='FFE500' }
-	if ($percent >= 42.5) { $color='FFF600' }
-	if ($percent >= 47.5) { $color='FCFF00' }
-	if ($percent >= 52.5) { $color='D3FF00' }
-	if ($percent >= 57.5) { $color='D3FF00' }
-	if ($percent >= 62.5) { $color='BEFF00' }
-	if ($percent >= 67.5) { $color='92FF00' }
-	if ($percent >= 72.5) { $color='99FF00' }
-	if ($percent >= 77.5) { $color='39FF00' }
-	if ($percent >= 82.5) { $color='0BFF00' }
-	if ($percent >= 87.5) { $color='16E900' }
-	if ($percent >= 92.5) { $color='33CC00' }
-	if ($percent >= 97.5) { $color='33CC00' }
-	if ($percent > 100) { $color='000000' }
-	return $color;
+  my $percent = shift; 
+  my $color;
+  
+  if ($percent >= 0) { $color='D10000' }
+  if ($percent >= 2.5) { $color='F10000' }
+  if ($percent >= 7.5) { $color='FF1600' }
+  if ($percent >= 12.5) { $color='FF3700' }
+  if ($percent >= 17.5) { $color='FF6500' }
+  if ($percent >= 22.5) { $color='FF8F00' }
+  if ($percent >= 27.5) { $color='FFB900' }
+  if ($percent >= 32.5) { $color='FFD800' }
+  if ($percent >= 37.5) { $color='FFE500' }
+  if ($percent >= 42.5) { $color='FFF600' }
+  if ($percent >= 47.5) { $color='FCFF00' }
+  if ($percent >= 52.5) { $color='D3FF00' }
+  if ($percent >= 57.5) { $color='D3FF00' }
+  if ($percent >= 62.5) { $color='BEFF00' }
+  if ($percent >= 67.5) { $color='92FF00' }
+  if ($percent >= 72.5) { $color='99FF00' }
+  if ($percent >= 77.5) { $color='39FF00' }
+  if ($percent >= 82.5) { $color='0BFF00' }
+  if ($percent >= 87.5) { $color='16E900' }
+  if ($percent >= 92.5) { $color='33CC00' }
+  if ($percent >= 97.5) { $color='33CC00' }
+  if ($percent > 100) { $color='000000' }
+  return $color;
 }
 
 #######################################################################
 # Rounding function 
 sub round {
-	my $n = shift;
+  my $n = shift;
     return int($n + .5);
 }
 
@@ -675,30 +675,30 @@ including the icon for that REVIEWCLASS.
 =cut
 
 sub get_cached_review_icon { 
-	my $class = shift;
-	
-	if ( defined $cacheMem->{$class . "-icon"} ) { 
-		print "<!-- hit {$class}-icon in memory cache -->\n";
-		return $cacheMem->{$class . "-icon"};
-	}
-	
-	my $key = "CLASS:" . $class . "-icon";
-	my ($expiry, $data);
-	
-	if ( $expiry = cache_exists($key) ) { 
-		print "<!-- hit {$class}-icon in database cache, expiry " 
-		. strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
-		. " -->\n";
-		$data = cache_get($key);
-		$cacheMem->{$class} = $data;
-		return $data;
-	}
-	
-	$data = get_review_icon($class);
-	
-	cache_set($key, $data, '12 hours');
-	$cacheMem->{$class . "-icon"} = $data;
-	return $data;
+  my $class = shift;
+  
+  if ( defined $cacheMem->{$class . "-icon"} ) { 
+    print "<!-- hit {$class}-icon in memory cache -->\n";
+    return $cacheMem->{$class . "-icon"};
+  }
+  
+  my $key = "CLASS:" . $class . "-icon";
+  my ($expiry, $data);
+  
+  if ( $expiry = cache_exists($key) ) { 
+    print "<!-- hit {$class}-icon in database cache, expiry " 
+    . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
+    . " -->\n";
+    $data = cache_get($key);
+    $cacheMem->{$class} = $data;
+    return $data;
+  }
+  
+  $data = get_review_icon($class);
+  
+  cache_set($key, $data, '12 hours');
+  $cacheMem->{$class . "-icon"} = $data;
+  return $data;
 }
 
 ###########################################################################
@@ -706,25 +706,25 @@ sub get_cached_review_icon {
 # internal function to get review icon from API
 
 sub get_review_icon { 
-	my $class = shift;
-	my $r =  $api->parse('{{' . $class . '-Class}}');
-	my $t = $r->{'text'}->{'content'};
-	my $f =  $api->parse('{{' . $class . '-classicon}}');
-	my $g = $f->{'text'}->{'content'};
-	
-	$t =~ s/\|.*//s;
-	$t =~ s!^<p>!!;
-	$g =~ s/<\/p.*//;
-	$g =~ s!^<p>!!;
-	# Perl doesn't want to get rid of the rest of the lines in the 
-	# multi-line string, so remove them the hard way
-	my @str = split(/\n/,$g);
-	$g = @str[0];
-	undef(@str);
-	$class =~ s/-Class//;
-	$t = "<td $t><b>$g&nbsp;$class</b></td>";
-	
-	return $t;
+  my $class = shift;
+  my $r =  $api->parse('{{' . $class . '-Class}}');
+  my $t = $r->{'text'}->{'content'};
+  my $f =  $api->parse('{{' . $class . '-classicon}}');
+  my $g = $f->{'text'}->{'content'};
+  
+  $t =~ s/\|.*//s;
+  $t =~ s!^<p>!!;
+  $g =~ s/<\/p.*//;
+  $g =~ s!^<p>!!;
+  # Perl doesn't want to get rid of the rest of the lines in the 
+  # multi-line string, so remove them the hard way
+  my @str = split(/\n/,$g);
+  $g = @str[0];
+  undef(@str);
+  $class =~ s/-Class//;
+  $t = "<td $t><b>$g&nbsp;$class</b></td>";
+  
+  return $t;
 }
 
 ###########################################################################
@@ -741,16 +741,16 @@ sub make_wp05_link {
   my $linka = "http://en.wikipedia.org/wiki/Wikipedia:Wikipedia_0.5";
   my $linkb = "http://en.wikipedia.org/wiki/Wikipedia:Version_0.5";
   my $abbrev = {  'Arts' => 'A',
-		  'Engineering, applied sciences, and technology' => 'ET',
-		  'Everyday life' => 'EL',
-		  'Geography' => 'G',
-		  'History' => 'H',
-		  'Language and literature' => 'LL',
-		  'Mathematics' => 'Ma',
-		  'Natural sciences' => 'NS',
-		  'Philosophy and religion' => 'PR',
-		  'Social sciences and society' => 'SS',
-		  'Uncategorized'  => 'U'};
+      'Engineering, applied sciences, and technology' => 'ET',
+      'Everyday life' => 'EL',
+      'Geography' => 'G',
+      'History' => 'H',
+      'Language and literature' => 'LL',
+      'Mathematics' => 'Ma',
+      'Natural sciences' => 'NS',
+      'Philosophy and religion' => 'PR',
+      'Social sciences and society' => 'SS',
+      'Uncategorized'  => 'U'};
 
   return "<a href=\"$linka\">0.5</a> ";
 }
@@ -778,6 +778,15 @@ sub fix_timestamp {
   return substr($t, 0, 4) . "-" . substr($t, 4, 2) . "-"
            . substr($t, 6, 2) . "T" . substr($t, 8, 2) 
            . ":" . substr($t, 10, 2) . ":" . substr($t, 12, 2)  . "Z";
+}
+
+###########################################################################
+
+sub commify {
+  # commify a number. Perl Cookbook, 2.17, p. 64
+  my $text = reverse $_[0];
+  $text =~ s/(\d\d\d)(?=\d)(?!\d*\.)/$1,/g;
+  return scalar reverse $text;
 }
 
 ###########################################################################

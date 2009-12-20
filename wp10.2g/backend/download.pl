@@ -119,13 +119,13 @@ sub parse_argv {
 
   if ( exists $opts->{'releases'} ) {
     print "Download release data\n";
-    download_release_data();	
+    download_release_data();  
     exit;
   }
 
   if ( exists $opts->{'reviews'} ) {
     print "Download review data\n";
-    download_review_data();	  
+    download_review_data();    
     exit;
   }
 

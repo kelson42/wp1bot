@@ -157,7 +157,7 @@ sub log_table {
         l_old, l_new, l_revision_timestamp, l_namespace
  FROM logging
 HERE
-	  
+    
    $query .= " WHERE ";
    $queryc .= " WHERE ";
   
@@ -261,7 +261,7 @@ HERE
 
   my $sthcount = $dbh->prepare($queryc);
   my $res = $sthcount->execute(@qparamc);
-  	
+    
 #  print "<br/>Res: $res <br/>\n";
 
   my @row = $sthcount->fetchrow_array() ;
@@ -392,20 +392,20 @@ HERE
   my $newURL;
   if (($offset - $limit + 1) > 0) {
     $newURL =   $logurl. "?" . $params_enc
-              . "offset=" . ($offset - $limit + 1);	  
+              . "offset=" . ($offset - $limit + 1);    
     print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
     $prev = 1;
   }
-	
+  
   if ($limit + $offset < $total){ 
     if ($prev == 1) {
       print " | ";
     }
     $newURL =   $logurl . "?" . $params_enc
-             . "&offset=" . ($offset + $limit + 1);	  
+             . "&offset=" . ($offset + $limit + 1);    
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
-  print "\n";	
+  print "\n";  
 
   get_previous_name($params->{'ns'}, $params->{'pagename'});
 }
@@ -506,7 +506,7 @@ sub print_header_text {
       get_project_data($project);
 
     if ( ! defined $wikipage) {
-      print "Data for <b>$project</b> "; 	
+      print "Data for <b>$project</b> ";   
     } elsif ( ! defined $shortname) {
       print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
     } else {

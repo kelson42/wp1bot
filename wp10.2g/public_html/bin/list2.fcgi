@@ -119,12 +119,12 @@ sub ratings_table {
 
   if (($params->{'intersect'} eq 'on') && 
       ($params->{'projecta'} ne $params->{'projectb'})) { 
-		ratings_table_intersect($params, $projects);
-		return;
+    ratings_table_intersect($params, $projects);
+    return;
   } 
-	
+  
   my $project = $params->{'projecta'};
-	
+  
   my $limit = $params->{'limit'} || 100;
   my $offset = $params->{'offset'} || 0;
   if ( $offset > 0 ) { $offset --; }
@@ -385,7 +385,7 @@ HERE
   if ( ! $disable_count ) { 
     my $sthcount = $dbh->prepare($queryc);
     $sthcount->execute(@qparamc);
-  	
+    
     @row = $sthcount->fetchrow_array() ;
     $total = $row[0] || 'Error';
   }  
@@ -524,17 +524,17 @@ HERE
 
   if (($offset - $limit + 1) > 0)  {
     my $newURL = make_list_link() . "?" . $params_enc
-		      . "&offset=" . ($offset - $limit + 1);	  
+          . "&offset=" . ($offset - $limit + 1);    
     print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
     $prev = 1;
   }
-	
+  
   if ($limit + $offset < $total)  {
     if ($prev == 1)  {
       print " | ";
     }
     my $newURL = make_list_link() . "?" . $params_enc 
-              . "&offset=" . ($limit + $offset + 1);	  
+              . "&offset=" . ($limit + $offset + 1);    
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
   print "\n";
@@ -708,7 +708,7 @@ HERE
 
   my $sthcount = $dbh->prepare($queryc);
   $sthcount->execute(@qparamc);
-  my @row = $sthcount->fetchrow_array()	;
+  my @row = $sthcount->fetchrow_array()  ;
 
   print "<div class=\"navbox\">\n";
   print_header_text($projecta);
@@ -826,22 +826,22 @@ HERE
   my $prev = 0;
   if (($offset - $limit + 1) > 0) {
     my $newURL =  $Opts->{'list2-url'} . "?" . $params_enc
-               . "offset=" . ($offset - $limit + 1);	  
-		
+               . "offset=" . ($offset - $limit + 1);    
+    
     print "<a href=\"" . $newURL . "\">Previous $limit entries</a>";
     $prev = 1;
   }
-	
+  
   if ($limit + $offset < $total){ 
     if ($prev == 1) {
- 	print " | ";
+   print " | ";
     }
     my $newURL =  $Opts->{'list2-url'}  . "?" . $params_enc
-                 . "&offset=" . ($offset + $limit + 1);	  
+                 . "&offset=" . ($offset + $limit + 1);    
 
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
-  print "\n";	
+  print "\n";  
 }
 
 ###########################################################################
@@ -1042,7 +1042,7 @@ sub print_header_text {
       get_project_data($project);
 
     if ( ! defined $wikipage) {
-      print "Data for <b>$project</b> "; 	
+      print "Data for <b>$project</b> ";   
     } elsif ( ! defined $shortname) {
       print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
     } else {
@@ -1068,7 +1068,7 @@ sub sort_orders {
             'Importance (reverse)' => 'r_importance DESC',
             'Release status' => 'rel_0p5_category',
             'Importance' => 'r_importance',
-	    'Review status' => 'rev_value',
+            'Review status' => 'rev_value',
             'Score' => 'r_score',
           };
 }
