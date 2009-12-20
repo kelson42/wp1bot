@@ -524,6 +524,8 @@ sub get_link_from_api {
   @t = split('"',$t,2);
   $t = @t[0] . "\"" . $serverURL .  @t[1];
 
+print "<!-- link '$t' -->\n";
+
   return $t;
 }
 
