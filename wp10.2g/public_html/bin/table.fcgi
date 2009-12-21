@@ -47,7 +47,7 @@ require "database_www.pl";
 our $dbh = db_connect_rw($Opts);
 
 require 'cache.pl';
-my $cache_sep = "<hr/><!-- cache separator -->\n";
+my $cache_sep = "<!-- cache separator -->\n";
 
 require 'tables_lib.pl';
 
