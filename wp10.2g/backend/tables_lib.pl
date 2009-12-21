@@ -8,6 +8,8 @@
 
 Library routines to create assessment summary tables
 
+=over
+
 =cut
 
 use strict;
@@ -48,10 +50,19 @@ require 'cache.pl';
 my $cache_sep = "<!-- cache separator -->\n";
 
 ############################################################
+=item B<cached_project_table>(PROJECT, [PURGE])
+
+Get the summary table for PROJECT, using the cache and updating
+the cache if needed. If PURGE is nonzero then the cache will
+be forced to update. 
+
+Returns ($html, $wikicode).
+
+=cut
 
 sub cached_project_table { 
   my $proj = shift;
-  my $purge = shift;
+  my $purge = shift || 0;
 
   my $sth = $dbh->prepare("select p_timestamp from projects "
                         . "where p_project = ?");
@@ -61,7 +72,6 @@ sub cached_project_table {
   my $proj_timestamp = $row[0];
 
   print "<!-- cache debugging  -->\n";
-  print "<!-- Debugging output -->\n";
   print "<!-- Current time: $timestamp -->\n";
   print "<!-- Data for project $proj was last updated '$proj_timestamp'-->\n";
 
@@ -69,7 +79,7 @@ sub cached_project_table {
   my $data;
   my $expiry = cache_exists($key);
 
-  if ( (defined $purge) && $expiry )  { 
+  if ( $purge && $expiry )  { 
     print "<!-- Purging cached output -->\n";
   } elsif ( $expiry ) { 
     print "<!-- Cached output expires " 
@@ -109,6 +119,11 @@ sub cached_project_table {
 
 
 ############################################################
+=item B<make_project_table>(PROJECT)
+
+Create a new table for PROJECT. Does not use the cache in any way. 
+
+=cut
 
 sub make_project_table { 
   my $proj = shift;
@@ -121,10 +136,14 @@ sub make_project_table {
 }
 
 ############################################################
+=item B<make_global_table>()
+
+Create a new global table. Does not use the cache in any way. 
+
+=cut
 
 sub make_global_table { 
-  my $proj = shift;
-  my $tdata = fetch_global_table_data($proj);
+  my $tdata = fetch_global_table_data();
   my $code = make_project_table_wikicode($tdata, 
                             "All rated articles by quality and importance",
                             \&format_cell_pqi );
@@ -134,6 +153,11 @@ sub make_global_table {
 }
 
 ############################################################
+=item B<fetch_project_table_data>(PROJECT)
+
+Fetch info to create table for project. Returns a TDATA object.
+
+=cut
 
 sub fetch_project_table_data { 
   my $proj = shift;
@@ -197,6 +221,18 @@ sub fetch_project_table_data {
 } 
 
 ##############################################################
+=item B<make_project_table_wikicodedata>(TDATA, TITLE, FORMAT)
+
+Create wikicode for a table using data from TDATA. The overall
+title is TITLE. The FORMAT function is used to format the table
+cells. It is invoked as:
+
+&{$FORMAT}(project, quality, importance, value)
+
+where quality and/or importance will be undefined for the
+cells corresponding to the Total row and column.
+
+=cut
 
 sub make_project_table_wikicode { 
   my $tdata = shift;
@@ -341,6 +377,12 @@ sub make_project_table_wikicode {
 }
 
 ################################################################
+=item B<get_project_categories>(PROJECT)
+
+Internal function to fetch info about assessment categories for PROJECT 
+from the database. 
+
+=cut
 
 sub get_project_categories { 
   my $project = shift;
@@ -404,6 +446,11 @@ sub get_project_categories {
 }
 
 ################################################################
+=item B<get_global_table_data>())
+
+Get assessment data from the global table. Returns a TDATA object.
+
+=cut
 
 sub fetch_global_table_data { 
 
@@ -470,6 +517,12 @@ group by grq.gr_rating, gri.gr_rating /* SLOW_OK */
 }
 
 ################################################################
+=item B<get_global_categories>())
+
+Internal function to Get info about global assessments from
+database.
+
+=cut
 
 sub get_global_categories { 
 
@@ -509,6 +562,15 @@ sub get_global_categories {
 }
 
 ################################################################
+=item B<cached_global_ratings_table>([PURGE])
+
+Gets the global ratings table, using the cache and updating
+the cache if needed. If PURGE is nonzero then the cache
+will be forced to update. 
+
+Returns ($html, $wikicode).
+
+=cut
 
 sub cached_global_ratings_table { 
   my $force_regenerate = shift || 0;
@@ -562,6 +624,12 @@ sub cached_global_ratings_table {
 }
 
 ################################################################
+=item B<format_cell_pqi>(PROJECT, QUALITY, IMPORTANCE, VALUE)
+
+Create a formatted table cell entry. The entry links to the article
+list for PROJECT, with approprate query values preset. 
+
+=cut
 
 sub format_cell_pqi { 
   my $proj = shift;
@@ -594,5 +662,12 @@ sub format_cell_pqi {
 }
 
 ################################################################
+
+=pod
+
+=back 
+
+=cut
+
 #Load successfully
 1;
