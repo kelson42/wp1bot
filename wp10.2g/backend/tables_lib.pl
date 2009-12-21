@@ -60,40 +60,39 @@ sub cached_project_table {
   my @row = $sth->fetchrow_array();
   my $proj_timestamp = $row[0];
 
-  print "<!-- cache debugging  \n";
-  print "<div class=\"indent\">\n";
-  print "<b>Debugging output x</b><br/>\n";
-  print "Current time: $timestamp<br/>\n";
-  print "Data for project $proj was last updated '$proj_timestamp'<br/>\n";
+  print "<!-- cache debugging  -->\n";
+  print "<!-- Debugging output -->\n";
+  print "<!-- Current time: $timestamp -->\n";
+  print "<!-- Data for project $proj was last updated '$proj_timestamp'-->\n";
 
   my $key = "TABLE:" . $proj;
   my $data;
   my $expiry = cache_exists($key);
 
   if ( (defined $purge) && $expiry )  { 
-    print "Purging cached output<br/>\n";
+    print "<!-- Purging cached output -->\n";
   } elsif ( $expiry ) { 
-    print "Cached output expires: " 
+    print "<!-- Cached output expires " 
         . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
-        . "<br/>\n";
+        . "-->\n";
 
     $data = cache_get($key);
     my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
     split /\Q$cache_sep\E/, $data, 5;
 
     if ( $c_proj_timestamp eq $proj_timestamp ) {
-      print "Cached output valid<br/>\n";
-      print " end cache debugging --> \n ";
+      print "<!-- Cached output valid -->\n";
+      print "<!-- end cache debugging -->\n ";
       return ($c_html, $c_wikicode);
     } else {
-      print "Cached output must be regenerated<br/>\n";
+      print "<!-- Cached output must be regenerated -->\n";
     }
   } else {
-    print "No cached output available<br/>\n";
+    print "<!-- No cached output available --> \n";
   }
 
-  print "Regenerating output<br/>\n";
-  print " end cache debugging --> \n ";
+  print "<!-- Regenerating output --> \n";
+  print "<!-- end cache debugging --> \n ";
 
   my ($html, $wikicode) = make_project_table($proj);
   
@@ -103,7 +102,7 @@ sub cached_project_table {
         . $html . $cache_sep 
         . $wikicode;
 
-  cache_set($key, $data, 60*60); # expires in 1 hour
+  cache_set($key, $data, 12*60*60); # expires in 12 hours
 
   return ($html, $wikicode, $timestamp);
 }
@@ -113,13 +112,25 @@ sub cached_project_table {
 
 sub make_project_table { 
   my $proj = shift;
-
   my $tdata = fetch_project_table_data($proj);
   my $code = make_project_table_wikicode($tdata, 
-                                 "$proj articles by quality and importance");
+                                 "$proj articles by quality and importance",
+                                 \&format_cell_pqi );
   my $r =  $api->parse($code);
-
   return ($r->{'text'}->{'content'}, $code);
+}
+
+############################################################
+
+sub make_global_table { 
+  my $proj = shift;
+  my $tdata = fetch_global_table_data($proj);
+  my $code = make_project_table_wikicode($tdata, 
+                            "All rated articles by quality and importance",
+                            \&format_cell_pqi );
+  my $r =  $api->parse($code);
+  my $created = time();
+  return ($r->{'text'}->{'content'}, $code, $created);
 }
 
 ############################################################
@@ -190,6 +201,7 @@ sub fetch_project_table_data {
 sub make_project_table_wikicode { 
   my $tdata = shift;
   my $title = shift;
+  my $format_cell = shift;
 
   my $proj = $tdata->{'proj'};
   my $cols = $tdata->{'cols'};
@@ -199,11 +211,8 @@ sub make_project_table_wikicode {
   my $ImportanceLabels = $tdata->{'ImportanceLabels'};
   my $QualityLabels = $tdata->{'QualityLabels'};
 
-  print "<!-- Make table '$proj' -->\n";
-z
-  my $colcount =  (scalar keys %$cols) ;
 
-  # The 'Assessed' classification is dynamically generated as we go. 
+  # The 'assessed' data is generated dynamically
   $data->{'Assessed'} = {};
 
   # These, along with the totals, will appear in the final table. 
@@ -228,7 +237,7 @@ z
 
   # Temporary arrays used to hold lists of row resp. column names
   my @P = (@PriorityRatings, "Total");
-  my @Q = (@QualityRatings, "Total");
+  my @Q = (@QualityRatings,"Total");
 
   $table->rows(\@Q);
 
@@ -277,11 +286,9 @@ z
 	  if (  (defined $data->{$qual}->{$prio}) 
               && $data->{$qual}->{$prio} > 0 ) { 
             $table->data($qual, $prio, 
-                   '[' . $list_url . "?projecta=" . uri_escape($proj) 
-                    . "&importance=" . uri_escape($prio) 
-                    . "&quality=" . uri_escape($qual)  
-                    . "&run=yes" 
-		      . ' ' . commify($data->{$qual}->{$prio}) . "]");
+                         &{$format_cell}($proj, $qual, $prio, 
+                                         $data->{$qual}->{$prio}) );
+
 	  } else { 
 	      $table->data($qual, $prio, "");
 	  }
@@ -309,35 +316,24 @@ z
   }
 
   foreach $qual ( @QualityRatings ) {
-    $table->data($qual, "Total", "'''[" 
-                   . $list_url . "?projecta=" . uri_escape($proj) 
-#                    . "&importance=" . uri_escape($prio) 
-                    . "&quality=" . uri_escape($qual)  . ' ' 
-		 . commify($qualcounts->{$qual}) . "]'''");
+    $table->data($qual,  "Total",
+                 &{$format_cell}($proj, $qual, undef, $qualcounts->{$qual}));
   }
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
-                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
-                    . "&importance=" . uri_escape($prio) 
-#                    . "&quality=" . uri_escape($qual)  
-		 . ' ' . commify($priocounts->{$prio}) . "]'''");
+                 &{$format_cell}($proj, undef, $prio, $priocounts->{$prio}));
 
     $table->data("Assessed", $prio, 
-                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
-                    . "&importance=" . uri_escape($prio) 
-                    . "&quality=Assessed" 
-		 . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
+                 &{$format_cell}($proj, "Assessed", $prio, 
+                                 $totalAssessed->{$prio}));
   }
 
-  $table->data("Total", "Total", "'''[" 
-                   . $list_url . "?projecta=" . uri_escape($proj) 
-	       . ' ' . commify($total) . "]'''");
+  $table->data("Total", "Total", format_cell_pqi($proj, undef, undef, $total));
 
   $table->data("Assessed", "Total", 
-                "'''[" . $list_url . "?projecta=" . uri_escape($proj) 
-                    . "&quality=Assessed" 
-	       . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
+               &{$format_cell}($proj, "Assessed", undef, 
+                               $totalAssessed->{'Total'}));
 
   my $code = $table->wikicode();
 
@@ -409,7 +405,7 @@ sub get_project_categories {
 
 ################################################################
 
-sub global_ratings_table { 
+sub fetch_global_table_data { 
 
   # Step 1: fetch totals from DB and load them into the $data hash
 
@@ -420,7 +416,7 @@ join global_rankings as grq
   on grq.gr_type = 'quality' and grq.gr_ranking= a_quality
 join global_rankings as gri 
   on gri.gr_type = 'importance' and gri.gr_ranking= a_importance
-group by grq.gr_rating, gri.gr_rating
+group by grq.gr_rating, gri.gr_rating /* SLOW_OK */
   HERE
 
   my $sth = $dbh->prepare($query);
@@ -428,17 +424,13 @@ group by grq.gr_rating, gri.gr_rating
   $sth->execute();
 
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
-    = get_categories();
+    = get_global_categories();
 
   my $data = {};
   my $cols = {};
   my @row;
 
   while ( @row = $sth->fetchrow_array ) {
-#  print "Row: ";
-#  print Dumper(@row);
-#  print "\n";
-
     if ( ! defined $row[1] ) { $row[1] = $NotAClass; }
     if ( ! defined $row[2] ) { $row[2] = $NotAClass; }
     if ( ! defined $data->{$row[1]} ) { $data->{$row[1]} = {} };
@@ -468,122 +460,13 @@ group by grq.gr_rating, gri.gr_rating
     }
   }
 
-  # The 'Assessed' classification is dynamically generated as we go. 
-  $data->{'Assessed'} = {};
-
-  # These, along with the totals, will appear in the final table. 
-  # The important step here is the sorting. 
-  my @PriorityRatings = sort { $SortImp->{$b} <=> $SortImp->{$a} } 
-                             keys %$cols;
-  my @QualityRatings =  sort { $SortQual->{$b} <=> $SortQual->{$a} } 
-                             keys %$data; 
-
-  use RatingsTable;
-  my $table = RatingsTable::new();
-
-  $QualityLabels->{'Total'} = "'''Total'''";
-  $ImportanceLabels->{'Total'} = "'''Total'''";
-
-  $table->title("Assessed articles by quality and importance");
-  $table->columnlabels($ImportanceLabels);
-  $table->rowlabels($QualityLabels);
-  $table->columntitle("'''Importance'''");
-  $table->rowtitle("'''Quality'''");
-
-  # Temporary arrays used to hold lists of row resp. column names
-  my @P = (@PriorityRatings, "Total");
-  my @Q = (@QualityRatings, "Total");
-
-  $table->rows(\@Q);
-  $table->columns(\@P);
-
-  my $priocounts = {};  # Used to count total articles for each priority rating
-  my $qualcounts = {};  # same, for each quality rating
-  my $cells;
-
-  my $total;
-  
-  $table->clear();
-
-  my $qual;
-  my $prio;
-  my $total = 0;
-  my $totalAssessed = {};  # To count 'Assessed' articles
-
-  # Next step: fill in table data using the $data hash
-
-  foreach $qual ( @QualityRatings ) {
-    $qualcounts->{$qual}=0;
-  }
-
-  foreach $prio ( @PriorityRatings ) { 
-    $priocounts->{$prio} = 0;
-  }
-
-  my $script_url = $Opts->{'list2-url'} 
-   or die "No 'list2-url' specified in configuration.\n";
-
-  foreach $qual ( @QualityRatings ) {
-    next if ( $qual eq 'Assessed' );  # nothing in $data for this
-    foreach $prio ( @PriorityRatings ) { 
-
-      if ( $data->{$qual}->{$prio} > 0 ) { 
-         $table->data($qual, $prio, 
-                   '[' . $script_url 
-                    . "?importance=" . uri_escape($prio) 
-                    . "&quality=" . uri_escape($qual)  . ' ' 
-                    . commify($data->{$qual}->{$prio}) . "]");
-      } else { 
-         $table->data($qual, $prio, "");
-      }
-
-      $qualcounts->{$qual} += $data->{$qual}->{$prio};    
-      $priocounts->{$prio} += $data->{$qual}->{$prio};    
-      $total += $data->{$qual}->{$prio};    
-
-      if ( ! ($qual eq 'Unassessed-Class' ) ) { 
-        $totalAssessed->{$prio} += $data->{$qual}->{$prio};
-        $totalAssessed->{'Total'} += $data->{$qual}->{$prio};
-      }
-    }
-  }
-
-  foreach $qual ( @QualityRatings ) {
-    $table->data($qual, "Total", "'''[" 
-                   . $script_url 
-                    . "?quality=" . uri_escape($qual)  . ' ' 
-                    . commify($qualcounts->{$qual}) . "]'''");
-  }
-
-  foreach $prio ( @PriorityRatings ) { 
-    $table->data("Total", $prio, 
-                "'''[" . $script_url 
-                    . "?importance=" . uri_escape($prio) 
-                   . ' ' . commify($priocounts->{$prio}) . "]'''");
-
-    $table->data("Assessed", $prio, 
-                "'''[" . $script_url 
-                    . "?importance=" . uri_escape($prio) 
-                    . "&quality=Assessed" 
-                   . ' ' . commify($totalAssessed->{$prio}) . "]'''" );
-  }
-
-  $table->data("Total", "Total", "'''[" 
-                   . $script_url  . ' ' . commify($total) . "]'''");
-
-  $table->data("Assessed", "Total", 
-                "'''[" . $script_url . "?quality=Assessed" 
-                   . ' ' . commify($totalAssessed->{'Total'}) . "]'''" );
-
-  my $code = $table->wikicode();
-
-  my $r =  $api->parse($code);
-
-#  print Dumper($r);
-
-  my $created = time();
-
-  return ($r->{'text'}->{'content'}, $code, $created);
+  return { 'proj' => undef, 
+           'cols' => $cols,
+           'data' => $data,
+           'SortImp' => $SortImp,
+           'SortQual' => $SortQual,
+           'ImportanceLabels' => $ImportanceLabels,
+           'QualityLabels' => $QualityLabels };
 }
 
 ################################################################
@@ -598,12 +481,13 @@ sub get_global_categories {
   my $sortQual = { 'FA-Class' => 500, 'FL-Class' => 480, 'A-Class' => 425, 
                    'GA-Class' => 400, 'B-Class' => 300, 'C-Class' => 225, 
               'Start-Class'=>150, 'Stub-Class' => 100, 'List-Class' => 80, 
-              $Assessed_Class => 20, $NotAClass => '11', 'Unknown-Class' => '10', 
-              $Unassessed_Class => 0};
+              $Assessed => 20, $NotAClass => '11', 
+              'Unknown-Class' => '10',  $Unassessed_Class => 0};
 
   my $sortImp= { 'Top-Class' => 400, 'High-Class' => 300, 
                  'Mid-Class' => 200, 'Low-Class' => 100, 
-                 $NotAClass => 11, $Unknown_Class => 10, $Unassessed_Class => 0};
+                 $NotAClass => 11, $Unknown_Class => 10, 
+                  $Unassessed_Class => 0};
 
   my $qualityLabels = {};
   my $importanceLabels = {};
@@ -629,21 +513,20 @@ sub get_global_categories {
 sub cached_global_ratings_table { 
   my $force_regenerate = shift || 0;
 
-  print "<!-- global table -- purge: '$force_regenerate' -->\n";
+  print "<!-- global table - purge: '$force_regenerate' -->\n";
 
   my $key = "GLOBAL:TABLE";
   my ($expiry, $data);
 
   if ( ($expiry = cache_exists($key)) && ! $force_regenerate ) { 
-    print "<!-- <div class=\"indent\">\n";
-    print "<b>Debugging output</b><br/>\n";
-    print "Current time: $timestamp<br/>\n";
+    print "<!-- Debugging output -->\n";
+    print "<!-- Current time: $timestamp --> \n";
 
     $expiry =~ s/\0//g;
 
-    print "Cached output expires: " 
+    print "<!-- Cached output expires: " 
        . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry)) 
-       . "<br/></div> -->\n";
+       . " -->\n";
 
     $data = cache_get($key);
 
@@ -662,11 +545,7 @@ sub cached_global_ratings_table {
   print "Current time: $timestamp\n";
   my $ts = time();
   
-  my ($html, $wikicode, $createdtime) = global_ratings_table();
-
-#  print "----\n";
-#  print "$html\n";
-#  print "----\n";
+  my ($html, $wikicode, $createdtime) = make_global_table();
 
   $ts = time() - $ts;
   $ts = int(0.5 + $ts / 60);
@@ -684,5 +563,31 @@ sub cached_global_ratings_table {
 
 ################################################################
 
+sub format_cell_pqi { 
+  my $proj = shift;
+  my $qual = shift;
+  my $prio = shift;
+  my $value = shift;
+
+  my $str = '[' . $list_url . "?run=yes";
+
+  if ( defined $proj ) { 
+    $str .= "&projecta=" . uri_escape($proj) ;
+  }
+
+  if ( defined $prio ) { 
+    $str .= "&importance=" . uri_escape($prio) ;
+  }
+
+  if ( defined $qual ) { 
+    $str .= "&quality=" . uri_escape($qual)  ;
+  }
+
+  $str .=  ' ' . commify($value) . "]" ;
+
+  return $str;
+}
+
+################################################################
 #Load successfully
 1;
