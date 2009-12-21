@@ -14,9 +14,6 @@ binmode STDOUT, ":utf8";
 
 use strict;
 use Encode;
-use Data::Dumper;
-use POSIX;
-use Getopt::Long;
 
 #############################################################
 # Define global variables and then load subroutines
@@ -29,38 +26,76 @@ require 'wp10_routines.pl';
 require 'api_routines.pl';
 require 'tables_lib.pl';
 
-my $start_time = time();
+############################################################
 
-my $project_details = db_get_project_details();
+if ( $ARGV[0] =~ /^--project/ ) {  # accept --project and --projects
+  copy_project_tables($ARGV[1]);
+} elsif ( $ARGV[0] eq '--global' ) { 
+  copy_global_table();
+} else { 
+  print << "HERE";
+Usage:
 
-my $project;
+* Copy project tables:
 
-my $count = scalar keys %$project_details;
+  $0 --project [PROJECT]
 
-print "Count: $count\n";
+* Copy global table:
 
-my $i = 0;
-foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-  next unless ( $project =~ /\Q$ARGV[0]\E/);
+  $0 --global 
+
+HERE
+}
+
+exit;
+
+############################################################
+
+sub copy_project_tables { 
+  my $filter = shift;
+
+  my $project_details = db_get_project_details();
+  my $project;
+
+  my $count = scalar keys %$project_details;
+  print "Count: $count\n";
+
+  my $i = 0;
+  foreach $project ( sort {$a cmp $b} keys %$project_details ) {
+    next unless ( $project =~ /\Q$filter\E/);
     $i++;
     print "$i / $count $project\n";
 
-    my ( $html, $wiki) = cached_project_table($project);
-
-    $wiki = munge($wiki);
-
     my $page = "User:WP 1.0 bot/Tables/Project/$project";
     my $summary = "Copying assessment table to wiki";
+    my ( $html, $wiki) = cached_project_table($project);
+    $wiki = munge($wiki);
 
     api_edit($page, $wiki, $summary);
-
     exit;
+  }
 }
 
-#######################################
+############################################################
+
+sub copy_global_table { 
+  print "Copying global table\n";
+
+  my $page = "User:WP 1.0 bot/Tables/OverallArticles";
+  my $summary = "Copying assessment table to wiki";
+  my ( $html, $wiki) = cached_global_ratings_table();
+  $wiki = munge($wiki);
+
+  api_edit($page, $wiki, $summary);
+  exit;
+}
+
+############################################################
 # In case we need to do some reformatting for the wiki
 
 sub munge { 
   my $text = shift;
   return $text;
 }
+
+############################################################

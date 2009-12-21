@@ -285,7 +285,7 @@ sub wikicode {
   $totalCols = scalar @{$self->{'columns'}} + 1;
 
   $text .= << "HERE";
-{| class="ratingstable wikitable" 
+{| class="ratingstable wikitable plainlinks"  style="text-align: right; margin-left: auto; margin-right: auto;"
 HERE
 
   if ( defined $self->{'title'} ) { 

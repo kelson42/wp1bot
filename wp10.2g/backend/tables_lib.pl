@@ -569,7 +569,12 @@ sub format_cell_pqi {
   my $prio = shift;
   my $value = shift;
 
-  my $str = '[' . $list_url . "?run=yes";
+  my $bold = "";
+  if ( (! defined $qual) || (! defined $prio ) ) { 
+    $bold = "'''";
+  }
+
+  my $str = $bold . '[' . $list_url . "?run=yes";
 
   if ( defined $proj ) { 
     $str .= "&projecta=" . uri_escape($proj) ;
@@ -583,7 +588,7 @@ sub format_cell_pqi {
     $str .= "&quality=" . uri_escape($qual)  ;
   }
 
-  $str .=  ' ' . commify($value) . "]" ;
+  $str .=  ' ' . commify($value) . "]" . $bold ;
 
   return $str;
 }
