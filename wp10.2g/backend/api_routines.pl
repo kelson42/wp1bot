@@ -296,6 +296,23 @@ sub api_get_move_log {
   return $output;
 }
 
+#####################################################################
+=item B<api_edit>(WIKIPAGE, CONTENT, SUMMARY)
+
+Edit WIKIPAGE with given content and edit summary
+
+=cut
+
+sub api_edit { 
+  my $page = shift;
+  my $content = shift;
+  my $summary = shift;
+
+  init_api();
+
+  $api->edit_page($page, $content, $summary);
+}
+#####################################################################
 
 #Load successfuly
 1;
