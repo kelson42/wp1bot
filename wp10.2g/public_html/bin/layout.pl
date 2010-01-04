@@ -31,6 +31,7 @@ my $listURL = $Opts->{'list2-url'};
 my $manualURL = $Opts->{'manual-url'};
 my $versionURL = $Opts->{'version-url'};
 my $serverURL = $Opts->{'server-url'};
+my $updateURL = $Opts->{'update-url'};
 
 my $namespaceIDs;
 
@@ -88,6 +89,9 @@ sub layout_header {
 
   my $usableforms = $Opts->{'usableforms.js'}
     or die "Must specify configuration value for 'usableforms.js'\n";
+
+  my $wpjavascript = $Opts->{'wp10.js'}
+    or die "Must specify configuration value for 'wp10.js'\n";
   
   my $basehref = $Opts->{'base-url'} || "";
   my $toolserverurl = $Opts->{'toolserver-home-url'} || "";
@@ -105,6 +109,7 @@ sub layout_header {
      \@import "$stylesheet";
   </style>
 <script type="text/javascript"  src="$usableforms"></script>
+<script type="text/javascript"  src="$wpjavascript"></script>
 </head>
 <body>
 
@@ -151,7 +156,8 @@ sub layout_leftnav {
      "Overall summary table" =>  $table2URL,
      "Project summary tables" => $tableURL,
      "Article lists" =>          $listURL,
-     "Assessment logs" =>        $logURL
+     "Assessment logs" =>        $logURL,
+     "Update project data" =>        $updateURL
     );
 
 

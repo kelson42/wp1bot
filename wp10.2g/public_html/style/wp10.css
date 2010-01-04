@@ -503,3 +503,19 @@ div.editfloat {
   font-size: small;
 }
 
+
+
+
+pre.updatepre { 
+  background-color: #eee;
+  color: #333;
+  padding-left: 1em;
+}
+
+p.updatewait { 
+  color: red;
+}
+
+p.updatedone { 
+ color: green;
+}

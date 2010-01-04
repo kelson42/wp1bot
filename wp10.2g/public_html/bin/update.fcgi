@@ -79,17 +79,37 @@ sub main_loop {
 
   my $proj = $param{'project'} || $ARGV[0] ;
 
-  my $prog = $Opts->{'download-program'};
+  my $prog = $Opts->{'download-program'} || die "No program\n";
 
   if ( defined $proj ) { 
     layout_header("Updating project data for $proj");
-    print "<pre>\n";
+    print << "HERE";
+      <p class="updatewait" id="wait">
+        Please wait for the data to be updated.</p>
+      <p class="updatedone" id="done" style="display: none;">
+        Data has been updated; you may now leave this page.</p>
+    <hr/>
+    <pre class="updatepre">
+    Running $prog
+
+HERE
+
     open PIPE, "$prog '$proj'|";
     while ( <PIPE> ) { 
       print;
     }
     close PIPE;
     print "</pre>\n";
+    print "<hr/>\n";
+    print "<p class=\"updatedone\">Data has been updated; you may now leave this page.</p>\n";
+
+print << "HERE";
+<script type="text/javascript">
+  document.getElementById("wait").style.display="none";
+  document.getElementById("done").style.display="inline";
+</script>
+HERE
+
   } else { 
     layout_header('Update project data');
     input_html();
@@ -107,11 +127,36 @@ sub main_loop {
 ############################################################
 
 sub input_html { 
+
+  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  $sth->execute();
+  my @row;
+  my $projects = {};
+
+  while ( @row = $sth->fetchrow_array ) { 
+    $projects->{$row[0]} = 1;
+  }
+
   print << "HERE";
     <form>
       <fieldset class="inner">
         <legend>Update project</legend>
-          Project name <input type="text" name="project"><br/>
+<select id="projectsel" name="projectselect" 
+onchange="projectSelected();">
+<option value="">Select a project or enter its name below</option>
+HERE
+
+  my $p;
+  foreach $p ( sort { $a cmp $b} keys %$projects) { 
+      print "<option value=\"" . $p . "\">" . $p . "</option>\n";
+  }
+
+  print << "HERE";
+
+</select>
+<hr/>
+          Project to update: <input type="text" id="projectname" 
+name="project" size="30"><br/>
           <input type="submit" value="Go">
       </fieldset>
     </form>
