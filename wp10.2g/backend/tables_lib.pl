@@ -127,10 +127,23 @@ Create a new table for PROJECT. Does not use the cache in any way.
 
 sub make_project_table { 
   my $proj = shift;
-  my $tdata = fetch_project_table_data($proj);
-  my $code = make_project_table_wikicode($tdata, 
-                                 "$proj articles by quality and importance",
-                                 \&format_cell_pqi );
+  my $cat = shift;
+  my $catNS = shift;
+  my $title = shift;
+
+  my $tdata = fetch_project_table_data($proj, $cat, $catNS, $title);
+
+  if ( ! defined $title ) { 
+    $title = "$proj articles by quality and importance";
+  }
+
+  my $format = \&format_cell_pqi;
+
+  if ( defined $cat ) { 
+    $format = get_format_cell_pqi_cat($cat, $catNS);
+  }
+
+  my $code = make_project_table_wikicode($tdata, $title, $format );
   my $r =  $api->parse($code);
   return ($r->{'text'}->{'content'}, $code);
 }
@@ -161,17 +174,41 @@ Fetch info to create table for project. Returns a TDATA object.
 
 sub fetch_project_table_data { 
   my $proj = shift;
+  my $cat = shift;
+  my $catNS = shift;
 
-  print "<!-- Fetch data for '$proj' -->\n";
+  printf "<!-- Fetch data for '%s' '%s' '%s' -->\n", $proj, $cat, $catNS;
 
   # Step 1: fetch totals from DB and load them into the $data hash
+  
+  my $query;
+  my @qparam;
 
-  my $sth = $dbh->prepare(
-     "select count(r_article), r_quality, r_importance, r_project 
+  if ( ! defined $cat ) { 
+    $query =  "
+      select count(r_article), r_quality, r_importance, r_project 
       from ratings
-      where r_project = ? group by r_quality, r_importance, r_project");
+      where r_project = ? group by r_quality, r_importance, r_project";
 
-  $sth->execute($proj);
+    push @qparam, $proj;
+  } else { 
+
+    $query =  "
+      select count(r_article), r_quality, r_importance, r_project 
+      from ratings
+      join enwiki_p.page on page_namespace = ? 
+                        and page_title = replace(r_article, ' ', '_')
+      join enwiki_p.categorylinks on page_id = cl_from and cl_to = ?  
+      where r_project = ? group by r_quality, r_importance, r_project";
+
+    push @qparam, $catNS;
+    push @qparam, $cat;
+    push @qparam, $proj;
+  } 
+
+  my $sth = $dbh->prepare($query);
+
+  $sth->execute(@qparam);
 
   my ($SortQual, $SortImp, $QualityLabels, $ImportanceLabels) 
     = get_project_categories($proj);
@@ -197,7 +234,7 @@ sub fetch_project_table_data {
   my $col;
   foreach $col ( keys %$cols ) {
     if ( ! defined $SortImp->{$col} ) { 
-      print "skip col $col\n";
+      print "<!-- skip col $col -->\n";
       delete $cols->{$col};
     }
   }
@@ -246,7 +283,6 @@ sub make_project_table_wikicode {
   my $SortQual = $tdata->{'SortQual'};
   my $ImportanceLabels = $tdata->{'ImportanceLabels'};
   my $QualityLabels = $tdata->{'QualityLabels'};
-
 
   # The 'assessed' data is generated dynamically
   $data->{'Assessed'} = {};
@@ -603,15 +639,15 @@ sub cached_global_ratings_table {
       return;
   }
 
-  print "Regenerating global table\n";
-  print "Current time: $timestamp\n";
+  print "<!-- Regenerating global table -->\n";
+  print "<!-- Current time: $timestamp -->\n";
   my $ts = time();
   
   my ($html, $wikicode, $createdtime) = make_global_table();
 
   $ts = time() - $ts;
   $ts = int(0.5 + $ts / 60);
-  print "Regenerated in $ts minutes\n";
+  print "<!-- Regenerated in $ts minutes -->\n";
 
   $data = "GLOBAL:TABLE" 
         . $cache_sep . $html 
@@ -659,6 +695,59 @@ sub format_cell_pqi {
   $str .=  ' ' . commify($value) . "]" . $bold ;
 
   return $str;
+}
+
+################################################################
+################################################################
+=item B<get_format_cell_pqi_cat>(CATEGORY, NAMESPACE)
+
+Return a subroutine reference for tables limited to a particular category
+
+=cut
+
+sub get_format_cell_pqi_cat { 
+  my $cat = shift;
+  my $catNS = shift;
+
+  my $catparam = 'category';
+
+  if ( 1 == ($catNS % 2) ) { 
+    $catparam = 'categoryt';
+  }
+
+  return sub { 
+
+    my $proj = shift;
+    my $qual = shift;
+    my $prio = shift;
+    my $value = shift;
+
+    my $bold = "";
+    if ( (! defined $qual) || (! defined $prio ) ) { 
+      $bold = "'''";
+    }
+
+    my $str = $bold . '[' . $list_url . "?run=yes";
+
+    $str .= "&filterCategory=on";
+    $str .= "&" . $catparam . "=" . uri_escape($cat);
+
+    if ( defined $proj ) { 
+      $str .= "&projecta=" . uri_escape($proj) ;
+    }
+
+    if ( defined $prio ) { 
+      $str .= "&importance=" . uri_escape($prio) ;
+    }
+
+    if ( defined $qual ) { 
+      $str .= "&quality=" . uri_escape($qual)  ;
+    }
+
+    $str .=  ' ' . commify($value) . "]" . $bold ;
+
+    return $str;
+  }
 }
 
 ################################################################
