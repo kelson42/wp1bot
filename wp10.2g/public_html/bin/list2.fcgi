@@ -658,8 +658,8 @@ HERE
   my $score = $params->{'score'};
   if ( defined $score && $score =~ /\d/ ) { 
     $score =~ s/[^\d]//;
-    $query .= " AND r_score >= ?";
-    $queryc .= " AND r_score >= ?";
+    $query .= " AND ra.r_score >= ?";
+    $queryc .= " AND ra.r_score >= ?";
     push @qparam, $score;
     push @qparamc, $score;
   }
@@ -888,11 +888,10 @@ sub query_form {
     $disable_count_checked = "checked=\"yes\" ";
   }
 
-
   my $intersect_checked = "";
   if ( $intersect eq 'on' ) { 
     $intersect_checked = "checked=\"yes\" ";
-  }
+  } 
 
   my $filter_release_checked = "";
   if ( $filter_release eq 'on' ) { 
@@ -963,7 +962,7 @@ sub query_form {
 
 <fieldset class="inner">
   <legend>Second project</legend>
-  <input type="checkbox"  name="intersect"  rel="secondproj"/>
+  <input type="checkbox"  name="intersect"  $intersect_checked rel="secondproj"/>
     <b>Specify second project</b><br/>
   <div rel="secondproj">
     Project name <input type="text" value="$projectb" name="projectb"/><br/>
