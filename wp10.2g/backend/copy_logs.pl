@@ -1,0 +1,677 @@
+#!/usr/bin/perl
+
+# copy_logs.pl
+# Copy logs of project assessment changes to the wiki
+
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
+select STDOUT;
+$| = 1;
+
+use strict;
+
+require 'read_conf.pl';
+require 'database_www.pl';
+require 'api_routines.pl';
+
+use utf8;
+use encoding 'utf8';
+
+my $Opts = read_conf();
+
+if ( ! defined $Opts->{'max-log-page-size'} ) { 
+  die "Must define max-log-page-size in wp10.conf";
+}
+my $MaxLogPageSize = $Opts->{'max-log-page-size'};
+
+my $NotAClass = $Opts->{'not-a-class'};
+
+my $chunkMessageBottom = << "HERE";
+
+This log entry was truncated because it was too long. The entry
+continues in the previous revision of this log page.
+HERE
+
+my $chunkMessageTop = << "HERE";
+
+This log entry was truncated because it was too long. This entry
+is a continuation of the entry in the next revision of this log page.
+
+HERE
+
+my @Months = ('Null', 'January', 'February', 'March', 'April', 'May',
+              'June', 'July', 'August', 'September', 'October',
+              'November', 'December');
+
+my %MonthsRev = ( 
+   'January' => '01',
+   'February' => '02',
+   'March' => '03',
+   'April' => '04',
+   'May' => '05',
+   'June' => '06',
+   'July' => '07',
+   'August' => '08',
+   'September' => '09',
+   'October' => '10',
+   'November' => '11',
+   'December' => '12'  );
+
+###################################################3
+use DBI;
+our $dbh = db_connect($Opts);
+my $Namespaces = db_get_namespaces();
+
+use POSIX 'strftime';
+use URI::Escape;
+
+my $project = $ARGV[0];
+
+if ( $project eq '--all' ) { 
+  my $sth = $dbh->prepare("select p_project from projects");
+  my @r;
+  my $i;
+  my $count = $sth->execute();
+  
+  while ( @r = $sth->fetchrow_array() ) { 
+    $i++;
+    next if ( $i < 1602);
+    print "$i/$count : $r[0] \n";
+    do_project($r[0]);
+  }
+
+} else { 
+  do_project($project);
+}
+
+exit;
+
+############################################################
+############################################################
+
+sub do_project { 
+  my $project = shift;
+
+  my ($hist,$max)  = get_log_history($project);
+
+  my $timestamp = $max . "000000";
+
+  if ( defined $ARGV[1]) { 
+     $timestamp = $ARGV[1] . "000000";
+  }
+
+  print "Most recent log entry for $project: $max\n";
+
+  $hist = {};
+  get_ratings($project, $timestamp, $hist);
+
+}
+############################################################
+
+sub get_ratings {
+  my $project = shift;
+  my $timestamp = shift;
+  my $hist = shift;
+
+  my ($p, $art, $ns, $key, $action, $log_ts, $old, $new, $rev_ts);
+
+  my $project_db = $project;
+#  $project_db =~ s/ /_/g;
+
+  my $sth = $dbh->prepare("select p_timestamp from projects 
+                             where p_project = ?");
+  $_ = $sth->execute($project_db);
+
+  if ($_ eq '0E0' ) { 
+      die "I don't see a project named '$project_db'\n";
+  }
+
+  my $query = "
+    SELECT * FROM logging 
+    WHERE l_project = ?
+      AND l_timestamp > ?";
+
+  print "T: '$timestamp'\n";
+
+  $sth = $dbh->prepare($query);
+
+  my $now = time();
+  $sth->execute($project_db, $timestamp);
+  print "Fetched assessment logs for $project  in " . (time() - $now) 
+          . " seconds\n"; 
+
+  my $r;
+  my $dates = {};
+
+  while ( $r = $sth->fetchrow_hashref() ) { 
+    $key = substr($r->{l_timestamp}, 0, 8);
+    if ( ! exists $dates->{$key} ) { 
+      $dates->{$key} = [];
+    }
+    push @{$dates->{$key}}, $r;
+  }
+
+  my $processed = {};
+  my ($year, $month, $mname, $day);
+
+  foreach $key ( sort {$a <=> $b } keys %$dates ) { 
+    print "K '$key' size: " . scalar @{$dates->{$key}} . "\n";
+
+    if ( defined $hist->{$key} ) { 
+      print " already done\n";
+      next;
+    }
+
+    $processed->{$key} = process_log($dates->{$key});
+   
+    $key =~ /(....)(..)(..)/;
+    $year = $1;
+    $month = $2;
+    $day = $3;
+
+    $day =~ s/^0//;
+    $month =~ s/^0//;
+    $mname = $Months[$month];
+
+    $processed->{$key} = "=== $year-$month-$day ===\n" . $processed->{$key};
+#    print $processed->{$key};
+    do_edit($project, $processed->{$key}, "$mname $day, $year");
+  }
+}
+
+############################################################
+
+sub process_log { 
+  my $rawdata = shift;
+
+  my ($r, $key);
+
+  my $move_to = {};
+  my $move_from = {};
+  my $reassess = {};
+  my $no_qual = {};
+  my $no_imp = {};
+
+  my $errors = "";
+  my $move_log = [];
+  my $remove_log = [];
+  my $reassess_log = [];
+  my $assess_log = [];
+  my $line;
+  
+  foreach $r ( @$rawdata ) { 
+    $key = $r->{'l_namespace'} . ":" . $r->{'l_article'};
+
+    if ( $r->{'l_action'} eq 'moved' ) {
+      my $dkey = move_target($r->{'l_namespace'},
+                             $r->{'l_article'},
+                             $r->{'l_revision_timestamp'});
+
+      $move_to->{$key} = $dkey;
+      $move_from->{$dkey} = $key;
+  
+    } elsif ( $r->{'l_action'} eq 'importance' ) { 
+      if ( ! defined $reassess->{$key} ) { 
+        $reassess->{$key} = {};
+      }
+
+      $reassess->{$key}->{'imp_old'} = $r->{'l_old'};
+      $reassess->{$key}->{'imp_new'} = $r->{'l_new'};
+      $reassess->{$key}->{'imp_ts'} = $r->{'l_revision_timestamp'};
+
+      if ( $r->{'l_new'} eq $NotAClass ) { 
+        $no_imp->{$key} = 1;
+      }    
+
+    } elsif ( $r->{'l_action'} eq 'quality' ) { 
+
+      if ( ! defined $reassess->{$key} ) { 
+        $reassess->{$key} = {};
+      }
+
+      $reassess->{$key}->{'qual_old'} = $r->{'l_old'};
+      $reassess->{$key}->{'qual_new'} = $r->{'l_new'};
+      $reassess->{$key}->{'qual_ts'} = $r->{'l_revision_timestamp'};
+
+      if ( $r->{'l_new'} eq $NotAClass ) { 
+        $no_qual->{$key} = 1;
+      }    
+
+    } else { 
+      $errors .= "" . Dumper($r) . "\n--\n";
+    }
+  }
+
+  foreach $key ( keys %$move_to ) { 
+    $line =  "'''[[" . key_to_name($key)  . "]]'''" 
+        . " renamed to " 
+        . "'''[[" . key_to_name($move_to->{$key}) . "]]'''.";
+    push @$move_log, $line;
+  } 
+
+  foreach $key ( keys %$reassess ) { 
+    my $data = $reassess->{$key};
+
+    my $okey;
+
+    # If both of these become 1, it means the article was just
+    # moved, so the log entry for reassessing will be skipped
+    my $imp_ok = 0;
+    my $qual_ok = 0;
+
+    # was this article moved somewhere else
+    # without any change in ratings ? 
+    if ( exists $move_to->{$key}  ) { 
+      $okey = $move_to->{$key};
+      if ( defined $reassess->{$okey} ) {
+
+        if ($reassess->{$key}->{'imp_old'} 
+            eq $reassess->{$okey}->{'imp_new'} ) {
+              $imp_ok = 1;
+        }
+        if ($reassess->{$key}->{'qual_old'} 
+            eq $reassess->{$okey}->{'qual_new'} ) {
+              $qual_ok = 1;
+        }
+      }
+    }
+
+    # was this article moved from somewhere else
+    # without any change in ratings ? 
+    if ( exists $move_from->{$key}  ) { 
+      $okey = $move_from->{$key};
+      if ( defined $reassess->{$okey} ) {
+
+        if ($reassess->{$key}->{'imp_new'} 
+            eq $reassess->{$okey}->{'imp_old'} ) {
+              $imp_ok = 1;
+        }
+        if ($reassess->{$key}->{'qual_new'} 
+            eq $reassess->{$okey}->{'qual_old'} ) {
+              $qual_ok = 1;
+        }
+      }
+    }
+
+    my $name = key_to_name($key);
+    my $talk = key_to_talk($key);
+    my ($rev_page, $rev_talk, $reassessed);    
+
+    if ( (! $imp_ok) || (!$qual_ok) ) {   # this eliminates renamed articles
+
+      if ( ((! defined $data->{'qual_old'}) 
+             || ($data->{'qual_old'} eq $NotAClass ))  
+          && ((! defined $data->{'imp_old'} ) 
+              || ($data->{'imp_old'} eq $NotAClass ))) { 
+          $reassessed = 'assessed';
+  
+      } elsif ( ((! defined $data->{'qual_new'}) 
+              || ($data->{'qual_new'} eq $NotAClass ))  
+          &&  ((! defined $data->{'imp_new'} ) 
+              || ($data->{'imp_new'} eq $NotAClass ))) { 
+        $reassessed = 'removed';
+      } else { 
+        $reassessed = 'reassessed';
+      }
+
+      $line = "'''[[$name]]''' ([[$talk|talk]]) $reassessed.";
+
+      if ( $reassessed eq 'removed' ) {
+        if ( defined $data->{'qual_old' } ) {
+          ($rev_page, $rev_talk) = get_revid($key, $data->{'qual_ts'});
+          $line .= " Quality rating was " 
+                 . format_old_rating($data->{'qual_old'})
+                 . " <span style=\"white-space: nowrap;\">(" 
+                 . rev_link($key, $rev_page, "rev") 
+                 . " &middot; " . rev_link($key, $rev_talk, "t") . ").</span>"
+	}
+
+        if ( defined $data->{'imp_old' } ) {
+          ($rev_page, $rev_talk) = get_revid($key, $data->{'imp_ts'});
+          $line .= " Importance rating was " 
+                 . format_old_rating($data->{'imp_old'})
+                 . " <span style=\"white-space: nowrap;\">(" 
+                 . rev_link($key, $rev_page, "rev") 
+                 . " &middot; " . rev_link($key, $rev_talk, "t") . ").</span>"
+	}
+
+      } else {  
+
+        if ( defined $data->{'qual_old' } ) {
+          ($rev_page, $rev_talk) = get_revid($key, $data->{'qual_ts'});
+
+          if ( $data->{'qual_old'} eq $NotAClass ) { 
+            $line .= " Quality assessed as ";
+          } else { 
+            $line .= " Quality rating changed from "
+                  . format_old_rating($data->{'qual_old'}) 
+                  . " to ";
+          }
+
+          $line .= format_new_rating($data->{'qual_new'})
+                 . " <span style=\"white-space: nowrap;\">(" 
+                 . rev_link($key, $rev_page, "rev") 
+                 . " &middot; " . rev_link($key, $rev_talk, "t") . ").</span>"
+        }
+
+        if ( defined $data->{'imp_old'} ) { 
+          ($rev_page, $rev_talk) = get_revid($key, $data->{'imp_ts'});
+
+          if ( $data->{'imp_old'} eq $NotAClass ) { 
+            $line .= " Importance assessed as ";
+          } else { 
+            $line .= " Importance rating changed from "
+                  . format_old_rating($data->{'imp_old'} )
+                  . " to ";
+          }
+          $line .=  format_new_rating($data->{'imp_new'} )
+                  . " <span style=\"white-space: nowrap;\">(" 
+                  . rev_link($key, $rev_page, "rev") 
+                  . " &middot; " . rev_link($key, $rev_talk, "t") 
+                  . ").</span>"
+        }   
+      }
+      if ( $reassessed eq 'reassessed') { 
+        push @$reassess_log, $line;
+      } elsif ( $reassessed eq 'removed') { 
+	  if ( ! defined $move_to->{$key} ) {
+	      # if the ratings are changed when the page is moved,
+	      # the tests above don't notice the move. So force
+	      # if not to display here
+            push @$remove_log, $line;
+	  }
+      } else { 
+        push @$assess_log, $line;    
+      }
+    }
+  }
+    
+  my $output;
+  
+  if ( 0 < scalar @$move_log ) { 
+    $output .= "==== Renamed ====\n";
+    foreach $line ( @$move_log ) { 
+      $output .= "* $line\n";
+    }
+  }
+
+  if ( 0 < scalar @$reassess_log ) { 
+    $output .= "==== Reassessed ====\n";
+    foreach $line ( @$reassess_log ) { 
+      $output .= "* $line\n";
+    }
+  }
+
+  if ( 0 < scalar @$assess_log ) { 
+    $output .= "==== Assessed ====\n";
+    foreach $line ( @$assess_log ) { 
+      $output .= "* $line\n";
+    }
+  }
+
+  if ( 0 < scalar @$remove_log ) { 
+    $output .= "==== Removed ====\n";
+    foreach $line ( @$remove_log ) { 
+      $output .= "* $line\n";
+    }
+  }
+
+#print $output;
+#exit;
+  return $output;
+}
+
+############################################################
+
+sub move_target {
+  my $ns = shift;
+  my $art = shift;
+  my $ts = shift;
+
+  my $sth = $dbh->prepare("select m_new_namespace, m_new_article
+                           from moves
+                           where m_old_namespace = ? 
+                             and m_old_article = ? 
+                             and m_timestamp = ?");
+
+  $sth->execute($ns, $art, $ts);
+
+  my @r = $sth->fetchrow_array();
+  return $r[0] . ":" . $r[1];
+}
+
+############################################################
+
+sub key_to_name { 
+  my $key = shift;
+  my ($ns, $title) = split /:/, $key, 2;
+
+  if ( $ns == 0 ) { 
+    return $title; 
+  } else { 
+    return ":" . $Namespaces->{$ns} . ":" . $title;
+  }
+}
+
+sub key_to_talk { 
+  my $key = shift;
+  my ($ns, $title) = split /:/, $key, 2;
+  $ns++;
+
+  return $Namespaces->{$ns} . ":" . $title;
+}
+
+############################################################
+
+sub get_revid { 
+  my $key = shift;
+  my $timestamp = shift;
+  $timestamp =~ s/[^0-9]//g;
+
+  my ($ns, $page) = split /:/, $key, 2;
+  $page =~ s/ /_/g;
+
+  my $query = 'select rev_id 
+               from enwiki_p.revision join enwiki_p.page 
+               on page_namespace = ? and page_title = ? 
+               and rev_page = page_id 
+               where rev_timestamp <= ? 
+               order by rev_timestamp desc limit 1';
+
+  my $sth = $dbh->prepare($query);
+
+  my ($rev_page, $rev_talk);
+  my @r;
+
+  $sth->execute($ns, $page, $timestamp);
+
+  @r = $sth->fetchrow_array();
+  $rev_page = $r[0];
+
+  $sth->execute($ns+1, $page, $timestamp);
+  @r = $sth->fetchrow_array();
+  $rev_talk = $r[0];
+
+  return ($rev_page, $rev_talk);
+}
+
+############################################################
+
+sub rev_link { 
+  my $key = shift;
+  my $revid = shift;
+  my $title = shift;
+  my $name = key_to_name($key);
+  my $link = $Opts->{'server-url'} 
+                       . "?title=" . uri_escape_utf8($name) 
+                       . "&oldid=$revid";
+  return "[$link $title]";
+}
+
+############################################################
+
+sub do_edit { 
+  my $project = shift;
+  my $newtext = shift;
+  my $date = shift;
+
+  my $page = log_page($project);
+
+  # parse old content into @sections
+  my $content = api_content($page);
+  my @sections;
+  $sections[0] = "";
+  my $sn = 0;
+  my @lines = split /\n/, $content;
+  my $l;
+  foreach $l ( @lines ) { 
+#      print "See: $l\n";
+
+    if ( $l =~ /^===[^=]/ ) { 
+      $sn++;
+      $sections[$sn] = "";
+    }
+    $sections[$sn] .= $l . "\n";
+  }
+  $sections[$sn] =~ s/\n+$/\n/;
+
+#  for ( $sn = 0; $sn < scalar @sections; $sn++ ) { 
+#      print "Sec $sn: " . (length $sections[$sn] ) . "\n";
+#  } 
+
+#  exit;
+
+  $newtext = $sections[0] . $newtext;
+
+  my $revision = $Opts->{'svn-revision'};
+  my $edit_summary = "Log for $date (2G r$revision)";
+
+  # If the new content is to big, we will split it. 
+  # Otherwise, keep as much of the old stuff as possible
+
+  if ( $MaxLogPageSize < length $newtext ) { 
+    print "Need to split new text\n";
+    my @chunks;
+    my $cn = 0;
+    $chunks[0] = "";
+
+    @lines = split /\n/, $newtext;
+    foreach $l ( @lines ) { 
+      if ( $MaxLogPageSize < length $chunks[$cn] ) { 
+        $chunks[$cn] .= $chunkMessageBottom;
+        $cn++;
+        $chunks[$cn] = $chunkMessageTop;
+      }
+      $chunks[$cn] .= $l . "\n";
+    }
+    $chunks[$cn] =~ s/\n+$/\n/;
+
+    my $count = scalar @chunks;
+    my $m;
+    $cn = $count - 1;
+    while ( $cn >= 0 ) { 
+      $m = " [chunk " . ($cn+1) . " of $count]";
+      api_edit($page, $chunks[$cn], $edit_summary . $m );
+      $cn--;
+   }
+
+   exit;
+
+  } else { 
+    print "Don't need to split new text\n";
+    $sn = 1;
+
+    while ( $sn < (scalar @sections) ) { 
+#      print "Check section $sn\n";
+#      print " Text: " . (length $newtext) . "\n";
+#      print " Section $sn: " . (length $sections[$sn]) . "\n";
+      last if ( $MaxLogPageSize <
+                  ((length $newtext) + (length $sections[$sn])) ) ;
+      $newtext .= $sections[$sn];
+      $sn++;
+    }
+#    print "Final length: " . (length $newtext) . "\n\n";
+
+    api_edit($page, $newtext, $edit_summary);
+  }
+}
+
+############################################################
+
+sub log_page { 
+  my $project = shift;
+  my $type = shift;
+
+  my $title = "Version 1.0 Editorial Team/"
+      . $project . " articles by quality log";
+
+  if ( ! defined $type ) { 
+    return "Wikipedia:$title";
+  } elsif ( $type = "db" ) { 
+      $title =~ s/ /_/g;
+      return (4,$title);
+  }
+}
+
+############################################################
+
+sub get_log_history { 
+  my $project = shift;
+  my ($ns, $page) = log_page($project, 'db');
+
+  my $query = "select rev_comment 
+               from enwiki_p.revision 
+               join enwiki_p.page on page_id = rev_page
+               where page_namespace = ? and page_title = ?
+               order by rev_timestamp desc limit 250";
+
+  my $sth = $dbh->prepare($query);
+  $sth->execute($ns, $page);
+
+  my $hist = {};
+
+  my @r;
+  my ($year, $mname, $month, $day, $key);
+  my $max = 0;
+  while ( @r = $sth->fetchrow_array ) { 
+    if ( $r[0] =~ /Log for (.*) (\d+), (\d+)/ ) { 
+      $mname = $1;
+      $day = $2;
+      $year = $3;
+      if ( defined $MonthsRev{$mname} ) { 
+        $key = sprintf("%d%02d%02d",  $year , $MonthsRev{$mname}, $day);
+        $hist->{$key} = 1;
+        if ( $key > $max ) { 
+	    $max = $key;
+        }
+      }
+    }
+  }
+
+  return ($hist, $max);
+}
+
+############################################################
+
+sub format_old_rating { 
+  my $text = shift;
+  return "'''$text'''";
+}
+
+sub format_new_rating { 
+  my $text = shift;
+  return "'''$text'''";
+}
+
+
+############################################################
+
+
+sub usage { 
+  print << "HERE";
+Usage: $0 PROJECT TIMESTAMP
+
+HERE
+exit;
+}
