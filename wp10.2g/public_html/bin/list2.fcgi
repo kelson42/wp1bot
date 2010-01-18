@@ -877,7 +877,7 @@ sub query_form {
 
   my $review_html = review_filter_html($review_filter);
 
-  my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'} : 0;
+  my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'};
 
   my $category = $params->{'category'} || "";
   my $tcategory = $params->{'categoryt'} || "";
@@ -1053,7 +1053,7 @@ sub print_header_text {
   }
 
   print "(<b>list</b> \| <a href=\"" 
-  . $Opts->{'table-url'} . "\">summary table</a>)\n";
+  . $tableURL . "\">summary table</a>)\n";
 }
 
 ###########################################################################

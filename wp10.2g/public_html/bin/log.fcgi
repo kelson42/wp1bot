@@ -496,8 +496,6 @@ sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
   my $tableURL = $Opts->{'table-url'};
-  my @t = split('log.pl',$tableURL);
-  $tableURL = @t[0] . "table.pl";
 
   if ( $project =~ /\w|\d/ ) { 
     $tableURL = $tableURL . "?project=" . $project;
