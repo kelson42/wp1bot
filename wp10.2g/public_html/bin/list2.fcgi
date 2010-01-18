@@ -735,6 +735,7 @@ HERE
   <th colspan="3"><b>$projecta</b></th>
   <th colspan="1" class="spacer">&nbsp;</th>
   <th colspan="3"><b>$projectb</b></th>
+  <th colspan="1" class="spacer">&nbsp;</th>
   <th colspan="2">
     <a class="info">
       <b>Review</b><br/><b>Release</b>
@@ -952,7 +953,7 @@ sub query_form {
       Treat page name as a
       <a href="http://en.wikipedia.org/wiki/Regular_expression">regular 
            expression</a><br/>
-  <input type="checkbox"  name="showExternal" />
+  <input type="checkbox"  name="showExternal" $show_external_checked />
       Show external interest data<br/>
   <div class="note">Note: leave any field blank to select all values.</div>
   <div class="submit">
