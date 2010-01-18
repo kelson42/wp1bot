@@ -877,7 +877,7 @@ sub query_form {
 
   my $review_html = review_filter_html($review_filter);
 
-  my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'};
+  my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'} : "";
 
   my $category = $params->{'category'} || "";
   my $tcategory = $params->{'categoryt'} || "";
