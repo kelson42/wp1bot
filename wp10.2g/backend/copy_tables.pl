@@ -10,7 +10,12 @@ Copy assessment tables to the wiki
 
 =cut
 
+use utf8;
+use encoding 'utf8';
+
 binmode STDOUT, ":utf8";
+select STDOUT;
+$| = 1;
 
 use strict;
 use Encode;
@@ -62,7 +67,7 @@ sub copy_project_tables {
 
   my $i = 0;
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-    next unless ( $project =~ /\Q$filter\E/);
+    next unless ( (! defined $filter ) || ($project =~ /\Q$filter\E/));
     $i++;
     print "$i / $count $project\n";
 
@@ -71,8 +76,8 @@ sub copy_project_tables {
     my ( $html, $wiki) = cached_project_table($project);
     $wiki = munge($wiki);
 
-    api_edit($page, $wiki, $summary);
-    exit;
+    api_edit(encode("utf8", $page), $wiki, $summary);
+#    exit;
   }
 }
 

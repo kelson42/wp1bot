@@ -493,7 +493,7 @@ sub fetch_global_table_data {
   # Step 1: fetch totals from DB and load them into the $data hash
 
   my $query = <<"  HERE";
-select count(distinct a_article), grq.gr_rating, gri.gr_rating
+select count(distinct a_article), grq.gr_rating, gri.gr_rating /* SLOW_OK */
 from global_articles
 join global_rankings as grq 
   on grq.gr_type = 'quality' and grq.gr_ranking= a_quality

@@ -16,7 +16,7 @@ into a common interface and output format.
 
 use strict;
 use Encode;
-use lib '/home/cbm/veblen/VeblenBot';
+#use lib '/home/cbm/veblen/VeblenBot';
 
 use Data::Dumper;
 
@@ -47,12 +47,17 @@ sub init_api() {
   $api->max_retries(20);
 
   $api->base_url(get_conf('api-url'));
-  $api->debug_level(1);
+  $api->debug_level(3);
 
   my $cred = get_conf('api-credentials');
 
   if ( $cred ) { 
     $api->login_from_file($cred);
+  }
+  $api->{'decodeprint'} = 0;
+
+  if ( defined $ENV{'API_DEBUG'} ) { 
+    $api->debug_level($ENV{'API_DEBUG'});
   }
 
   # Initialize hash of namespace prefixes
@@ -172,6 +177,27 @@ sub pages_in_category_detailed {
 
 #####################################################################
 
+=item B<content>(PAGE) 
+
+Fetch the source code of PAGE. The returned text is UTF-8 encoded.
+
+=cut
+
+sub api_content {
+  my $art = shift;
+
+  init_api();
+
+  my $t = $api->content($art);
+
+  if ( $t eq "") { return ""; }
+
+  return encode("utf8", $t->{'content'});
+
+}
+
+#####################################################################
+
 =item B<content_section>(PAGE, SECTION) 
 
 Fetch the source code of section number SECTION in PAGE. The lede is
@@ -194,6 +220,7 @@ sub content_section {
   return encode("utf8", $t->{'content'});
 
 }
+
 
 #####################################################################
 
@@ -282,7 +309,7 @@ sub api_get_move_log {
   my $data = $api->log_events($title, ['letype'=>'move']);
 
   my $output = [];
-  my $d;
+  my ($d, $prefix);
 
   foreach $d ( @$data ) { 
     $d->{'user'} = encode('utf8', $d->{'user'});
@@ -290,6 +317,11 @@ sub api_get_move_log {
     $d->{'comment'} = encode('utf8', $d->{'comment'});
     $d->{'dest-ns'} =$d->{'move'}->{'new_ns'};
     $d->{'dest-title'} = encode('utf8',$d->{'move'}->{'new_title'});
+
+    # The following is to resolve ENWPONE-14
+    $prefix = $namespaces->{$d->{'dest-ns'}};
+    $d->{'dest-title'} =~ s/^\Q$prefix//;
+
     push @$output, $d;
   }
 
