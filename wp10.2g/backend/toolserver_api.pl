@@ -170,7 +170,7 @@ sub toolserver_pages_in_category {
   my $sth = $dbh->prepare($query);
   my $t = time();
   my $r = $sth->execute(@qparam);
-  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
+  print "\tListed $r pages in " . (time() - $t) . " seconds\n";
   
   my @row;
   my @results;
@@ -236,7 +236,7 @@ sub toolserver_pages_in_category_detailed {
   
   my $t = time();
   my $r = $sth->execute(@qparam);
-  print "\tListed $r articles in " . (time() - $t) . " seconds\n";
+  print "\tListed $r pages in " . (time() - $t) . " seconds\n";
   
   my @row;
   my @results;

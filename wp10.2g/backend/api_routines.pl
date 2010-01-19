@@ -149,7 +149,7 @@ sub pages_in_category_detailed {
   my $cat = shift;
   my $ns = shift;
 
-  print "Get: $cat '$ns'\n";
+  print "Get: $cat $ns\n";
 
   if ( $use_toolserver ) { 
 #    print "\tusing toolserver\n";

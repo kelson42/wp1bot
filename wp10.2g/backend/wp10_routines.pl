@@ -184,8 +184,11 @@ $dt = time() - $lt;
 $lt = time();
 #print "==> update articles table $dt sec\n";
 
+if ( defined $ENV{'DRY_RUN'} ) { 
+  print "DRY RUN - not committing changes\n";
+} else { 
     db_commit();
-
+}
 $dt = time() - $lt;
 $lt = time();
 #print "==> commit $dt sec\n";
