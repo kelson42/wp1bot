@@ -16,7 +16,6 @@ into a common interface and output format.
 
 use strict;
 use Encode;
-#use lib '/home/cbm/veblen/VeblenBot';
 
 use Data::Dumper;
 
@@ -192,7 +191,7 @@ sub api_content {
 
   if ( $t eq "") { return ""; }
 
-  return encode("utf8", $t->{'content'});
+  return encode("utf8", $t);
 
 }
 

@@ -76,7 +76,6 @@ if ( $project eq '--all' ) {
   
   while ( @r = $sth->fetchrow_array() ) { 
     $i++;
-    next if ( $i < 1602);
     print "$i/$count : $r[0] \n";
     do_project($r[0]);
   }

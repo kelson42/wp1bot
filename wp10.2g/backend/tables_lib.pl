@@ -405,7 +405,7 @@ sub make_project_table_wikicode {
 
   $table->data("Assessed", "Total", 
                &{$format_cell}($proj, "Assessed", undef, 
-                               $totalAssessed->{'Total'}));
+                               $totalAssessed->{'Total'} || "0"));
 
   my $code = $table->wikicode();
 

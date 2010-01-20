@@ -8,7 +8,7 @@
 binmode STDOUT, ":utf8";
 
 use strict;
-use lib '/home/cbm/veblen/VeblenBot';
+use lib '/home/project/e/n/w/enwp10/VeblenBot';
 use Date::Parse;
 use POSIX 'strftime';
 
@@ -17,7 +17,7 @@ my $api = new Mediawiki::API;
 $api->base_url('http://en.wikipedia.org/w/api.php');
 $api->debug_level(3);
 $api->maxlag(2000);
-$api->login_from_file('/home/cbm/veblen/api.credentials');
+$api->login_from_file('/home/project/e/n/w/enwp10/api.credentials.wp10');
 
 use Data::Dumper;
 
