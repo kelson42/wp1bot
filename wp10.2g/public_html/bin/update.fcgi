@@ -138,6 +138,7 @@ sub input_html {
   }
 
   print << "HERE";
+  <p>WP 1.0 bot is ready to serve you. </p>
     <form>
       <fieldset class="inner">
         <legend>Update project</legend>
