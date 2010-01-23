@@ -31,6 +31,7 @@ my $listURL = $Opts->{'list2-url'};
 my $manualURL = $Opts->{'manual-url'};
 my $versionURL = $Opts->{'version-url'};
 my $serverURL = $Opts->{'server-url'};
+my $baseURL = $Opts->{'base-url'};
 my $updateURL = $Opts->{'update-url'};
 
 my $namespaceIDs;
@@ -528,9 +529,9 @@ sub get_link_from_api {
   $t = @t[0];
 
   @t = split('"',$t,2);
-  $t = @t[0] . "\"" . $serverURL .  @t[1];
+  $t = @t[0] . "\"" . $baseURL .  @t[1];
 
-print "<!-- link '$t' -->\n";
+  print "<!-- link '$t' -->\n";
 
   return $t;
 }
