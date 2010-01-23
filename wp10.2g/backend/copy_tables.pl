@@ -69,12 +69,12 @@ sub copy_project_tables {
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
     next unless ( (! defined $filter ) || ($project =~ /\Q$filter\E/));
     $i++;
-    print "$i / $count $project\n";
+    print "\n$i / $count $project\n";
 
     my $page = "User:WP 1.0 bot/Tables/Project/$project";
     my $summary = "Copying assessment table to wiki";
     my ( $html, $wiki) = cached_project_table($project);
-    $wiki = munge($wiki);
+    $wiki = munge($wiki, 'project');
 
     api_edit(encode("utf8", $page), $wiki, $summary);
 #    exit;
@@ -89,7 +89,7 @@ sub copy_global_table {
   my $page = "User:WP 1.0 bot/Tables/OverallArticles";
   my $summary = "Copying assessment table to wiki";
   my ( $html, $wiki) = cached_global_ratings_table();
-  $wiki = munge($wiki);
+  $wiki = munge($wiki, 'global');
 
   api_edit($page, $wiki, $summary);
   exit;
@@ -100,6 +100,14 @@ sub copy_global_table {
 
 sub munge { 
   my $text = shift;
+  my $mode = shift;
+
+  if ( $mode eq 'project' ) { 
+      # Don't center the tables so they can be trancluded more flexibly
+    $text =~ s/margin-left: auto;//;
+    $text =~ s/margin-right: auto;//;
+  }
+
   return $text;
 }
 
