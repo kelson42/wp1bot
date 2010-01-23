@@ -76,11 +76,11 @@ if ( $project eq '--all' ) {
   
   while ( @r = $sth->fetchrow_array() ) { 
     $i++;
-    print "$i/$count : $r[0] \n";
+    print "\n--- $i/$count : $r[0] \n";
     do_project($r[0]);
   }
-
 } else { 
+  if ( $project eq '' ) { usage(); } 
   do_project($project);
 }
 
@@ -94,10 +94,10 @@ sub do_project {
 
   my ($hist,$max)  = get_log_history($project);
 
-  my $timestamp = $max . "000000";
+  my $timestamp = $max . "250000";  # to skip to next day
 
   if ( defined $ARGV[1]) { 
-     $timestamp = $ARGV[1] . "000000";
+     $timestamp = $ARGV[1] . "250000";
   }
 
   print "Most recent log entry for $project: $max\n";
@@ -162,8 +162,12 @@ sub get_ratings {
       next;
     }
 
-    $processed->{$key} = process_log($dates->{$key});
-   
+    if ( 100000 < scalar @{$dates->{$key}} ) { 
+      $processed->{$key} = "The log for today is too huge to upload to the wiki.\n"
+    } else {  
+      $processed->{$key} = process_log($dates->{$key});
+    }
+ 
     $key =~ /(....)(..)(..)/;
     $year = $1;
     $month = $2;
@@ -173,9 +177,15 @@ sub get_ratings {
     $month =~ s/^0//;
     $mname = $Months[$month];
 
-    $processed->{$key} = "=== $year-$month-$day ===\n" . $processed->{$key};
-#    print $processed->{$key};
-    do_edit($project, $processed->{$key}, "$mname $day, $year");
+    my $header = sprintf "=== %s %s, %s ===\n", 
+                           $Months[$month], $day, $year;
+
+    $processed->{$key} = $header . $processed->{$key};
+    if ( defined $ENV{'DRY_RUN'} ) { 
+      print $processed->{$key};
+    } else { 
+      do_edit($project, $processed->{$key}, "$mname $day, $year");
+    }
   }
 }
 
@@ -416,8 +426,6 @@ sub process_log {
     }
   }
 
-#print $output;
-#exit;
   return $output;
 }
 
@@ -539,8 +547,6 @@ sub do_edit {
 #      print "Sec $sn: " . (length $sections[$sn] ) . "\n";
 #  } 
 
-#  exit;
-
   $newtext = $sections[0] . $newtext;
 
   my $revision = $Opts->{'svn-revision'};
@@ -574,8 +580,6 @@ sub do_edit {
       api_edit($page, $chunks[$cn], $edit_summary . $m );
       $cn--;
    }
-
-   exit;
 
   } else { 
     print "Don't need to split new text\n";
@@ -669,8 +673,20 @@ sub format_new_rating {
 
 sub usage { 
   print << "HERE";
-Usage: $0 PROJECT TIMESTAMP
+Usage:
+
+* Copy logs for a single project
+
+  $0 --project [PROJECT] [TIMESTAMP]
+
+If TIMESTAMP is specified, only logs newer than that are uploaded
+
+* Copy logs for all projects
+
+  $0 --all
+
 
 HERE
 exit;
+
 }
