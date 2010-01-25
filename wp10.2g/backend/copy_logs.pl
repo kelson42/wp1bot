@@ -11,6 +11,8 @@ $| = 1;
 
 use strict;
 
+use Time::HiRes qw ( time  );
+
 require 'read_conf.pl';
 require 'database_www.pl';
 require 'api_routines.pl';
@@ -68,6 +70,16 @@ use URI::Escape;
 
 my $project = $ARGV[0];
 
+# Instrumenting
+my @i_latest;
+my @i_log;
+my @i_process;
+my @i_moves;
+my @i_edit;
+my @i_revlink;
+my @i_revids;
+my @i_key;
+
 if ( $project eq '--all' ) { 
   my $sth = $dbh->prepare("select p_project from projects");
   my @r;
@@ -76,7 +88,11 @@ if ( $project eq '--all' ) {
   
   while ( @r = $sth->fetchrow_array() ) { 
     $i++;
+    if ( defined $ENV{'CLEAR'} ) { 
+      system("clear");
+    }
     print "\n--- $i/$count : $r[0] \n";
+    instrument();
     do_project($r[0]);
   }
 } else { 
@@ -84,15 +100,21 @@ if ( $project eq '--all' ) {
   do_project($project);
 }
 
+instrument();
+
 exit;
 
 ############################################################
 ############################################################
 
+
 sub do_project { 
   my $project = shift;
 
+  my $stime = time();
   my ($hist,$max)  = get_log_history($project);
+  my $etime = time();
+  push @i_latest, ($etime - $stime);
 
   my $timestamp = $max . "250000";  # to skip to next day
 
@@ -135,11 +157,13 @@ sub get_ratings {
 
   $sth = $dbh->prepare($query);
 
-  my $now = time();
+  my $stime = time();
   $sth->execute($project_db, $timestamp);
-  print "Fetched assessment logs for $project  in " . (time() - $now) 
+  my $etime = time();
+  print "Fetched assessment logs for $project  in " . ($etime - $stime) 
           . " seconds\n"; 
 
+  push @i_log, ($etime - $stime);
   my $r;
   my $dates = {};
 
@@ -181,10 +205,13 @@ sub get_ratings {
                            $Months[$month], $day, $year;
 
     $processed->{$key} = $header . $processed->{$key};
-    if ( defined $ENV{'DRY_RUN'} ) { 
-      print $processed->{$key};
+    if ( defined $ENV{'DRY_RUN'} && (1 == $ENV{'DRY_RUN'}) ) { 
+      print $processed->{$key}; 
+      sleep 30;
     } else { 
       do_edit($project, $processed->{$key}, "$mname $day, $year");
+      exit if ( defined $ENV{'DRY_RUN'} && (2 == $ENV{'DRY_RUN'}));
+    
     }
   }
 }
@@ -195,6 +222,8 @@ sub process_log {
   my $rawdata = shift;
 
   my ($r, $key);
+
+  my $stime = time();
 
   my $move_to = {};
   my $move_from = {};
@@ -208,9 +237,13 @@ sub process_log {
   my $reassess_log = [];
   my $assess_log = [];
   my $line;
-  
-  foreach $r ( @$rawdata ) { 
-    $key = $r->{'l_namespace'} . ":" . $r->{'l_article'};
+
+  my $rawcount = scalar @$rawdata;
+
+  foreach $r ( @$rawdata ) {
+    print "R";
+ 
+    $key = sprintf "%04d:%s", $r->{'l_namespace'}, $r->{'l_article'};
 
     if ( $r->{'l_action'} eq 'moved' ) {
       my $dkey = move_target($r->{'l_namespace'},
@@ -252,6 +285,8 @@ sub process_log {
     }
   }
 
+  print "\n";
+
   foreach $key ( keys %$move_to ) { 
     $line =  "'''[[" . key_to_name($key)  . "]]'''" 
         . " renamed to " 
@@ -259,15 +294,17 @@ sub process_log {
     push @$move_log, $line;
   } 
 
-  foreach $key ( keys %$reassess ) { 
-    my $data = $reassess->{$key};
+  my ($okey, $imp_ok, $qual_ok, $name, $talk);
+  my ($rev_page, $rev_talk, $reassessed);    
 
-    my $okey;
+  foreach $key ( sort {$a cmp $b} keys %$reassess ) { 
+    print "D";
+    my $data = $reassess->{$key};
 
     # If both of these become 1, it means the article was just
     # moved, so the log entry for reassessing will be skipped
-    my $imp_ok = 0;
-    my $qual_ok = 0;
+    $imp_ok = 0;
+    $qual_ok = 0;
 
     # was this article moved somewhere else
     # without any change in ratings ? 
@@ -303,9 +340,8 @@ sub process_log {
       }
     }
 
-    my $name = key_to_name($key);
-    my $talk = key_to_talk($key);
-    my ($rev_page, $rev_talk, $reassessed);    
+    $name = key_to_name($key);
+    $talk = key_to_talk($key);
 
     if ( (! $imp_ok) || (!$qual_ok) ) {   # this eliminates renamed articles
 
@@ -395,6 +431,8 @@ sub process_log {
       }
     }
   }
+
+  print "\n";
     
   my $output;
   
@@ -426,6 +464,11 @@ sub process_log {
     }
   }
 
+  my $etime = time();
+  push @i_process, ($etime - $stime);
+
+  print "::: Processed $rawcount in " . ($etime - $stime) . "\n";
+
   return $output;
 }
 
@@ -436,6 +479,8 @@ sub move_target {
   my $art = shift;
   my $ts = shift;
 
+  my $stime = time();
+
   my $sth = $dbh->prepare("select m_new_namespace, m_new_article
                            from moves
                            where m_old_namespace = ? 
@@ -443,6 +488,9 @@ sub move_target {
                              and m_timestamp = ?");
 
   $sth->execute($ns, $art, $ts);
+
+  my $etime = time();
+  push @i_moves, ($etime - $stime);
 
   my @r = $sth->fetchrow_array();
   return $r[0] . ":" . $r[1];
@@ -454,6 +502,10 @@ sub key_to_name {
   my $key = shift;
   my ($ns, $title) = split /:/, $key, 2;
 
+  push @i_key, 0;
+
+  $ns =~ s/^0*(\d)/$1/;
+
   if ( $ns == 0 ) { 
     return $title; 
   } else { 
@@ -464,7 +516,13 @@ sub key_to_name {
 sub key_to_talk { 
   my $key = shift;
   my ($ns, $title) = split /:/, $key, 2;
+
+  $ns =~ s/^0*(\d)/$1/;
+
+  print "\nNS pre: '$ns' " . $Namespaces->{$ns} . "\n";
   $ns++;
+
+  print "\nNS post: '$ns' " . $Namespaces->{$ns} . "\n";
 
   return $Namespaces->{$ns} . ":" . $title;
 }
@@ -475,6 +533,8 @@ sub get_revid {
   my $key = shift;
   my $timestamp = shift;
   $timestamp =~ s/[^0-9]//g;
+
+  my $stime = time();
 
   my ($ns, $page) = split /:/, $key, 2;
   $page =~ s/ /_/g;
@@ -500,6 +560,9 @@ sub get_revid {
   @r = $sth->fetchrow_array();
   $rev_talk = $r[0];
 
+
+  my $etime = time();
+  push @i_revids, ($etime -$stime);
   return ($rev_page, $rev_talk);
 }
 
@@ -509,10 +572,18 @@ sub rev_link {
   my $key = shift;
   my $revid = shift;
   my $title = shift;
+
+  my $stime = time();
+
   my $name = key_to_name($key);
+
   my $link = $Opts->{'server-url'} 
                        . "?title=" . uri_escape_utf8($name) 
                        . "&oldid=$revid";
+
+  my $etime = time();
+  push @i_revlink, ($etime - $stime);
+
   return "[$link $title]";
 }
 
@@ -522,6 +593,8 @@ sub do_edit {
   my $project = shift;
   my $newtext = shift;
   my $date = shift;
+ 
+  my $stime = time();
 
   my $page = log_page($project);
 
@@ -598,6 +671,9 @@ sub do_edit {
 
     api_edit($page, $newtext, $edit_summary);
   }
+
+  my $etime = time();
+  push @i_edit, ($etime - $stime);
 }
 
 ############################################################
@@ -689,4 +765,31 @@ If TIMESTAMP is specified, only logs newer than that are uploaded
 HERE
 exit;
 
+}
+
+############################################################
+
+sub instrument { 
+   i_total("latest edit", \@i_latest);
+   i_total("fetching logs", \@i_log);
+   i_total("processing logs", \@i_process);
+   i_total("move logs (inside process logs)", \@i_moves);
+   i_total("rev links (inside process logs)", \@i_revlink);
+   i_total("rev ids", \@i_revids);
+   i_total("edits", \@i_edit);
+   i_total("key to name (count only)", \@i_key);
+
+}
+
+
+sub i_total { 
+  my $caption = shift;
+  my $data = shift;
+  my $count = scalar @$data;
+  my $total = 0;
+  foreach $_ ( @$data ) { 
+    $total += $_;
+  }
+
+  print "I: $caption : $count in $total sec\n";
 }
