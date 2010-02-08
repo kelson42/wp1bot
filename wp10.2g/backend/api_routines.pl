@@ -341,7 +341,7 @@ sub api_edit {
 
   init_api();
 
-  $api->edit_page($page, $content, $summary);
+  $api->edit_page($page, $content, $summary, ['bot' => 1]);
 }
 #####################################################################
 
