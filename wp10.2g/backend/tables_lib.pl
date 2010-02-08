@@ -159,7 +159,7 @@ sub make_global_table {
   my $tdata = fetch_global_table_data();
   my $code = make_project_table_wikicode($tdata, 
                             "All rated articles by quality and importance",
-                            \&format_cell_pqi );
+                            \&format_cell_pqi_nolink  );
   my $r =  $api->parse($code);
   my $created = time();
   return ($r->{'text'}->{'content'}, $code, $created);
@@ -401,7 +401,7 @@ sub make_project_table_wikicode {
                                  $totalAssessed->{$prio}));
   }
 
-  $table->data("Total", "Total", format_cell_pqi($proj, undef, undef, $total));
+  $table->data("Total", "Total", &{$format_cell}($proj, undef, undef, $total));
 
   $table->data("Assessed", "Total", 
                &{$format_cell}($proj, "Assessed", undef, 
@@ -657,6 +657,29 @@ sub cached_global_ratings_table {
   cache_set($key, $data, 7*24*60*60); # expires in 1 week
 
   return ($html, $wikicode, $createdtime);
+}
+
+################################################################
+=item B<format_cell_pqi_nolink>(PROJECT, QUALITY, IMPORTANCE, VALUE)
+
+Create a formatted table cell entry. There is no link.
+If either QUALITY or IMPORTANCE is undefined, the cell is bold.
+=cut
+
+sub format_cell_pqi_nolink { 
+  my $proj = shift;
+  my $qual = shift;
+  my $prio = shift;
+  my $value = shift;
+
+  my $bold = "";
+  if ( (! defined $qual) || (! defined $prio ) ) { 
+    $bold = "'''";
+  }
+
+  my $str = $bold . commify($value) . $bold ;
+
+  return $str;
 }
 
 ################################################################
