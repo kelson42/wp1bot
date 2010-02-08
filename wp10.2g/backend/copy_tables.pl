@@ -67,7 +67,7 @@ sub copy_project_tables {
 
   my $i = 0;
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-    next unless ( (! defined $filter ) || ($project =~ /\Q$filter\E/));
+    next unless ( (! defined $filter ) || ($project =~ /^\Q$filter\E$/));
     $i++;
     print "\n$i / $count $project\n";
 
@@ -76,7 +76,9 @@ sub copy_project_tables {
     my ( $html, $wiki) = cached_project_table($project);
     $wiki = munge($wiki, 'project');
 
-    api_edit(encode("utf8", $page), $wiki, $summary);
+    if ( ! defined $ENV{'DRY_RUN'}) {
+      api_edit(encode("utf8", $page), $wiki, $summary);
+    }
 #    exit;
   }
 }
