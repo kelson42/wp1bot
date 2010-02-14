@@ -119,7 +119,7 @@ sub cached_project_table {
 
 
 ############################################################
-=item B<make_project_table>(PROJECT)
+=item B<make_project_table>(PROJECT, CATEGORY, CATNS, TITLE, CONFIG)
 
 Create a new table for PROJECT. Does not use the cache in any way. 
 
@@ -130,6 +130,7 @@ sub make_project_table {
   my $cat = shift;
   my $catNS = shift;
   my $title = shift;
+  my $config = shift;
 
   my $tdata = fetch_project_table_data($proj, $cat, $catNS, $title);
 
@@ -143,10 +144,11 @@ sub make_project_table {
     $format = get_format_cell_pqi_cat($cat, $catNS);
   }
 
-  my $code = make_project_table_wikicode($tdata, $title, $format );
+  my $code = make_project_table_wikicode($tdata, $title, $format, $config );
   my $r =  $api->parse($code);
   return ($r->{'text'}->{'content'}, $code);
 }
+
 
 ############################################################
 =item B<make_global_table>()
@@ -197,10 +199,13 @@ sub fetch_project_table_data {
       select count(r_article), r_quality, r_importance, r_project 
       from ratings
       join enwiki_p.page on page_namespace = ? 
-                        and page_title = replace(r_article, ' ', '_')
+        and replace(page_title, '_', ' ') =  cast(r_article as char character set latin1)
+/*                        and page_title = replace(r_article, ' ', '_') */
       join enwiki_p.categorylinks on page_id = cl_from and cl_to = ?  
       where r_project = ? group by r_quality, r_importance, r_project";
 
+
+    $cat =~ s/ /_/g;
     push @qparam, $catNS;
     push @qparam, $cat;
     push @qparam, $proj;
@@ -258,7 +263,7 @@ sub fetch_project_table_data {
 } 
 
 ##############################################################
-=item B<make_project_table_wikicodedata>(TDATA, TITLE, FORMAT)
+=item B<make_project_table_wikicodedata>(TDATA, TITLE, FORMAT, CONFIG)
 
 Create wikicode for a table using data from TDATA. The overall
 title is TITLE. The FORMAT function is used to format the table
@@ -269,12 +274,19 @@ cells. It is invoked as:
 where quality and/or importance will be undefined for the
 cells corresponding to the Total row and column.
 
+CONF is a hash used to set formatting settings for the table
+
 =cut
 
 sub make_project_table_wikicode { 
   my $tdata = shift;
   my $title = shift;
   my $format_cell = shift;
+  my $config = shift;
+  if ( ! defined $config) { $config = {}; }
+  else { 
+    print Dumper($config) ;
+  }
 
   my $proj = $tdata->{'proj'};
   my $cols = $tdata->{'cols'};
@@ -304,8 +316,18 @@ sub make_project_table_wikicode {
   $table->title($title);
   $table->columnlabels($ImportanceLabels);  
   $table->rowlabels($QualityLabels);
-  $table->columntitle("'''Importance'''");
-  $table->rowtitle("'''Quality'''");
+
+  if ( defined $config->{'importance-header'} ) { 
+    $table->columntitle($config->{'importance-header'});
+  } else { 
+    $table->columntitle("'''Importance'''");
+  }
+
+  if ( defined $config->{'quality-header'} ) { 
+    $table->columntitle($config->{'quality-header'});
+  } else { 
+    $table->rowtitle("'''Quality'''");
+  }
 
   # Temporary arrays used to hold lists of row resp. column names
   my @P = (@PriorityRatings, "Total");
@@ -732,10 +754,13 @@ sub get_format_cell_pqi_cat {
   my $cat = shift;
   my $catNS = shift;
 
+  my $ns = $catNS;
+
   my $catparam = 'category';
 
   if ( 1 == ($catNS % 2) ) { 
     $catparam = 'categoryt';
+    $ns--;
   }
 
   return sub { 
@@ -752,7 +777,7 @@ sub get_format_cell_pqi_cat {
 
     my $str = $bold . '[' . $list_url . "?run=yes";
 
-    $str .= "&filterCategory=on";
+    $str .= "&filterCategory=on&namespace=$ns";
     $str .= "&" . $catparam . "=" . uri_escape($cat);
 
     if ( defined $proj ) { 

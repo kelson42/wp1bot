@@ -30,6 +30,7 @@ require 'database_routines.pl';
 require 'wp10_routines.pl';
 require 'api_routines.pl';
 require 'tables_lib.pl';
+require 'read_custom.pl';
 
 ############################################################
 
@@ -37,6 +38,8 @@ if ( $ARGV[0] =~ /^--project/ ) {  # accept --project and --projects
   copy_project_tables($ARGV[1]);
 } elsif ( $ARGV[0] eq '--global' ) { 
   copy_global_table();
+} elsif ( $ARGV[0] eq '--custom' ) { 
+  copy_custom_tables($ARGV[0]);
 } else { 
   print << "HERE";
 Usage:
@@ -82,6 +85,51 @@ sub copy_project_tables {
 #    exit;
   }
 }
+############################################################
+
+sub copy_custom_tables { 
+
+  my $custom = read_custom();
+
+  my $table;
+  foreach $table ( keys %$custom ) { 
+    print "T: '$table'\n";
+    if ( $custom->{$table}->{'type'} eq 'projectcategory' ) { 
+
+      project_category_table($custom->{$table});
+    }
+  }
+  exit;
+
+}
+
+############################################################
+
+sub project_category_table { 
+  my $data = shift;
+
+  my $project = $data->{'project'};
+  my $cat = $data->{'cat'};
+  my $catns = $data->{'catns'};
+  my $title = $data->{'title'};
+  my $dest = $data->{'dest'};
+  my $config = $data->{'config'};
+
+  my $summary = "Copying assessment table to wiki";
+
+  my ($html, $wiki) = make_project_table($project, $cat, $catns, $title, $config);
+
+  print $wiki;
+  print "\n-- Dest: '$dest'\n";
+
+  $wiki = munge($wiki, 'project');
+  if ( ! defined $ENV{'DRY_RUN'}) {
+#    api_edit(encode("utf8", $dest), $wiki, $summary);
+  } else { 
+    print "DRY RUN - not editing wiki\n";
+  }
+}
+
 
 ############################################################
 
