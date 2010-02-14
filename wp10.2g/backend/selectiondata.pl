@@ -51,13 +51,14 @@ exit;
 
 sub insert_from_stdin {
   my $dbh = shift;
-  my $sth = $dbh->prepare("insert into selection_data values (?,?,?,?)");
+  my $sth = $dbh->prepare("insert into selection_data values (?,?,?,?,?)");
 
   print "Inserting new data\n";
 
   my @parts;
   my $count;
   my $line;
+  my ($hc, $pl, $ll, $ei); # hitcount, pagelinks, langlinks, external interest score
   while ( $line = <STDIN> ) { 
     $count++;
     if ( 0 == $count %  10000 ) { print "."; }
@@ -66,7 +67,18 @@ sub insert_from_stdin {
     chomp $line;
     @parts = split / /, $line, 4;
     $parts[0] =~ s/_/ /g;
-    $sth->execute(@parts);
+
+
+    $ll = $parts[1];
+    $pl = $parts[2];
+    $hc = $parts[3];
+    $ei =   ( $hc > 0 ?  50*log10($hc) : 0) 
+           + ( $pl > 0 ? 100*log10($pl) : 0)
+           + ( $ll > 0 ? 250*log10($ll) : 0);
+    $ei = floor($ei);
+
+    $sth->execute($parts[0], $ll, $pl, $hc, $ei);
+
   }
   print " $count\n";
 

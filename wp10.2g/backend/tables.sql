@@ -302,6 +302,9 @@ create table if not exists selection_data (
   sd_pagelinks int unsigned not null default 0,
 
   sd_hitcount int unsigned not null default 0,
+
+  sd_external int unsigned not null default 0,
+
   primary key (sd_article)
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
