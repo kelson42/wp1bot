@@ -150,7 +150,7 @@ HERE
 my $show_external = ($params->{'showExternal'} eq "on");
 
 if ( $show_external ) { 
-  $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount \n";
+  $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount, sd_external \n";
 }
 
   $query .= << "HERE";
@@ -341,8 +341,10 @@ HERE
 
   $queryc =~ s/WHERE\s*$//;
 
-# print "<pre>QQ:\n$query</pre>\n";
-# print join "<br/>", @qparam;
+  if ( defined $params->{'debug'} ) { 
+     print "<pre>QQ:\n$query</pre>\n";
+     print join "<br/>", @qparam;
+  }
 
 # print "QC: $queryc<br/>\n";
 # print join "<br/>", @qparamc;
@@ -431,15 +433,19 @@ HERE
 if ( $show_external ) { 
   print << "HERE";
     <th><a class="info">PL
-          <span>Number of pages that link to this page.</span>
+          <span>Number of incoming wikilinks</span>
         </a>
     </th>  
     <th><a class="info">LL
-          <span>Number of pages that link to this page.</span>
+          <span>Number of interlanguage links</span>
         </a>
     </th>  
     <th><a class="info">Hits
-          <span>Number of pages that link to this page.</span>
+          <span>Estimated daily hitcount (page views).</span>
+        </a>
+    </th>  
+    <th><a class="info">EI
+          <span>The combined "external interest score" (see the Guide for details)</span>
         </a>
     </th>  
 HERE
@@ -493,14 +499,16 @@ HERE
     }
 
     if ( $show_external ) { 
-      my ( $external_pl, $external_ll, $external_hc );
+      my ( $external_pl, $external_ll, $external_hc, $external_ei );
       $external_pl = $row[12] || "0";
       $external_ll = $row[13] || "0";
       $external_hc = $row[14] || "0";
+      $external_ei = $row[15] || "0";
       print << "HERE";
        <td class="external">$external_pl</td>
        <td class="external">$external_ll</td>
        <td class="external">$external_hc</td>
+       <td class="external">$external_ei</td>
 HERE
     }
 
@@ -591,7 +599,7 @@ HERE
 
   my $show_external = ($params->{'showExternal'} eq "on");
   if ( $show_external ) {
-    $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount \n";
+    $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount, sd_external \n";
   }
 
   $query .= << "HERE";
@@ -600,7 +608,7 @@ HERE
 
   if ( $show_external ) {
     $query .= << "HERE";
-   LEFT JOIN selection_data ON r_namespace = 0 AND r_article = sd_article
+   LEFT JOIN selection_data ON ra.r_namespace = 0 AND ra.r_article = sd_article
 HERE
   }
   
@@ -700,6 +708,12 @@ HERE
   $query .= " LIMIT ?";
   push @qparam, $limit;
 
+  if ( defined $params->{'debug'} ) { 
+     print "<pre>QQ:\n$query</pre>\n";
+     print join "<br/>", @qparam;
+  }
+
+
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
@@ -758,9 +772,13 @@ if ( $show_external ) {
         </a>
     </th>
     <th><a class="info">Hits
-          <span>A measure of the average daily hitcount of this page, including redirects..</span>
+          <span>Estimated average daily hitcount of this page.</span>
         </a>
     </th>
+    <th><a class="info">EI
+          <span>The combined "external interest score" (see the Guide for details).</span>
+        </a>
+    </th>  
 HERE
   }
 
@@ -799,14 +817,16 @@ HERE
     }
 
     if ( $show_external ) {
-      my ( $external_pl, $external_ll, $external_hc );
+      my ( $external_pl, $external_ll, $external_hc, $external_ei );
       $external_pl = $row[12] || "0";
       $external_ll = $row[13] || "0";
       $external_hc = $row[14] || "0";
+      $external_ei = $row[15] || "0";
       print << "HERE";
        <td class="external">$external_pl</td>
        <td class="external">$external_ll</td>
        <td class="external">$external_hc</td>
+       <td class="external">$external_ei</td>
 HERE
     }
 
