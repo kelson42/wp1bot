@@ -283,9 +283,13 @@ sub make_project_table_wikicode {
   my $title = shift;
   my $format_cell = shift;
   my $config = shift;
-  if ( ! defined $config) { $config = {}; }
-  else { 
-    print Dumper($config) ;
+
+  if ( ! defined $config) { 
+    $config = {}; 
+  } else { 
+    if ( defined $ENV{'DEBUG'})  { 
+      print Dumper($config);
+    }
   }
 
   my $proj = $tdata->{'proj'};
@@ -297,7 +301,9 @@ sub make_project_table_wikicode {
   my $QualityLabels = $tdata->{'QualityLabels'};
 
   # The 'assessed' data is generated dynamically
-  $data->{'Assessed'} = {};
+  if ( ! defined $config->{'noassessed'} ) { 
+    $data->{'Assessed'} = {};
+  }
 
   # These, along with the totals, will appear in the final table. 
   # The important step here is the sorting. 
@@ -410,24 +416,30 @@ sub make_project_table_wikicode {
   }
 
   foreach $qual ( @QualityRatings ) {
+    next if ( ($qual eq 'Assessed' ) && defined $config->{'noassessed'} );
     $table->data($qual,  "Total",
                  &{$format_cell}($proj, $qual, undef, $qualcounts->{$qual}));
   }
+
 
   foreach $prio ( @PriorityRatings ) { 
     $table->data("Total", $prio, 
                  &{$format_cell}($proj, undef, $prio, $priocounts->{$prio}));
 
-    $table->data("Assessed", $prio, 
-                 &{$format_cell}($proj, "Assessed", $prio, 
+    if ( ! defined $config->{'noassessed'} ) { 
+      $table->data("Assessed", $prio, 
+                   &{$format_cell}($proj, "Assessed", $prio, 
                                  $totalAssessed->{$prio}));
+    }
   }
 
   $table->data("Total", "Total", &{$format_cell}($proj, undef, undef, $total));
 
-  $table->data("Assessed", "Total", 
-               &{$format_cell}($proj, "Assessed", undef, 
-                               $totalAssessed->{'Total'} || "0"));
+  if ( ! defined $config->{'noassessed'} ) { 
+      $table->data("Assessed", "Total", 
+                 &{$format_cell}($proj, "Assessed", undef, 
+                                 $totalAssessed->{'Total'} || "0"));
+  }
 
   my $code = $table->wikicode();
 

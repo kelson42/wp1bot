@@ -30,7 +30,9 @@ require 'database_routines.pl';
 require 'wp10_routines.pl';
 require 'api_routines.pl';
 require 'tables_lib.pl';
+require 'custom_tables.pl';
 require 'read_custom.pl';
+
 
 ############################################################
 
@@ -51,6 +53,10 @@ Usage:
 * Copy global table:
 
   $0 --global 
+
+* Copy custom tables:
+
+  $0 --custom
 
 HERE
 }
@@ -82,9 +88,9 @@ sub copy_project_tables {
     if ( ! defined $ENV{'DRY_RUN'}) {
       api_edit(encode("utf8", $page), $wiki, $summary);
     }
-#    exit;
   }
 }
+
 ############################################################
 
 sub copy_custom_tables { 
@@ -92,15 +98,38 @@ sub copy_custom_tables {
   my $custom = read_custom();
 
   my $table;
+  my $code;
+  my $dest;
+  my $summary;
+
   foreach $table ( keys %$custom ) { 
     print "T: '$table'\n";
-    if ( $custom->{$table}->{'type'} eq 'projectcategory' ) { 
 
-      project_category_table($custom->{$table});
+    if ( ! defined $custom->{$table}->{'dest'} ) { 
+      die "No destination for table '$table'\n";
+    } else { 
+      $dest = $custom->{$table}->{'dest'};
+    }
+
+    if ( $custom->{$table}->{'type'} eq 'projectcategory' ) { 
+      print "... projectcategory\n";
+      $code = project_category_table($custom->{$table});
+    } elsif ( $custom->{$table}->{'type'} eq 'customsub' ) { 
+      print "... customsub \n";
+      $code = &{$custom->{$table}->{'customsub'}}();
+    }  else { 
+      die ("Bad table type for '$table'\n");
+    }
+
+    $code = munge($code, 'project');
+    $summary = "Copying custom table '$table' to wiki\n";
+
+    if ( ! defined $ENV{'DRY_RUN'}) {
+      api_edit($dest, $code, $summary);
+    } else { 
+      print "DRY RUN - not editing wiki\n";
     }
   }
-  exit;
-
 }
 
 ############################################################
@@ -119,17 +148,8 @@ sub project_category_table {
 
   my ($html, $wiki) = make_project_table($project, $cat, $catns, $title, $config);
 
-  print $wiki;
-  print "\n-- Dest: '$dest'\n";
-
-  $wiki = munge($wiki, 'project');
-  if ( ! defined $ENV{'DRY_RUN'}) {
-#    api_edit(encode("utf8", $dest), $wiki, $summary);
-  } else { 
-    print "DRY RUN - not editing wiki\n";
-  }
+  return $wiki;
 }
-
 
 ############################################################
 

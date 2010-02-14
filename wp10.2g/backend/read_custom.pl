@@ -7,19 +7,18 @@
 use strict;
 use Data::Dumper;
 
+my $custom_die = 0;
+
 sub read_custom { 
-  my $filename;
-  my $settings;
-  my $homedir = (getpwuid($<))[7];
-  
-  $filename = 'Custom.tables.dat';
+  my $verbose = shift || 0;
+
+  my $homedir = (getpwuid($<))[7];  
+  my $filename = 'Custom.tables.dat';
 
   die "Can't open file '$filename'\n"
     unless -r $filename;
 
-  if ( $ARGV[0] eq '--debug' ) { 
-    print "Reading configuration file '$filename'\n";
-  }
+  logmsg(1, $verbose, "-- Reading configuration file '$filename'\n");
 
   open CONF, "<", $filename 
     or die "Can't open configuration file '$filename': $!\n";
@@ -32,72 +31,89 @@ sub read_custom {
   }
   close CONF;
 
-  $settings = eval '{ ' . $text . ' }';
+  my $settings = eval '{ ' . $text . ' }';
 
   if ( $@ ) { 
     die "\nError parsing configuration file '$filename':\n  $@\n";
   }
 
-
-  if ( $ARGV[0] eq '--debug' ) { 
+  if ( $verbose > 1) { 
 
     local $Data::Dumper::Terse = 1;
     local $Data::Dumper::Sortkeys = 1;
-    print "Configuration settings: \n";
-    print Dumper($settings);
-    print "\n";
+    logmsg(2, $verbose, "Configuration settings: \n");
+    logmsg(2, $verbose, Dumper($settings) );
+    logmsg(2, $verbose, "\n");
   }
 
-  check_custom($settings);
+  check_custom($settings, $verbose);
 
   return $settings;
 }
 
 sub check_custom { 
   my $settings = shift;
+  my $verbose = shift || 0;
   my $tablen;
   my $table;
-  my $die = 0;
+
+  logmsg(1, $verbose, "-- Verifying custom table instructions \n");
 
   foreach $tablen ( keys %$settings ) { 
-    print "Table: $tablen\n";
+    logmsg(1, $verbose, "Table: $tablen\n");
     $table = $settings->{$tablen};
 
     if ( ! defined $table->{'type'} ) { 
       fatal($tablen, "no type specified");
-      $die++;
     }
 
-    print "  type: " . ($table->{'type'}) . "\n";
+    logmsg(1, $verbose, "  type: " . ($table->{'type'}) . "\n");
 
     if ( 'projectcategory' eq $table->{'type'} ) { 
       my $param;
       foreach $param ( ('cat', 'catns', 'project', 'title', 'dest') ) { 
         if ( ! defined $table->{$param} ) { 
           fatal($tablen, "parameter '$param' not specified");
-          $die++;
         } else { 
-          print "  $param: " . ($table->{$param}) . "\n";
+          logmsg(1, $verbose, "  $param: " . ($table->{$param}) . "\n");
         }
       } 
       
       if ( ! defined $table->{'config'} ) { 
         $table->{'config'} = {};
       } else { 
-        print "  configuration:\n";
+        logmsg(1, $verbose, "  configuration:\n");
         my $param;
         foreach $param ( sort {$a cmp $b} keys %{$table->{'config'}} ) { 
-          print "    $param: " . $table->{'config'}->{$param} . "\n";
+          logmsg(1, $verbose, "    $param: " . $table->{'config'}->{$param} . "\n");
         }   
       }
-      print "\n";
-    }  # projectcategory type
+
+      logmsg(1, $verbose, "\n");
+
+    } elsif ( $table->{'type'} eq 'customsub' ) { 
+      if ( ! defined $table->{'customsub'} ) { 
+        fatal($tablen, "custom subroutine not specified");
+      } else {
+        logmsg(1, $verbose, "  custom subroutine: specified\n");
+      }
+
+      if ( ! defined $table->{'dest'} ) { 
+        fatal($tablen, "destination not specified");
+      } else {
+        logmsg(1, $verbose, "  dest: " . ($table->{'dest'}) . "\n");
+      }     
+    
+    } else { 
+      fatal($tablen, "unrecognized type: " . ($table->{'type'}) . "\n");
+    }
   }
 
-  if ( $die > 0 ) { 
-    die "Encountered $die fatal errors, aborting\n";
+  if ( $custom_die > 0 ) { 
+    die "Encountered $custom_die fatal errors, aborting\n";
   }
 
+  logmsg(1, $verbose, "\n-- Finished verifying custom table instructions \n");
 }
 
 
@@ -105,6 +121,16 @@ sub fatal {
   my $table = shift;
   my $error = shift;
   print "Fatal error with configuration of '$table': $error\n";
+  $custom_die++;
+}
+
+sub logmsg { 
+  my $level = shift;
+  my $threshold = shift;
+  my $message = shift;
+  if ( $threshold >= $level ) { 
+    print $message;
+  }
 }
 
 # Load successfully

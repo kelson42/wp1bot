@@ -1,5 +1,4 @@
-'Mathematics-1' =>
- { 
+'Mathematics-1' => { 
    'type' => 'projectcategory',
    'cat' => 'Mathematics articles related to foundations, logic, and set theory',
    'catns' => 1,
@@ -7,7 +6,13 @@
    'title'=> '[[Wikipedia:WikiProject Mathematics/Wikipedia 1.0/Foundations, logic, and set theory|Foundations, logic, and set theory]] article ratings',
    'dest' => "User:WP 1.0 bot/Tables/Custom/Mathematics-1",
    'config' => { 'importance-header' => "'''Priority'''" }
- }
+ },
+
+'Ships-1' =>  { 
+  'type' => 'customsub',
+  'customsub' => \&custom_ships_table_1,
+  'dest' => "User:WP 1.0 bot/Tables/Custom/Ships-1",
+  }
 
 
 
