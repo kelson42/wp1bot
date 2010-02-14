@@ -124,6 +124,7 @@ HERE
   } elsif ( $mode eq 'login' ) { 
     layout_header("Log in", $authline);
     auth_form_manual($user, $value);
+    login_header();
   } elsif ( $mode eq 'processlogin' ) { 
     layout_header("Log in", $authline);
     processlogin($authenticated);
@@ -319,6 +320,11 @@ sub do_add {
       <input type="hidden" name="user" value="$user">
       <input type="hidden" name="pass" value="$pass">
       <input type="hidden" name="mode" value="processadd">
+
+<p>
+Enter the information on the articles in the spaces below. You may leave
+any unused spaces blank.</p>
+
     <center>
       <table class="wikitable">
        <tr>
@@ -414,9 +420,7 @@ sub do_list {
       Article:&nbsp;<input type="text" name="farticle" value="$artenc">
    <br/>
       Type:&nbsp;$select<br/>
-    <div class="submit">
       <input type="submit" value="Filter results">
-    </div>
     </fieldset>
     </form>
 HERE
@@ -720,5 +724,15 @@ sub auth_form_manual {
   </div>
   </fieldset>
   </form>
+HERE
+}
+
+
+sub login_header {
+  print << "HERE"
+<p>
+To log out, simply close your browser.  <br/>
+If you have forgotten your password, please contact the bot operator.
+</p>
 HERE
 }
