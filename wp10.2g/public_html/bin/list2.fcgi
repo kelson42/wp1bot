@@ -202,7 +202,7 @@ HERE
      $acategory =~ s/ /_/g;
 
      $aquery = "\n join enwiki_p.page as apage on r_namespace = apage.page_namespace 
-                   and r_article = replace(apage.page_title, '_', ' ') 
+                   and cast(r_article as char character set latin1) = replace(apage.page_title, '_', ' ') 
                    join enwiki_p.categorylinks as acat on apage.page_id = acat.cl_from ";
 
      $queryc .= $aquery;
@@ -212,7 +212,7 @@ HERE
   if ( defined $tcategory ) { 
      $tcategory =~ s/ /_/g;
      $aquery  = "\n join enwiki_p.page as tpage on (1+r_namespace) = tpage.page_namespace 
-                   and r_article = replace(tpage.page_title, '_', ' ') 
+                   and cast(r_article as char character set latin1) = replace(tpage.page_title, '_', ' ') 
                    join enwiki_p.categorylinks as tcat on tpage.page_id = tcat.cl_from ";
 
      $queryc .= $aquery;
