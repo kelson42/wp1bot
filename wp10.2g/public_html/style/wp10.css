@@ -181,7 +181,10 @@ legend {
   font-weight: bold;
 }
 
-a.info { position: relative; }
+a.info { 
+  position: relative; 
+  border-bottom: 1px dotted #f00;
+}
 
 a.info:hover { background-color: #ff8; }
 
