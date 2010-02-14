@@ -950,7 +950,7 @@ sub query_form {
   Importance: <input type="text" value="$importance" name="importance"/><br/>
   Score: &ge; <input size="5" type="text" value="$score" name="score"/><br/>
   <input type="checkbox" $pagename_wc_checked name="pagenameWC" />
-      Treat page name as a
+      Treat page title as a
       <a href="http://en.wikipedia.org/wiki/Regular_expression">regular 
            expression</a><br/>
   <input type="checkbox"  name="showExternal" $show_external_checked />
