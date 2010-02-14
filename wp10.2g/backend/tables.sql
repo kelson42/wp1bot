@@ -311,9 +311,13 @@ create table if not exists manualselection (
   
   ms_article varchar(255) not null,
 
+  ms_type enum('release', 'norelease') not null,
+
   ms_timestamp       binary(14) not null,
 
-  primary key(ms_article)
+  primary key(ms_article),
+
+  key (ms_type)
 
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
@@ -321,17 +325,20 @@ create table if not exists manualselection (
 
 create table if not exists manualselectionlog ( 
 
-  ms_article varchar(255) not null,
+  msl_article varchar(255) not null,
 
-  ms_timestamp       binary(14) not null,
+  msl_type enum('release', 'norelease') not null,
 
-  ms_action varchar(16) not null,
+  msl_timestamp       binary(14) not null,
 
-  ms_user varchar(255) not null,
+  msl_action varchar(16) not null,
 
-  ms_reason varchar(255) not null,
+  msl_user varchar(255) not null,
 
-  primary key (ms_article, ms_timestamp)
+  msl_reason varchar(255) not null,
+
+  primary key (msl_article, msl_timestamp),
+  key (msl_user)
 
 ) default character set 'utf8' collate 'utf8_bin'
   engine = InnoDB;
