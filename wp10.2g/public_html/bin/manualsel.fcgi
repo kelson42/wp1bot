@@ -22,7 +22,7 @@ use POSIX 'strftime';
 use URI::Escape;
 
 my $maxadds = 10;
-my $pagesize = 5;
+my $pagesize = 10;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -129,7 +129,7 @@ HERE
     processlogin($authenticated);
   } else { 
     layout_header("List manual selection", $authline);
-    do_list();
+    do_list(\%param);
   }
 
   $loop_counter++;
@@ -167,12 +167,12 @@ HERE
     return;
   }
 
-  my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?)");
+  my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?,?)");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
-                                VALUES (?,?,?,?,?)");
+                                VALUES (?,?,?,?,?,?)");
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
-  my ($art, $reason, $result, $r1, $r2);
+  my ($art, $type, $reason, $result, $r1, $r2);
 
   print << "HERE";
     <center>
@@ -180,6 +180,7 @@ HERE
     <tr>
     <th>#</th>
     <th>Article</th>
+    <th>Type</th>
     <th>Reason</th>
     <th>Result</th>
     </tr>
@@ -193,16 +194,21 @@ HERE
     $art =~ s/^\s*//;
     $art =~ s/\s*$//;
     next if ( $art eq '');
+
+    $type = $params->{"addtype$i"};
+    next unless ( ($type eq 'release' ) || ($type eq 'norelease'));
+
     $reason = $params->{"addreason$i"};
     $reason =~ s/^\s*//;
     $reason =~ s/\s*$//;
 
     my $error = "OK";
 
-    $r1 = $sthart->execute($art,$timestamp);
+    $r1 = $sthart->execute($art,$type,$timestamp);
+
 
     if ( 1 == $r1 ) { 
-      $r2 = $sthlog->execute($art, $timestamp, "add", $user, $reason);
+      $r2 = $sthlog->execute($art, $type, $timestamp, "add", $user, $reason);
       if ( 1 != $r2 ) { 
         $error = "Failed";
       }
@@ -214,6 +220,7 @@ HERE
     <tr>
       <td>$i</td>
       <td>$art</td>
+      <td>$type</td>
       <td>$reason</td>
       <td>$error</td>
     </tr>
@@ -246,7 +253,7 @@ HERE
   my $sthart = $dbh->prepare("DELETE FROM manualselection 
                               WHERE ms_article = ?");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
-                                VALUES (?,?,?,?,?)");
+                                VALUES (?,?,?,?,?,?)");
 
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
@@ -254,36 +261,42 @@ HERE
       <table class="wikitable">
        <tr>
         <th>Article</th>
+        <th>Type</th>
         <th>Reason</th>
+        <th>Result</th>
        </tr>
 HERE
 
-  my ($p, $art, $reason, $r1, $r2);
+  my ($p, $art, $type, $reason, $r1, $r2);
   foreach $p ( keys %{$params} ) {
 #    print $p . " &rarr; ".  $params->{$p} . "<br/>";
 
     next unless ( $p =~ /^key:(.*)$/);
     $art = uri_unescape($1);
     $reason = $params->{"reason:$1"};
+    $type = $params->{"type:$1"};
 
- #   print "SEE: " . $art . " &rarr; ".  $reason . "<br/>";
+#   print "SEE: " . $art . " '$type' &rarr; ".  $reason . "<br/>";
 
     my $error = "OK";
 
     $r1 = $sthart->execute($art);
 
     if ( $r1 == 1 ) { 
-      $r2 = $sthlog->execute($art, $timestamp, "remove", $user, $reason);
+      $r2 = $sthlog->execute($art, $type, $timestamp, 
+                                "remove", $user, $reason);
       if ( 1 != $r2) { 
-        $error = "Failed";
+
+        $error = "Failed step 2 '$art' '$type' ";
      }
     } else { 
-      $error = "Failed";
+      $error = "Failed step 1 '$art' '$type'";
     }
 
     print << "HERE";
     <tr>
     <td>$art</td>
+    <td>$type</td>
     <td>$reason</td>
     <td>$error</td>
     </tr>
@@ -311,17 +324,21 @@ sub do_add {
        <tr>
         <th>#</th>
         <th>Article</th>
+        <th>Type</th>
         <th>Reason</th>
        </tr>
 HERE
 
   my $i;
-  my (@arts, @reasons);
+  my (@arts, @reasons, @types);
   push @arts, "";
+  push @types, "";
   push @reasons, "";
+
 
   for ( $i = 1; $i < $maxadds+1; $i++) { 
     push @arts, $params->{"addart$i"};
+    push @types, $params->{"addtype$i"};
     push @reasons, $params->{"addreason$i"};
   }
 
@@ -330,6 +347,10 @@ HERE
     <tr>
     <td>$i</td>
     <td><input type="text" name="addart$i" value="$arts[$i]"></td>
+    <td><select name="addtype$i">
+          <option value="release">release</option>
+           <option value="norelease">norelease</option>
+        </select></td>
     <td><input type="text" name="addreason$i" value="$reasons[$i]"></td>
     </tr>
 HERE
@@ -371,12 +392,28 @@ sub do_list {
 
   my $artenc = uri_escape($farticle);
 
+  my $ftype = $params->{'ftype'};
+
+  my $select = '<select name="ftype">' . "\n";
+  $select .= "<option value=\"\">Any</option>\n";
+  my $sel;
+  my $v;
+  foreach $v ( ('release', 'norelease')) { 
+    $sel = "";
+    if ( $ftype eq $v ) { $sel = 'selected'; }
+    $select .= "<option value=\"$v\" $sel>$v</option>\n";
+  }
+  $select .= "</select>\n";
+
+
   print << "HERE";
     <form action="$url" method="post">
     <fieldset class="inner">
     <legend>List articles in the manual selection</legend>
     <input type="hidden" name="mode" value="list">
       Article:&nbsp;<input type="text" name="farticle" value="$artenc">
+   <br/>
+      Type:&nbsp;$select<br/>
     <div class="submit">
       <input type="submit" value="Filter results">
     </div>
@@ -386,16 +423,27 @@ HERE
 
   my @qparams;
   
-  my $query = "select * from manualselection ";
+  my $query = "select * from manualselection where ";
 
-   if ( 0 < length $farticle ) { 
-     $query .= " where ms_article regexp ? ";
-     push @qparams, $farticle;
-   }
+  if ( 0 < length $farticle ) { 
+    $query .= " ms_article regexp ?";
+    push @qparams, $farticle;
+  }
+ 
+  if ( ($ftype eq 'release') || ($ftype eq 'norelease') ) { 
+    $query .= " and ms_type = ?";
+    push @qparams, $ftype;
+  }
+
+  # in case no options were selected
+  $query =~ s/where $//; 
+  $query =~ s/where and/where /;
 
   $query .= " order by ms_timestamp desc limit ? offset ? ";
   push @qparams, $pagesize;
   push @qparams, $offset;
+
+#  print "Q: '$query'\n";
 
   my $sth = $dbh->prepare($query);
 
@@ -447,6 +495,7 @@ HERE
       </tr>
       <tr>
         <th>Article</th>
+        <th>Type</th>
         <th>Timestamp</th>
         <th colspan="2">Remove</th>
      </td>
@@ -456,7 +505,8 @@ HERE
 
   while ( @row = $sth->fetchrow_array() ) { 
     my $link = make_article_link(0, $row[0]);
-    my $ts = fix_timestamp($row[1]);
+    my $type = $row[1];
+    my $ts = fix_timestamp($row[2]);
     $ts =~ s/T/ /g;
     chop $ts;
 
@@ -465,6 +515,7 @@ HERE
     print << "HERE";
     <tr>
       <td>$link</td>
+      <td><input type="hidden" name="type:$key" value="$type"/>$type</td>
       <td>$ts</td>
       <td><input type="checkbox" name="key:$key"></td>
       <td><input type="text" name="reason:$key"></td>
@@ -531,12 +582,12 @@ HERE
     }
   }
 
-  $query .= " order by ms_timestamp desc limit ? offset ? ";
+  $query .= " order by msl_timestamp desc limit ? offset ? ";
   push @qparams,  $pagesize;
   push @qparams, $offset;
 
 # print "Query: $query<br/>Params: ";
-#  print (join "<br/>", @params);
+#  print (join "<br/>", @qparams);
 
   my $sth = $dbh->prepare($query);
 
@@ -563,6 +614,7 @@ HERE
   <table class="wikitable">
    <tr>
     <th>Article</th>
+    <th>Type</th>
     <th>Timestamp</th>
     <th>Action</th>
     <th>User</th>
@@ -574,7 +626,8 @@ HERE
 
   while ( @row = $sth->fetchrow_array() ) { 
     my $link = make_article_link(0, $row[0]);
-    my $ts = fix_timestamp($row[1]);
+    my $type = $row[1];
+    my $ts = fix_timestamp($row[2]);
 
     $ts =~ s/T/ /g;
     chop $ts;
@@ -582,10 +635,11 @@ HERE
     print << "HERE";
   <tr>
     <td>$link</td>
+    <td>$type</td>
     <td>$ts</td>
-    <td>$row[2]</td>
     <td>$row[3]</td>
     <td>$row[4]</td>
+    <td>$row[5]</td>
   </tr>
 HERE
   }
