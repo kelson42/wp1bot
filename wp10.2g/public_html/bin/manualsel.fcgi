@@ -31,6 +31,7 @@ my $url = $Opts->{"manual-url"} || die "Manual-url must be specified\n";
 $url =~ s/\?$//;
 
 require 'layout.pl';
+require 'tusc_verify.pl';
 
 require 'database_www.pl';
 our $dbh = db_connect_rw($Opts);
@@ -63,9 +64,10 @@ sub main_loop {
   $user =~ s/^[^a-zA-Z]*//;
 
   my $authenticated = 0;
+  my $reason = "";
 
   if ( defined($pass)  ) {
-    $authenticated = check_auth($user, $pass);
+    ($authenticated, $reason) = check_auth($user, $pass);
   }
 
   my $value = '';
@@ -127,7 +129,7 @@ HERE
     login_header();
   } elsif ( $mode eq 'processlogin' ) { 
     layout_header("Log in", $authline);
-    processlogin($authenticated);
+    processlogin($authenticated, $reason);
   } else { 
     layout_header("List manual selection", $authline);
     do_list(\%param);
@@ -143,10 +145,11 @@ HERE
 
 sub processlogin {
   my $authenticated = shift;
+  my $reason = shift;
   if( $authenticated == 1) { 
-    print "<b>Login successful</b>";
+    print "Result: <b>Login successful</b><br/>$reason";
   }   else  {
-    print "<b>Login unsuccessful; try again. $authenticated. </b>";
+    print "Result: <b>Login unsuccessful; try again.</b><br/>$reason ($authenticated) </b>";
     auth_form_manual();
   }
  print "<div class=\"clear\">&nbsp;</div>\n";
@@ -555,6 +558,7 @@ sub do_log {
   my $userenc = uri_escape($fuser);
 
 print << "HERE";
+<p>
   <form action="$url" method="post">
   <fieldset class="inner">
   <legend>Show changelog for the manual selection</legend>
@@ -660,7 +664,7 @@ HERE
   my $noffset = $offset + $pagesize;
 
   if ( $offset > 0 ) { 
-    print << "HERE";
+	    print << "HERE";
      <a href="$url?mode=logs&offset=$poffset&farticle=$artenc&fuser=$userenc">&larr; Previous $pagesize</a>&nbsp;&nbsp;
 HERE
   }
@@ -683,6 +687,10 @@ sub check_auth {
     return 0;
   }
 
+  if ( tusc_verify_password($user, $pass) ) { 
+    return (1, "Logged in using TUSC");
+  } 
+
   my $md5sum = Digest::MD5->new();
   $md5sum->add($user);
   $md5sum->add($pass);
@@ -693,14 +701,14 @@ sub check_auth {
   my $r = $sth->execute($user);
 
   if ( $r == 0) { 
-    return -1;
+    return (-1, "Invalid username or password");
   }
 
   my @res = $sth->fetchrow_array();
   if ( $res[0] eq $d ) {
-    return 1;
+    return (1, "Logged in using local password table");
   } else {
-    return -2;
+    return (-2, "Invalid username or password");
   }
 }
 
@@ -731,8 +739,23 @@ HERE
 sub login_header {
   print << "HERE"
 <p>
-To log out, simply close your browser.  <br/>
-If you have forgotten your password, please contact the bot operator.
+<h3>Instructions</h3>
+
+<p>
+According to toolserver policies, this program cannot ask for your Wikipedia password. 
+Before you can log in here, you must complete a simple <a href="http://toolserver.org/~magnus/tusc.php?language=en">registration process</a>
+to choose a TUSC toolserver password and link it to your account on Wikipedia. You should use a different password than you use on Wikipedia.
+This password system is the same one used by the CommonsHelper tool, so if you already have a TUSC password for that tool you may use it here as 
+well.
+</p>
+
+<p>
+<b>To log out</b>, simply close your browser. 
+</p>
+
+<p>
+If you have <b>forgotten your password,</b> you can use the registration process again to select a new one.
+</p>
 </p>
 HERE
 }
