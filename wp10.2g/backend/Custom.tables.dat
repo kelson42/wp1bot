@@ -12,6 +12,12 @@
   'type' => 'customsub',
   'customsub' => \&custom_ships_table_1,
   'dest' => "User:WP 1.0 bot/Tables/Custom/Ships-1",
+  },
+
+'Essays-1' =>  { 
+  'type' => 'customsub',
+  'customsub' => \&custom_essays_table_1,
+  'dest' => "User:WP 1.0 bot/Tables/Custom/Essays-1",
   }
 
 

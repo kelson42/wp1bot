@@ -104,6 +104,9 @@ sub copy_custom_tables {
 
   foreach $table ( keys %$custom ) { 
     print "T: '$table'\n";
+    if ( defined $ARGV[1] ) { 
+      next unless ( $table =~ /\Q$ARGV[1]\E/);  
+    }
 
     if ( ! defined $custom->{$table}->{'dest'} ) { 
       die "No destination for table '$table'\n";
