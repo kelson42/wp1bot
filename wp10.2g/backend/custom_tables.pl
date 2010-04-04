@@ -42,8 +42,6 @@ sub custom_essays_table_1 {
   my $tdata = fetch_project_table_data($proj, undef, undef, $title);
 
   my $ratings = $tdata->{'data'}->{'NA-Class'};
-  print Dumper($ratings);
-
   my $sort = $tdata->{'SortImp'};
 
   my $code = << "HERE";
@@ -55,16 +53,14 @@ HERE
 
   my $imp;
   foreach $imp ( sort { $sort->{$b} <=> $sort->{$a} } keys %$ratings ) { 
-    print "R $imp \n";
     $code .= "! " . $tdata->{'ImportanceLabels'}->{$imp} . "\n";
   }
 
   $code .= "! | '''Total'''\n";
-   $code .= "|-\n";
+  $code .= "|-\n";
 
   my $total = 0;
   foreach $imp ( sort { $sort->{$b} <=> $sort->{$a} } keys %$ratings ) { 
-    print "R $imp \n";
     $code .= "|| " . format_cell_pqi($proj, 'NA-Class', 
                                      $imp, $ratings->{$imp} )
              . "\n";
