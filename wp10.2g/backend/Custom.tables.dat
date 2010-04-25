@@ -18,7 +18,11 @@
   'type' => 'customsub',
   'customsub' => \&custom_essays_table_1,
   'dest' => "User:WP 1.0 bot/Tables/Custom/Essays-1",
-  }
+  },
 
-
+'Roads-1' => {
+  'type' => 'customsub',
+  'customsub' => \&custom_roads_table_1,
+  'dest' => "User:WP 1.0 bot/Tables/Custom/Roads-1",
+  },
 
