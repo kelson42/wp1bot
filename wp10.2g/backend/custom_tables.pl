@@ -1,7 +1,12 @@
 use strict;
 
-# Table for the Ships project, supposed to only have a few
-# of the quality classes in it. 
+# custom_tables.pl
+# Part of WP 1.0 bot
+# See the files README, LICENSE, and AUTHORS for additional information
+
+########################################################################
+# Table for the Ships project, only displays a few selected 
+# quality assessment levels
 
 sub custom_ships_table_1 {
   my $proj = 'Ships';
@@ -35,6 +40,10 @@ sub custom_ships_table_1 {
 
   return $code;
 }
+
+########################################################################
+# Table for the Essays project: hides the 'quality' row, because all
+# their articles are NA quality
 
 sub custom_essays_table_1 { 
   my $proj = 'Wikipedia essays';
@@ -72,6 +81,10 @@ HERE
   return $code;
 
 }
+
+########################################################################
+# Table for the US roads project, amalgamates data from the per-state
+# projects and computes some statistics for each one. 
 
 sub custom_roads_table_1 {
 
@@ -136,10 +149,15 @@ sub custom_roads_table_1 {
     'USRD' => 'U.S. road transport'
   ];
 
+  # List of projects that have a grey background for their table row
   my $RoadProjectsGrey = {
-    'IH' => 1
+    'IH' => 1, 'USH' => 1, 'Auto trail' => 1, 
+    'D.C.' => 1, 'Guam' => 1, 'Puerto Rico' => 1, 
+    'U.S. Virgin Islands' => 1, 'USRD' => 1
   };
-   
+ 
+
+  # Parse data into more useful structures  
   my $i;
   my $RoadProjects = [];
   my $RoadProjectCats = {};
@@ -150,17 +168,19 @@ sub custom_roads_table_1 {
   }
 
   my $Classes = {
-    'FA-Class' =>    {'sort'=>1, 'weight'=>0, 'name'=>'FA'},
-    'A-Class' =>     {'sort'=>2, 'weight'=>1, 'name'=>'A'},
-    'GA-Class' =>    {'sort'=>3, 'weight'=>2, 'name'=>'GA'},
-    'B-Class' =>     {'sort'=>4, 'weight'=>3, 'name'=>'B'},
-    'C-Class' =>     {'sort'=>5, 'weight'=>4, 'name'=>'C'},
+    'FA-Class'    => {'sort'=>1, 'weight'=>0, 'name'=>'FA'},
+    'A-Class'     => {'sort'=>2, 'weight'=>1, 'name'=>'A'},
+    'GA-Class'    => {'sort'=>3, 'weight'=>2, 'name'=>'GA'},
+    'B-Class'     => {'sort'=>4, 'weight'=>3, 'name'=>'B'},
+    'C-Class'     => {'sort'=>5, 'weight'=>4, 'name'=>'C'},
     'Start-Class' => {'sort'=>6, 'weight'=>5, 'name'=>'Start'},
-    'Stub-Class' =>  {'sort'=>7, 'weight'=>6, 'name'=>'Stub'},
+    'Stub-Class'  => {'sort'=>7, 'weight'=>6, 'name'=>'Stub'},
   };
 
   my $dbh = database_handle();
 
+  # This query is indexed and very fast, so I'm not bothering to 
+  # to combine all the road projects into a single query
   my $sth = $dbh->prepare('select r_quality, count(r_article) as num 
                              from ratings 
                               where r_project  = ? 
@@ -224,29 +244,28 @@ $i = 0;
 
       $total += $num;
       $omega += $num * $weight;
-   }
+    }
 
-   if ( defined $RoadProjectsGrey->{$proj} ) { 
-     $text .= "|bgcolor=silver";
-   }  
-   $text .= "|$omega\n";
+    if ( defined $RoadProjectsGrey->{$proj} ) { 
+      $text .= "|bgcolor=silver";
+    }  
+    $text .= "|$omega\n";
 
-   if ( defined $RoadProjectsGrey->{$proj} ) { 
-     $text .= "|bgcolor=silver";
-   }  
+    if ( defined $RoadProjectsGrey->{$proj} ) { 
+      $text .= "|bgcolor=silver";
+    }  
 
-   if ( $total > 0 ) { 
-     $text .= "|" . (sprintf("%2.4f", $omega/ $total)) . "\n";
-   } else { 
-      $text .= "|&ndash;\n";   
-   }
+    if ( $total > 0 ) { 
+      $text .= "|" . (sprintf("%2.4f", $omega/ $total)) . "\n";
+    } else { 
+       $text .= "|&ndash;\n";   
+    }
 
-   $i++;
- }
+    $i++;
+  }
 
   $text .= "|}";
   return $text;
-
 }
 
 1;
