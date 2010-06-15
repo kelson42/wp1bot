@@ -24,6 +24,8 @@ Connect to the database using the readonly credentials
 =cut
 
 sub db_connect {
+die "Testing\n";
+
   my $opts = shift;
 
   die "No database given in database conf file\n"
@@ -44,13 +46,41 @@ sub db_connect {
               . $opts->{'credentials-readonly'};
   }
 
-  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'})
-     or die "Couldn't connect to database: " . DBI->errstr;
-   
+  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'});
+
+  if ( ! $db ) { 
+    db_connect_error(DBI->errstr);
+  }
+
   return $db;
 }
 
 #####################################################################
+
+sub db_connect_error {
+  my $msg = shift;
+  my $ver = $Opts->{'version'};
+
+  if ( $Opts->{'use_fastcgi'} ) {
+    require CGI::Fast;
+   my $cgi = CGI::Fast->new();
+  }
+
+  print << "HERE";
+Content-type: text/plain
+
+There was an error connecting to the database. This is most 
+likely a temporary condition. Please try again in a few 
+minutes. If the problem persists, please contact User:CBM on enwiki.
+
+The error message is: $msg
+
+WP 1.0 bot $ver
+
+HERE
+
+exit;
+}
 
 
 =item B<db_connect_rw>(OPTS)
@@ -80,8 +110,11 @@ sub db_connect_rw {
                 . $opts->{'credentials-readwrite'};
   }
 
-  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'})
-     or die "Couldn't connect to database: " . DBI->errstr;
+  my $db = DBI->connect($connect, $opts->{'username'}, $opts->{'password'});
+
+  if ( ! $db ) { 
+    db_connect_error(DBI->errstr);
+  }
    
   return $db;
 }
