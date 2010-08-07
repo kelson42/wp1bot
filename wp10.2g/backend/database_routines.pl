@@ -179,7 +179,7 @@ sub update_article_moved {
 
   if ( '0' eq $r ) { 
     $sth = $dbh->prepare("INSERT INTO logging " . 
-                                "values (?,?,?,?,?,?,?,?)");
+                                "values (?,?,?,?,?,?,?,?) on duplicate key update l_project = l_project");
  
     $r = $sth->execute($project, $old_ns, $old_art, "moved", 
                        $global_timestamp, "", "", $rev_timestamp);
@@ -624,6 +624,8 @@ sub db_connect {
                        {'RaiseError' => 1, 
                         'AutoCommit' => 0} )
      or die "Couldn't connect to database: " . DBI->errstr;
+
+  $db->{'RaiseError'} = 'on'; # die on DB error
    
   return $db;
 }
@@ -972,15 +974,21 @@ sub update_project_scores {
   if ( $r[0] > 0 ) { 
     print "  Detected that project uses importance ratings\n";
 
+
+
     $query = <<"HERE";
    update ratings join projects on r_project = p_project 
                   left join selection_data on r_namespace = 0 
                                and r_article = sd_article 
+left join categories as cq on cq.c_project = p_project
+and cq.c_rating = r_quality and cq.c_type = 'quality'
+left join categories as ci on ci.c_project = p_project
+and ci.c_rating = r_quality and ci.c_type = 'importance'
                   left join global_rankings as gq on gq.gr_type = 'quality' 
-                                     and gq.gr_rating = r_quality 
+                                     and gq.gr_rating = cq.c_replacement
                   left join global_rankings as gi on gi.gr_type = 'importance' 
-                                     and  gi.gr_rating = r_importance 
-   set r_score = floor(
+                                     and  gi.gr_rating = ci.c_replacement
+   set r_score =  floor(
             if( isnull(gi.gr_ranking) OR gi.gr_ranking = 0, 4/3, 1)
                 * (     50*if( sd_hitcount > 0, log10(sd_hitcount),  0) 
                      + 100*if(sd_pagelinks > 0, log10(sd_pagelinks), 0) 
@@ -988,7 +996,7 @@ sub update_project_scores {
                   )
             + if(isnull(gi.gr_ranking), 0, gi.gr_ranking)
             + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
-            + p_scope ) 
+	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
       where r_project = ? and r_namespace = 0;
 HERE
    }  else { 
@@ -1006,7 +1014,7 @@ HERE
                      + 250*if(sd_langlinks > 0, log10(sd_langlinks), 0) 
                    )
              + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
-             + p_scope ) 
+	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
       where r_project = ? and r_namespace = 0;
 HERE
   }
