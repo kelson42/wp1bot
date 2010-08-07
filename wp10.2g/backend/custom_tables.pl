@@ -47,11 +47,16 @@ sub custom_ships_table_1 {
 
 sub custom_essays_table_1 { 
   my $proj = 'Wikipedia essays';
-  my $title = 'Wikipedia essays by importance';
+  my $title = 'Wikipedia essays by impact';
   my $tdata = fetch_project_table_data($proj, undef, undef, $title);
+
+#XXX
+#print Dumper($tdata);
+#die;
 
   my $ratings = $tdata->{'data'}->{'NA-Class'};
   my $sort = $tdata->{'SortImp'};
+
 
   my $code = << "HERE";
 {| class="ratingstable wikitable plainlinks"  style="text-align: right;"
@@ -88,12 +93,14 @@ HERE
 
 sub custom_roads_table_1 {
 
+  #The following data is in the order that the table rows should appear
   my $RoadProjectData = [
     'IH' => 'Interstate Highway System',
     'USH' => 'U.S. Highway system',
     'Auto trail' => 'U.S. auto trail',
     'Alabama' => 'Alabama road transport',
     'Alaska' => 'Alaska road transport',
+    'American Samoa' => 'American Samoa road transport',
     'Arizona' => 'Arizona road transport',
     'Arkansas' => 'Arkansas road transport',
     'California' => 'California road transport',
@@ -153,7 +160,7 @@ sub custom_roads_table_1 {
   my $RoadProjectsGrey = {
     'IH' => 1, 'USH' => 1, 'Auto trail' => 1, 
     'D.C.' => 1, 'Guam' => 1, 'Puerto Rico' => 1, 
-    'U.S. Virgin Islands' => 1, 'USRD' => 1
+    'U.S. Virgin Islands' => 1, 'USRD' => 1, 'American Samoa'=>1
   };
  
 
@@ -203,8 +210,6 @@ sub custom_roads_table_1 {
 !&#969;
 !&#937;
 HERE
-
-$i = 0;
 
   foreach $proj ( @$RoadProjects ) { 
     $omega = 0;
@@ -256,7 +261,7 @@ $i = 0;
     }  
 
     if ( $total > 0 ) { 
-      $text .= "|" . (sprintf("%2.4f", $omega/ $total)) . "\n";
+      $text .= "|" . (sprintf("%2.3f", $omega/ $total)) . "\n";
     } else { 
        $text .= "|&ndash;\n";   
     }

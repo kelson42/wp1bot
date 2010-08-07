@@ -63,6 +63,9 @@ sub insert_from_stdin {
     $count++;
     if ( 0 == $count %  10000 ) { print "."; }
     if ( 0 == $count % 100000 ) { print " $count\n"; $dbh->commit(); }
+      # The previous line should not call commit(), so that the entire job
+      # can post as a single transaction. But that causes the database to reject
+      # the job for being too big. So this is a hack to get it to complete. 
 
     chomp $line;
     @parts = split / /, $line, 4;

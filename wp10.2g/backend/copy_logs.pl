@@ -298,7 +298,7 @@ sub process_log {
   my ($rev_page, $rev_talk, $reassessed);    
 
   foreach $key ( sort {$a cmp $b} keys %$reassess ) { 
-    print "D";
+#    print "D";
     my $data = $reassess->{$key};
 
     # If both of these become 1, it means the article was just
@@ -519,10 +519,10 @@ sub key_to_talk {
 
   $ns =~ s/^0*(\d)/$1/;
 
-  print "\nNS pre: '$ns' " . $Namespaces->{$ns} . "\n";
+#  print "\nNS pre: '$ns' " . $Namespaces->{$ns} . "\n";
   $ns++;
 
-  print "\nNS post: '$ns' " . $Namespaces->{$ns} . "\n";
+#  print "\nNS post: '$ns' " . $Namespaces->{$ns} . "\n";
 
   return $Namespaces->{$ns} . ":" . $title;
 }

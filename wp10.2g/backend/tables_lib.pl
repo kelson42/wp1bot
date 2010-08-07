@@ -92,8 +92,12 @@ sub cached_project_table {
 
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "<!-- Cached output valid -->\n";
+      if ( defined $ENV{'TABLE_PURGE'} ) { 
+        print "<!-- regenerate anyway -->\n";
+      }
       print "<!-- end cache debugging -->\n ";
-      return ($c_html, $c_wikicode);
+      return ($c_html, $c_wikicode)
+        if ( ! defined $ENV{'TABLE_PURGE'} );
     } else {
       print "<!-- Cached output must be regenerated -->\n";
     }

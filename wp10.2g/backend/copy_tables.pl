@@ -41,7 +41,7 @@ if ( $ARGV[0] =~ /^--project/ ) {  # accept --project and --projects
 } elsif ( $ARGV[0] eq '--global' ) { 
   copy_global_table();
 } elsif ( $ARGV[0] eq '--custom' ) { 
-  copy_custom_tables($ARGV[0]);
+  copy_custom_tables($ARGV[1]);
 } else { 
   print << "HERE";
 Usage:
@@ -95,6 +95,9 @@ sub copy_project_tables {
 
 sub copy_custom_tables { 
 
+  my $filter = shift;
+print "F: '$filter'\n";
+
   my $custom = read_custom();
 
   my $table;
@@ -103,10 +106,11 @@ sub copy_custom_tables {
   my $summary;
 
   foreach $table ( keys %$custom ) { 
-    print "T: '$table'\n";
-    if ( defined $ARGV[1] ) { 
-      next unless ( $table =~ /\Q$ARGV[1]\E/);  
+    if ( defined $filter ) { 
+      next unless ( $table =~ /\Q$filter\E/);  
     }
+
+    print "T: '$table'\n";
 
     if ( ! defined $custom->{$table}->{'dest'} ) { 
       die "No destination for table '$table'\n";
