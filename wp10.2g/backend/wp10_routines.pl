@@ -243,17 +243,19 @@ sub get_project_quality_categories {
       $qcats->{$qual} = $cat;
       $value = $extra->{$cat}->{'ranking'}; 
       $replaces = $extra->{$cat}->{'replaces'};
-      print "\tCat $qual $value $cat (extra)\n";
+      print "\tCat (1) $qual $value $cat (extra)\n";
     } elsif ( $cat =~ /\Q$Category\E:(\w+)[\- ]/ ) {
       $qual=$1 . '-' . $Class; # e.g., FA-Class
       next unless (defined $Quality{$qual});
       $qcats->{$qual} = $cat;
       $value = $Quality{$qual};
-      print "\tCat $qual $value $cat \n";
+      $replaces = $qual;
+      print "\tCat (2) $qual $value $cat \n";
     } else {
       print "\tSkip '$cat'\n";
       next;
     }
+
     update_category_data( $project, $qual, 'quality', $cat, 
                           $value, $replaces);
   }
