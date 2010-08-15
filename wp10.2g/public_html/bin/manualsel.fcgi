@@ -22,7 +22,7 @@ use POSIX 'strftime';
 use URI::Escape;
 
 my $maxadds = 10;
-my $pagesize = 10;
+my $pagesize = 50;
 
 require 'read_conf.pl';
 our $Opts = read_conf();
@@ -60,8 +60,8 @@ sub main_loop {
 
   my $pass = $param{'pass'} || CGI::cookie('wp10pass') || '';
   my $user = $param{'user'} || CGI::cookie('wp10user') || '';
-  $pass =~ s/^[^a-zA-Z]*//;
-  $user =~ s/^[^a-zA-Z]*//;
+  $pass =~ s/^[^a-zA-Z0123456789]*//;
+  $user =~ s/^[^a-zA-Z0123456789]*//;
 
   my $authenticated = 0;
   my $reason = "";
@@ -180,7 +180,7 @@ HERE
 
   print << "HERE";
     <center>
-    <table class="wikitable">
+    <table class="wikitable manualselection">
     <tr>
     <th>#</th>
     <th>Article</th>
@@ -262,7 +262,7 @@ HERE
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
   print << "HERE";
-      <table class="wikitable">
+      <table class="wikitable manualselection">
        <tr>
         <th>Article</th>
         <th>Type</th>
@@ -329,7 +329,7 @@ Enter the information on the articles in the spaces below. You may leave
 any unused spaces blank.</p>
 
     <center>
-      <table class="wikitable">
+      <table class="wikitable manusalselection">
        <tr>
         <th>#</th>
         <th>Article</th>
@@ -495,7 +495,7 @@ HERE
       <form action="$url" method="post">
       <input type="hidden" name="mode" value="processremoves">
 
-      <table class="wikitable">
+      <table class="wikitable manualselection">
       <tr>
         <th colspan="4">
       </th>
@@ -580,12 +580,12 @@ HERE
     push @qparams, $fuser;
 
     if ( 0 < length $farticle ) { 
-      $query .= " and ms_article regexp ? ";
+      $query .= " and msl_article regexp ? ";
       push @qparams, $farticle;
     }
   } else { 
     if ( 0 < length $farticle ) { 
-      $query .= " where ms_article regexp ? ";
+      $query .= " where msl_article regexp ? ";
       push @qparams, $farticle;
     }
   }
@@ -619,7 +619,7 @@ HERE
 
   print << "HERE";
   <center>
-  <table class="wikitable">
+  <table class="wikitable manualselection">
    <tr>
     <th>Article</th>
     <th>Type</th>
@@ -708,7 +708,8 @@ sub check_auth {
   if ( $res[0] eq $d ) {
     return (1, "Logged in using local password table");
   } else {
-    return (-2, "Invalid username or password");
+    return (-2, "Invalid username or password ");
+#'$res[0]' '$d' '$user'  '$pass'");
   }
 }
 

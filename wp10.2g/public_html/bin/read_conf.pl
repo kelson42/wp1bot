@@ -13,6 +13,8 @@ Routines to parse configuration variables from a settings file
 use strict;
 use Data::Dumper;
 
+$ENV{'SERVER_ADMIN'} = 'cbm@toolserver.org';
+
 my $Settings = read_conf();
 
 #####################################################################

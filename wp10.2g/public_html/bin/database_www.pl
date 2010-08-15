@@ -24,7 +24,6 @@ Connect to the database using the readonly credentials
 =cut
 
 sub db_connect {
-die "Testing\n";
 
   my $opts = shift;
 

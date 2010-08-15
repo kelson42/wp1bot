@@ -93,8 +93,11 @@ sub main_loop {
     Running $prog
 
 HERE
+#   $proj =~ s/'/\'/g;
 
-    open PIPE, "$prog '$proj'|";
+#  print "Project before running: \"$proj\"<br/>\n";
+
+    open PIPE, "-|", $prog, $proj or print "Error: $!<br/>\n";
     while ( <PIPE> ) { 
       print;
     }
