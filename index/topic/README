@@ -1,0 +1,20 @@
+This directory has the files for the topic index.
+
+To make the index pages, run makePages.pl
+This reads:
+  * SortKeys.txt for the article sortkeys
+  * Selected.txt for the main selection
+  * Manual.arts.txt for info about the manually selected articles
+  * Pages for the info on how to make the index pages
+It writes files in ./output.
+
+To make the header template, run makeHeader.pl
+It read:
+ * Header for the instructions on how to make the template
+It writes: ./output/Header
+
+The script 'upload.pl' is what I use to upload the files. But it
+requires my perl library that you probably don't have. 
+
+
+

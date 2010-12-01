@@ -1,0 +1,23 @@
+This directory has the files for the geographical index. 
+
+To make the pages run MakeCountries.pl. 
+This reads:
+  * Countries to get a list of countries
+  * Matched.cats for a list of which cat3egories match which countries
+  * Categories for a list of which selected articles are in which 
+      categories
+  * Selected.txt for the list of selected articles
+  * Manual.arts.txt for the list of manually-selected articles
+  * Manual.ArtsToCat.txt for some article-specifc assignments of
+       WP 1.0 categories, so that no article is without
+
+It writes to ./output/
+
+To make the header template run MakeHeader.pl
+This read:
+ * Header.raw to get instructions on how to make the header
+It writes to ./output/Header
+
+I use the file 'upload.pl' to upload the files, but this requires
+my perl modules to be set up.
+
