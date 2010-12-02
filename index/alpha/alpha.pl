@@ -1,12 +1,5 @@
 use Data::Dumper;
 
-#open IN, "<:utf8", "Dot";
-#binmode STDOUT, ":utf8";
-#my $dot = <IN>;
-#chomp $dot;
-#print "$dot\n";
-#exit;
-
 open IN, "<:utf8", "SortKeys.txt" or die;
 while ( <IN> ) { 
   chomp;
@@ -111,10 +104,6 @@ foreach $initial ( sort {$a cmp $b} keys %$lists ) {
 
     print OUTPUT (join "{{Dot}}\n", @$arts);
     print OUTPUT "\n\n";
-#    foreach $_ ( @$arts ) { 
-#      print OUTPUT "* '" . Dumper($_) . "' '" . Dumper($pages->{$_}) . "'\n";
-#    }
-#    print OUTPUT "\n";
 
     $count++;
   }

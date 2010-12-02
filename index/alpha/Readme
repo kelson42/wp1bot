@@ -3,6 +3,6 @@ Alphabetical index for 0.8, using the 2nd gen WP1.0 system
 Steps to generate the index
 
 1) getSortKeys.pl
-2) alpha.pl
 3) Fix sortkeys in the Misc pages
-4) index.pl
+2) alpha.pl 
+4) ls Output/ | index.pl
