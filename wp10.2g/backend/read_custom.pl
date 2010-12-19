@@ -90,6 +90,27 @@ sub check_custom {
       }
 
       logmsg(1, $verbose, "\n");
+    } elsif ( 'project' eq $table->{'type'} ) { 
+      my $param;
+      foreach $param ( ('project', 'title', 'dest') ) { 
+        if ( ! defined $table->{$param} ) { 
+          fatal($tablen, "parameter '$param' not specified");
+        } else { 
+          logmsg(1, $verbose, "  $param: " . ($table->{$param}) . "\n");
+        }
+      } 
+      
+      if ( ! defined $table->{'config'} ) { 
+        $table->{'config'} = {};
+      } else { 
+        logmsg(1, $verbose, "  configuration:\n");
+        my $param;
+        foreach $param ( sort {$a cmp $b} keys %{$table->{'config'}} ) { 
+          logmsg(1, $verbose, "    $param: " . $table->{'config'}->{$param} . "\n");
+        }   
+      }
+
+      logmsg(1, $verbose, "\n");
 
     } elsif ( $table->{'type'} eq 'customsub' ) { 
       if ( ! defined $table->{'customsub'} ) { 
