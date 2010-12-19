@@ -626,18 +626,18 @@ sub download_review_data_internal {
       $seen->{$art} = 1;
 
       # New entry
-      if ( ! defined %$oldrating->{$art} ) { 
+      if ( ! defined $oldrating->{$art} ) { 
         update_review_data($global_timestamp, $art, $qual, 
                            $d->{'timestamp'}, 'None');
         next;
       }
 
       # Old entry, although it could have been updated, so we need to check
-      if ( %$oldrating->{$art} eq $qual ) {
+      if ( $oldrating->{$art} eq $qual ) {
   # No change
       } else {
         update_review_data($global_timestamp, $art, $qual, 
-                           $d->{'timestamp'}, %$oldrating->{$art});
+                           $d->{'timestamp'}, $oldrating->{$art});
       } 
     }
   } 
