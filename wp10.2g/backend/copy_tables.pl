@@ -56,7 +56,7 @@ Usage:
 
 * Copy custom tables:
 
-  $0 --custom
+  $0 --custom [TABLE NAME]
 
 HERE
 }
@@ -76,7 +76,8 @@ sub copy_project_tables {
 
   my $i = 0;
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-    next unless ( (! defined $filter ) || ($project =~ /^\Q$filter\E$/));
+#  print "'$project' '$filter'\n";
+    next unless ( (! defined $filter ) || ($project =~ /^\Q$filter\E.*$/));
     $i++;
     print "\n$i / $count $project\n";
 
@@ -86,7 +87,9 @@ sub copy_project_tables {
     $wiki = munge($wiki, 'project');
 
     if ( ! defined $ENV{'DRY_RUN'}) {
-      api_edit(encode("utf8", $page), $wiki, $summary);
+      api_edit(encode("utf8", $page), 
+               decode("utf8", $wiki),
+               $summary);
     }
   }
 }
@@ -96,7 +99,7 @@ sub copy_project_tables {
 sub copy_custom_tables { 
 
   my $filter = shift;
-print "F: '$filter'\n";
+  print "Filtering custom tables with '$filter'\n";
 
   my $custom = read_custom();
 
@@ -110,7 +113,7 @@ print "F: '$filter'\n";
       next unless ( $table =~ /\Q$filter\E/);  
     }
 
-    print "T: '$table'\n";
+    print "Creating custom table '$table'\n";
 
     if ( ! defined $custom->{$table}->{'dest'} ) { 
       die "No destination for table '$table'\n";
@@ -119,10 +122,13 @@ print "F: '$filter'\n";
     }
 
     if ( $custom->{$table}->{'type'} eq 'projectcategory' ) { 
-      print "... projectcategory\n";
+      print "... projectcategory type\n";
       $code = project_category_table($custom->{$table});
+    } elsif ( $custom->{$table}->{'type'} eq 'project' ) { 
+      print "... project type\n";
+      $code = project_custom_table($custom->{$table});
     } elsif ( $custom->{$table}->{'type'} eq 'customsub' ) { 
-      print "... customsub \n";
+      print "... customsub type\n";
       $code = &{$custom->{$table}->{'customsub'}}();
     }  else { 
       die ("Bad table type for '$table'\n");
@@ -157,6 +163,26 @@ sub project_category_table {
 
   return $wiki;
 }
+
+############################################################
+
+sub project_custom_table { 
+  my $data = shift;
+
+  my $project = $data->{'project'};
+  my $cat = undef;
+  my $catns = undef;
+  my $title = $data->{'title'};
+  my $dest = $data->{'dest'};
+  my $config = $data->{'config'};
+
+  my $summary = "Copying assessment table to wiki";
+
+  my ($html, $wiki) = make_project_table($project, $cat, $catns, $title, $config);
+
+  return $wiki;
+}
+
 
 ############################################################
 
