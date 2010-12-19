@@ -333,7 +333,7 @@ FROM
                                  AND imp.gr_rating = ci.c_replacement
     WHERE r_namespace = 0 and r_project = ? )
 ) as tabletwo
-GROUP BY art;
+GROUP BY art /* SLOW_OK */;
 HERE
 
   my $sth = $dbh->prepare($query);
@@ -395,8 +395,7 @@ sub update_project {
 
   my $sth_qcount = $dbh->prepare("SELECT COUNT(r_article) FROM ratings "
           . "WHERE r_project = ? AND (r_quality = '$NotAClass' 
-                                            OR r_quality= 'Unassessed-Class')");
-
+                                       OR r_quality= 'Unassessed-Class')");
 
   $sth_qcount->execute($project);
   @row = $sth_qcount->fetchrow_array();
@@ -621,7 +620,7 @@ sub db_connect {
   my $db = DBI->connect($connect, 
                         $opts->{'username'}, 
                         $opts->{'password'},
-                       {'RaiseError' => 1, 
+                       {'RaiseError' => 1, 'PrintError'=>0, 
                         'AutoCommit' => 0} )
      or die "Couldn't connect to database: " . DBI->errstr;
 
@@ -997,7 +996,7 @@ and ci.c_rating = r_quality and ci.c_type = 'importance'
             + if(isnull(gi.gr_ranking), 0, gi.gr_ranking)
             + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
 	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
-      where r_project = ? and r_namespace = 0;
+      where r_project = ? and r_namespace = 0 /* SLOW_OK */;
 HERE
    }  else { 
        print "  Detected that project does not use importance ratings\n";
@@ -1015,7 +1014,7 @@ HERE
                    )
              + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
 	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
-      where r_project = ? and r_namespace = 0;
+      where r_project = ? and r_namespace = 0 /* SLOW_OK */;
 HERE
   }
 
