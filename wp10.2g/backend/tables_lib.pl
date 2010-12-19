@@ -136,6 +136,10 @@ sub make_project_table {
   my $title = shift;
   my $config = shift;
 
+  if ( defined $config->{'filterNamespace'} ) { 
+    $catNS = $config->{'filterNamespace'};
+  }
+
   my $tdata = fetch_project_table_data($proj, $cat, $catNS, $title);
 
   if ( ! defined $title ) { 
@@ -151,6 +155,10 @@ sub make_project_table {
   my $code = make_project_table_wikicode($tdata, $title, $format, $config );
   my $r =  $api->parse($code);
   return ($r->{'text'}->{'content'}, $code);
+
+#  my $r = "";
+#  return ($r, $code);
+
 }
 
 
@@ -191,28 +199,46 @@ sub fetch_project_table_data {
   my @qparam;
 
   if ( ! defined $cat ) { 
-    $query =  "
-      select count(r_article), r_quality, r_importance, r_project 
-      from ratings
-      where r_project = ? group by r_quality, r_importance, r_project";
+    if ( ! defined $catNS ) { 
+      $query =  "
+        select count(r_article), r_quality, r_importance, r_project 
+        from ratings
+        where r_project = ? group by r_quality, r_importance, r_project";
 
-    push @qparam, $proj;
+      push @qparam, $proj;
+    } else { 
+      $query =  "
+        select count(r_article), r_quality, r_importance, r_project 
+        from ratings
+        where r_project = ? and r_namespace = ? 
+         group by r_quality, r_importance, r_project";
+
+      push @qparam, $proj;
+      push @qparam, $catNS;
+    }      
   } else { 
 
     $query =  "
       select count(r_article), r_quality, r_importance, r_project 
       from ratings
       join enwiki_p.page on page_namespace = ? 
-        and replace(page_title, '_', ' ') =  cast(r_article as char character set latin1)
+        and replace(page_title, '_', ' ') 
+                 =  cast(r_article as char character set latin1) 
 /*                        and page_title = replace(r_article, ' ', '_') */
       join enwiki_p.categorylinks on page_id = cl_from and cl_to = ?  
-      where r_project = ? group by r_quality, r_importance, r_project";
-
+      where r_project = ? and r_namespace = ? 
+        group by r_quality, r_importance, r_project 
+           /* SLOW_OK */";
 
     $cat =~ s/ /_/g;
     push @qparam, $catNS;
     push @qparam, $cat;
     push @qparam, $proj;
+ 
+    $_ = $catNS;
+    if ( 1 == $_ % 2 ) { $_ = $_ - 1; } 
+    push @qparam, $_;
+
   } 
 
   my $sth = $dbh->prepare($query);
@@ -267,7 +293,7 @@ sub fetch_project_table_data {
 } 
 
 ##############################################################
-=item B<make_project_table_wikicodedata>(TDATA, TITLE, FORMAT, CONFIG)
+=item B<make_project_table_wikicode>(TDATA, TITLE, FORMAT, CONFIG)
 
 Create wikicode for a table using data from TDATA. The overall
 title is TITLE. The FORMAT function is used to format the table
@@ -324,6 +350,7 @@ sub make_project_table_wikicode {
   $ImportanceLabels->{'Total'} = $TotalWikicode;
 
   $table->title($title);
+
   $table->columnlabels($ImportanceLabels);  
   $table->rowlabels($QualityLabels);
 
@@ -343,9 +370,10 @@ sub make_project_table_wikicode {
   my @P = (@PriorityRatings, "Total");
   my @Q = (@QualityRatings,"Total");
 
+
   $table->rows(\@Q);
 
-  # If there are just two colums, they have the same data
+  # If there are just two columns, they have the same data
   # So just show the totals
 
   if ( 2 < scalar @P ) { 
@@ -443,6 +471,11 @@ sub make_project_table_wikicode {
       $table->data("Assessed", "Total", 
                  &{$format_cell}($proj, "Assessed", undef, 
                                  $totalAssessed->{'Total'} || "0"));
+  }
+
+
+  if ( defined $config->{'transpose'} ) { 
+    $table->transpose();
   }
 
   my $code = $table->wikicode();
