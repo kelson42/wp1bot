@@ -156,9 +156,9 @@ sub print_header_text {
   if ( ! defined $wikipage)   {
     print "Data for <b>$project</b> ";   
   }  elsif ( ! defined $shortname)   {
-    print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
+    print "Data for <b>" . get_cached_link_from_api("[[$wikipage]]") . "</b> "; 
   }  else  {
-    print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> ";     
+    print "Data for <b>" . get_cached_link_from_api("[[$wikipage|$shortname]]") . "</b> ";     
   }
 
   print "(<a href=\"" . $listURL . "\">lists</a> | "

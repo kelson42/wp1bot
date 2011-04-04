@@ -364,6 +364,39 @@ HERE
   return $text;
 }
 
+###############################
+
+sub transpose { 
+  my $self = shift;
+
+  my $tmp = $self->{'columns'};
+  $self->{'columns'} = $self->{'rows'};
+  $self->{'rows'} = $tmp;
+
+  $tmp = $self->{'columntitle'};
+  $self->{'columntitle'} = $self->{'rowtitle'};
+  $self->{'rowtitle'} = $tmp;
+
+  $tmp =  $self->{'columnlabels'};
+  $self->{'columnlabels'} = $self->{'rowlabels'};
+  $self->{'rowlabels'} = $tmp;
+
+  my $olddata = $self->{'data'};
+  $self->{'clear'};
+  my ($r, $c);
+  foreach $r ( keys %$olddata ) { 
+    foreach $c ( keys %{$olddata->{$r}} ) { 
+      if ( ! exists $self->{'data'}->{$c} ) { 
+        $self->{'data'}->{$c} = {};
+      }
+      $self->{'data'}->{$c}->{$r} = $olddata->{$r}->{$c};
+    }
+  }
+
+
+}
+
+
 
 ###############################
 ## debugging

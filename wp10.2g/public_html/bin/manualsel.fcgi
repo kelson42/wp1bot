@@ -171,12 +171,12 @@ HERE
     return;
   }
 
-  my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?,?)");
+  my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?,?,?) ");
   my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
                                 VALUES (?,?,?,?,?,?)");
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
-  my ($art, $type, $reason, $result, $r1, $r2);
+  my ($art, $type, $reason, $result, $revid, $r1, $r2);
 
   print << "HERE";
     <center>
@@ -206,18 +206,21 @@ HERE
     $reason =~ s/^\s*//;
     $reason =~ s/\s*$//;
 
+    $revid = $params->{"addrevid$i"};
+    $revid =~ s/^\s*//;
+    $revid =~ s/\s*$//;
+
     my $error = "OK";
 
-    $r1 = $sthart->execute($art,$type,$timestamp);
-
+    $r1 = $sthart->execute($art,$type,$timestamp, $revid);
 
     if ( 1 == $r1 ) { 
       $r2 = $sthlog->execute($art, $type, $timestamp, "add", $user, $reason);
       if ( 1 != $r2 ) { 
-        $error = "Failed";
+        $error = "Failed 2";
       }
     } else { 
-      $error = "Failed";
+      $error = "Failed 1";
     }
 
     print << "HERE";
@@ -237,6 +240,8 @@ HERE
     </table>
 HERE
 
+
+  sync_workingselection();
 }
 
 ############################################################################
@@ -306,8 +311,9 @@ HERE
     </tr>
 HERE
 
-    print "</table>";
   }
+  print "</table>";
+ sync_workingselection();
 }
 
 ############################################################################
@@ -334,20 +340,21 @@ any unused spaces blank.</p>
         <th>#</th>
         <th>Article</th>
         <th>Type</th>
+        <th>Revision id</th>
         <th>Reason</th>
        </tr>
 HERE
 
   my $i;
-  my (@arts, @reasons, @types);
+  my (@arts, @reasons, @revids, @types);
   push @arts, "";
   push @types, "";
   push @reasons, "";
 
-
   for ( $i = 1; $i < $maxadds+1; $i++) { 
     push @arts, $params->{"addart$i"};
     push @types, $params->{"addtype$i"};
+    push @revids, $params->{"addrevid$i"};
     push @reasons, $params->{"addreason$i"};
   }
 
@@ -360,6 +367,7 @@ HERE
           <option value="release">release</option>
            <option value="norelease">norelease</option>
         </select></td>
+    <td><input type="text" name="addrevid$i" value="$revids[$i]"></td>
     <td><input type="text" name="addreason$i" value="$reasons[$i]"></td>
     </tr>
 HERE
@@ -759,4 +767,30 @@ If you have <b>forgotten your password,</b> you can use the registration process
 </p>
 </p>
 HERE
+}
+
+
+sub sync_workingselection {
+  print "<p>Sync database<br/>\n";
+  
+
+  my $q = $dbh->prepare("insert into workingselection select as_article,as_revid from automatedselection
+                            on duplicate key update ws_revid = as_revid");
+  $_ = $q->execute();
+  print "Stage 1: $_<br/>\n";  
+
+  my $q = $dbh->prepare("insert into workingselection select ms_article, ms_revid 
+                            from manualselection where ms_type = 'release'
+                          on duplicate key update ws_revid = if(isnull(ms_revid), ws_revid, ms_revid)");
+  $_ = $q->execute();
+  print "Stage 2: $_<br/>\n";
+
+
+  $q = $dbh->prepare("delete from workingselection 
+                       where exists (select 1 from manualselection where ms_article = ws_article and ms_type = 'norelease')");
+  $_ = $q->execute();
+
+  $_ = $q->execute();
+  print "Stage 3: $_</p>\n";
+
 }

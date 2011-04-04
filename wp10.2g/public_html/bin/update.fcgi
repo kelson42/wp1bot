@@ -10,6 +10,10 @@ CGI program to update data for a project
 
 =cut
 
+select STDOUT;
+$| = 1;
+
+
 use strict;
 use Encode;
 
@@ -70,10 +74,29 @@ exit;
 ############################################################
 
 sub main_loop { 
+
+  $cgi->nph(1);
+
   my %param = %{$cgi->Vars()};
 
-  select STDOUT;
-  $| = 1;
+### Log file
+  my $p;
+  my $logFile = "update." . time() . "." . $$;
+  my $logEntry = $logFile;
+
+  foreach $p ( keys %param ) { 
+    $param{$p} =~ s/^\s*//;
+    $param{$p} =~ s/\s*$//;
+    $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+  }
+
+  if ( defined $Opts->{'log-dir'} 
+       && -d $Opts->{'log-dir'} ) { 
+    open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
+    print LOG $logEntry . "\n";
+    close LOG;
+  }
+
 
   print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 

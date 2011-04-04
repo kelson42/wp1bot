@@ -137,14 +137,14 @@ sub ratings_table {
   $queryc = "SELECT count(r_article) FROM ratings as ra";
   $queryc .= " \n   LEFT JOIN reviews ON r_namespace = 0 
                          AND r_article = rev_article ";
-
+  $queryc .= "  RELEASE-MARKER  ";
 
   $query = << "HERE";
-SELECT r_project, r_namespace, r_article, r_importance, 
+SELECT /* LIMIT:15 */ r_project, r_namespace, r_article, r_importance, 
        r_importance_timestamp, r_quality, 
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
-       ISNULL(rev_value) as null_rev, r_score
+       ISNULL(rev_value) as null_rev, r_score, ws_revid as wsel
 HERE
 
 my $show_external = ($params->{'showExternal'} eq "on");
@@ -171,6 +171,9 @@ HERE
                      AND r_article = rel_article ";
   $query .= " \n   LEFT JOIN reviews ON r_namespace = 0 
                       AND r_article = rev_article ";
+
+  $query .= " \n LEFT JOIN workingselection ON  r_namespace = 0
+                       AND ws_article = r_article ";
 
   my $acategory;
 
@@ -202,7 +205,8 @@ HERE
      $acategory =~ s/ /_/g;
 
      $aquery = "\n join enwiki_p.page as apage on r_namespace = apage.page_namespace 
-                   and cast(r_article as char character set latin1) = replace(apage.page_title, '_', ' ') 
+                   and cast(replace(r_article, ' ', '_') as char character set latin1) 
+                             = apage.page_title
                    join enwiki_p.categorylinks as acat on apage.page_id = acat.cl_from ";
 
      $queryc .= $aquery;
@@ -212,7 +216,8 @@ HERE
   if ( defined $tcategory ) { 
      $tcategory =~ s/ /_/g;
      $aquery  = "\n join enwiki_p.page as tpage on (1+r_namespace) = tpage.page_namespace 
-                   and cast(r_article as char character set latin1) = replace(tpage.page_title, '_', ' ') 
+                   and cast(replace(r_article, ' ', '_') as char character set latin1) 
+                             = tpage.page_title
                    join enwiki_p.categorylinks as tcat on tpage.page_id = tcat.cl_from ";
 
      $queryc .= $aquery;
@@ -315,9 +320,17 @@ HERE
   }
 
   my $review_filter = normalize_review_filter($params->{'reviewFilter'});
+  my $release_filter = normalize_release_filter($params->{'releaseFilter'});
   my ($review_sql, $review_msg) = review_sql($review_filter);
+  my ($release_sql, $release_msg, $release_join) = release_sql($release_filter);
+
   $query .= $review_sql;
   $queryc .= $review_sql;
+
+  $query .= $release_sql;
+  $queryc .= $release_sql;
+  $queryc =~ s/RELEASE-MARKER/$release_join/;
+
 
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
@@ -342,6 +355,8 @@ HERE
   $queryc =~ s/WHERE\s*$//;
 
   if ( defined $params->{'debug'} ) { 
+    print "R: " . $release_filter . "\n";
+
      print "<pre>QQ:\n$query</pre>\n";
      print join "<br/>", @qparam;
   }
@@ -352,7 +367,7 @@ HERE
   my $catmsg = ""; # FC: '$filter_cats'<br/>";
 
   if ( $filter_cats < 0 ) { 
-    $catmsg = "<br/> <b>Warning:</b> ignoring category filters in this query. Due to performance problems, 
+    $catmsg = " <b>Warning:</b> ignoring category filters in this query. Due to performance problems, 
                        category filtering is only enabled when both a project and page namespace are specified. $filter_cats <br/>\n";
   }
 
@@ -394,11 +409,13 @@ HERE
 
   print "<div class=\"navbox\">\n";
   print_header_text($project);
-  print "<br/><b>Total results:&nbsp;" . $total . "</b> " 
-        .  $catmsg . $review_msg 
+  print  $catmsg . $review_msg . $release_msg 
+      . "<b>Total results:&nbsp;" . $total . "</b>&nbsp;&nbsp;&nbsp;" 
         . " Displaying up to $limit results beginning with #" 
         . ($offset +1) . "\n";
   print "</div>\n";
+
+  print_bignotice();
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
@@ -500,10 +517,10 @@ HERE
 
     if ( $show_external ) { 
       my ( $external_pl, $external_ll, $external_hc, $external_ei );
-      $external_pl = $row[12] || "0";
-      $external_ll = $row[13] || "0";
-      $external_hc = $row[14] || "0";
-      $external_ei = $row[15] || "0";
+      $external_pl = $row[13] || "0";
+      $external_ll = $row[14] || "0";
+      $external_hc = $row[15] || "0";
+      $external_ei = $row[16] || "0";
       print << "HERE";
        <td class="external">$external_pl</td>
        <td class="external">$external_ll</td>
@@ -512,7 +529,8 @@ HERE
 HERE
     }
 
-    print "<td class=\"score\">" . $row[11] . "</td>\n";
+    print "<td class=\"score\">" . $row[11] 
+             . make_workingselection_html($row[12], $row[2]) . "</td>\n";
 
     print "\n";
     print "</tr>\n";
@@ -541,7 +559,7 @@ HERE
     if ($prev == 1)  {
       print " | ";
     }
-    my $newURL = make_list_link() . "?" . $params_enc 
+    my $newURL = make_list_link() . $params_enc   # removed "?" 2010-12-30
               . "&offset=" . ($limit + $offset + 1);    
     print "<a href=\"" . $newURL . "\">Next $limit entries</a>";
   }
@@ -585,6 +603,8 @@ sub ratings_table_intersect {
                 FROM ratings as ra 
                 JOIN ratings as rb on rb.r_article = ra.r_article
                               AND ra.r_namespace = rb.r_namespace
+                LEFT JOIN workingselection ON  ra.r_namespace = 0
+                              AND ws_article = ra.r_article 
                 WHERE ra.r_project = ? AND rb.r_project = ?";
 
   my @qparam = ($projecta, $projectb);
@@ -594,7 +614,7 @@ sub ratings_table_intersect {
 SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
        rb.r_importance, rb.r_quality, rel_0p5_category,
        rev_value, ISNULL(rel_0p5_category) as null_rel,
-       ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score
+       ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score, ws_revid as wsel
 HERE
 
   my $show_external = ($params->{'showExternal'} eq "on");
@@ -626,6 +646,9 @@ HERE
                   AND ra.r_article = rel_article ";
   $query .= " \n   LEFT JOIN reviews ON ra.r_namespace = 0 
                      AND ra.r_article = rev_article ";
+
+  $query .= " \n LEFT JOIN workingselection ON  ra.r_namespace = 0
+                       AND ws_article = ra.r_article ";
 
   $query .= " \nWHERE ra.r_project = ? AND rb.r_project = ?";
 
@@ -689,9 +712,16 @@ HERE
   }
 
   my $review_filter = normalize_review_filter($params->{'reviewFilter'});
+  my $release_filter = normalize_release_filter($params->{'releaseFilter'});
   my ($review_sql, $review_msg) = review_sql($review_filter);
+  my ($release_sql, $release_msg, $release_join) = release_sql($release_filter);
+
   $query .= $review_sql;
   $queryc .= $review_sql;
+
+  $query .= $release_sql;
+  $queryc .= $release_sql;
+  $queryc =~ s/RELEASE-MARKER/$release_join/;
 
   if ( defined $params->{'diffonly'} ) { 
     $query .= " AND NOT ra.r_quality = rb.r_quality ";
@@ -713,28 +743,28 @@ HERE
      print join "<br/>", @qparam;
   }
 
-
   $query .= " OFFSET ?";
   push @qparam, $offset;
 
-#  print "<pre>QQ: $query</pre><br/>\n";
-#  print join "<br/>", @qparam;
+# print "<pre>QC: $queryc</pre><br/>\n";
+#   print join "<br/>", @qparam;
 
   my $sthcount = $dbh->prepare($queryc);
-  $sthcount->execute(@qparamc);
+  $_ = $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()  ;
 
   print "<div class=\"navbox\">\n";
   print_header_text($projecta);
-  print "<br />";
   print_header_text($projectb);
-  print "</div>\n";
 
   my $total = $row[0];
-  print "<p><b>Total results: " . $total . "</b>.<br/>\n"
-        . $review_msg
-        . " Displaying up to $limit results beginning with #" 
-        . ($offset +1) . "</p>\n";
+  print  $review_msg . $release_msg ;
+  print  "<b>Total results: " . $total . "</b>&nbsp;&nbsp;&nbsp;\n";
+  print " Displaying up to $limit results beginning with #"  
+        . ($offset +1);
+  print "</div>\n";
+
+  print_bignotice();
 
   my $sth = $dbh->prepare($query);
   my $c = $sth->execute(@qparam);
@@ -797,11 +827,13 @@ HERE
     print "    <td>" . make_article_link($row[0], $row[1]) . "</td>\n";
     print "    " . get_cached_td_background($row[2]) . "\n";
     print "    " . get_cached_td_background($row[3]) . "\n";
-    print "<td class=\"score\">$row[10]</td\n";
+    print "<td class=\"score\">$row[10]"
+             . make_workingselection_html($row[12], $row[1]) . "</td>\n";
     print "<td class=\"spacer\">&nbsp;</td>\n";
     print "    " . get_cached_td_background($row[4]) . "\n";
     print "    " . get_cached_td_background($row[5]) . "\n";
-    print "<td class=\"score\">$row[11]</td\n";
+    print "<td class=\"score\">$row[11]"
+             . make_workingselection_html($row[12], $row[1]) . "</td>\n";
     print "<td class=\"spacer\">&nbsp;</td>\n";
 
     if ( defined $row[7] ) { 
@@ -818,10 +850,10 @@ HERE
 
     if ( $show_external ) {
       my ( $external_pl, $external_ll, $external_hc, $external_ei );
-      $external_pl = $row[12] || "0";
-      $external_ll = $row[13] || "0";
-      $external_hc = $row[14] || "0";
-      $external_ei = $row[15] || "0";
+      $external_pl = $row[13] || "0";
+      $external_ll = $row[14] || "0";
+      $external_hc = $row[15] || "0";
+      $external_ei = $row[16] || "0";
       print << "HERE";
        <td class="external">$external_pl</td>
        <td class="external">$external_ll</td>
@@ -895,7 +927,15 @@ sub query_form {
     $review_filter = 0;
   }
 
+  my $release_filter = $params->{'releaseFilter'} || 0;
+  if ( ! (    $release_filter =~ /^\d+$/ 
+           && $release_filter >= 0 
+           && $release_filter <= 5 ) ) { 
+    $release_filter = 0;
+  }
+
   my $review_html = review_filter_html($review_filter);
+  my $release_html = release_filter_html($release_filter);
 
   my $namespace = defined($params->{'namespace'}) ? $params->{'namespace'} : "";
 
@@ -964,18 +1004,40 @@ sub query_form {
 <fieldset class="inner">
   <legend>First project</legend>
   Project: <input type="text" value="$projecta" name="projecta"/><br/>
-  Page namespace: <input type="text" value="$namespace" name="namespace"/><br/>
+  <a class="info">
+    Page namespace
+        <span>The numeric namespace of the page. The main article 
+              namespace is number 0. Use even numbers only. 
+        </span>
+  </a> <input type="text" value="$namespace" name="namespace"/><br/>
   Page title: <input type="text" value="$pagename" name="pagename"/><br/>
-  Quality:  <input type="text" value="$quality" name="quality"/><br/>
-  Importance: <input type="text" value="$importance" name="importance"/><br/>
-  Score: &ge; <input size="5" type="text" value="$score" name="score"/><br/>
+
+  <a class="info">
+    Quality
+        <span>For example: FA-Class, FL-Class, A-Class, B-Class, 
+Start-Class, Stub-Class, List-Class. Only one value can be specified. 
+</span>
+  </a>  <input type="text" value="$quality" name="quality"/><br/>
+  <a class="info">
+    Importance:
+        <span>For example: Top-Class, High-Class, Mid-Class, Low-Class. Only one value can be specified. </span>
+  </a>   <input type="text" value="$importance" name="importance"/><br/>
+  <a class="info">
+    Score
+        <span>A numeric score used to select articles for release 
+versions. Typical values range from 0 to 3000. 
+     </span>
+  </a> &ge; <input size="5" type="text" value="$score" name="score"/><br/>
   <input type="checkbox" $pagename_wc_checked name="pagenameWC" />
       Treat page title as a
       <a href="http://en.wikipedia.org/wiki/Regular_expression">regular 
            expression</a><br/>
   <input type="checkbox"  name="showExternal" $show_external_checked />
       Show external interest data<br/>
-  <div class="note">Note: leave any field blank to select all values.</div>
+  <div class="note">Note: leave any field blank to select all values. 
+Move your mouse over <a class="info">underlined terms
+<span>This is an example</span></a> for additional information.
+</div>
   <div class="submit">
     <input type="submit"  value="Generate list"/>
   </div>
@@ -1019,7 +1081,8 @@ sub query_form {
   <b>Filter release / review data</b><br/>
   <div rel="release">
     Review status $review_html<br/>
-    <div class="note">Filtering by release is not yet implemented</div>
+<!--     <div class="note">Filtering by release is not yet implemented</div> -->
+Release status $release_html<br/>
   </div>
 </fieldset>
 
@@ -1064,16 +1127,16 @@ sub print_header_text {
     if ( ! defined $wikipage) {
       print "Data for <b>$project</b> ";   
     } elsif ( ! defined $shortname) {
-      print "Data for <b>" . get_link_from_api("[[$wikipage]]") . "</b> "; 
+      print "Data for <b>" . get_cached_link_from_api("[[$wikipage]]") . "</b> "; 
     } else {
-      print "Data for <b>" . get_link_from_api("[[$wikipage|$shortname]]") . "</b> ";
+      print "Data for <b>" . get_cached_link_from_api("[[$wikipage|$shortname]]") . "</b> ";
     }
   } else { 
     print " Data for all projects ";
   }
 
   print "(<b>list</b> \| <a href=\"" 
-  . $tableURL . "\">summary table</a>)\n";
+  . $tableURL . "\">summary table</a>)<br/>\n";
 }
 
 ###########################################################################
@@ -1171,6 +1234,27 @@ sub sort_sql {
 
 ##########################################################################
 
+sub release_filter_html {
+
+  my $which = shift;
+  my @types = ( 'All articles',             # 0 
+                '0.8 provisional selection',  # 1
+                );                    
+
+  my $html = "<select name=\"releaseFilter\">\n";
+  for ( my $i = 0; $i < scalar @types; $i++ ) { 
+    $html .= "<option value=\"$i\"";
+    if ( $which == $i ) { 
+      $html .= " selected ";
+    }
+    $html .= ">" . $types[$i] . "</option>\n";
+  }
+  $html .= "</select>\n";
+
+  return $html;
+
+}
+
 sub review_filter_html { 
   my $which = shift;
   my @types = ( 'All articles',             # 0 
@@ -1194,6 +1278,28 @@ sub review_filter_html {
 
 ##########################################################################
 
+sub release_sql { 
+  my $release_filter = shift;
+  my $msg;
+  my $sql;
+  my $join;
+
+  if ($release_filter == 1 ) { 
+    $msg = "<i>Showing only articles in the 0.8 provisional selection</i><br/>\n";
+    $sql = " and not isnull(ws_article)";
+    $join= " \n LEFT JOIN workingselection ON  r_namespace = 0
+                       AND ws_article = r_article ";
+
+  } else {
+    $msg = "";
+    $sql = "";
+    $join = "";
+  } 
+
+  return ($sql, $msg, $join);
+}
+
+
 sub review_sql { 
   my $review_filter = shift;
   my $msg;
@@ -1206,22 +1312,22 @@ sub review_sql {
   } elsif ( $review_filter == 1 )  {
     # FA FL and GA
     $sql = " AND NOT ISNULL(rev_value) ";
-    $msg = "<br/>Showing FA, FL, and GA articles only.<br/>\n";
+    $msg = "Showing FA, FL, and GA articles only.<br/>\n";
   } elsif ( $review_filter == 2 )  {
     # FA and FL
     $sql = " AND (rev_value = 'FA' OR rev_value = 'FL') ";
-    $msg = "<br/>Showing FA and FL articles only.<br/>\n";
+    $msg = "Showing FA and FL articles only.<br/>\n";
   } elsif ( $review_filter == 3 )  {
     # FA
     $sql = " AND (rev_value = 'FA') ";
-    $msg = "<br/>Showing FA articles only.<br/>\n";
+    $msg = "Showing FA articles only.<br/>\n";
   } elsif ( $review_filter == 4 )  {
     # FL
     $sql = " AND (rev_value = 'FL') ";
-    $msg = "<br/>Showing FL articles only.<br/>\n";
+    $msg = "Showing FL articles only.<br/>\n";
   } elsif ( $review_filter == 5 )  {
     # GA
-    $msg = "<br/>Showing GA articles only.<br/>\n";
+    $msg = "Showing GA articles only.<br/>\n";
     $sql = " AND (rev_value = 'GA') ";
   }
   return ($sql, $msg);
@@ -1238,3 +1344,22 @@ sub normalize_review_filter {
   }
   return $review_filter;
 }
+
+sub normalize_release_filter { 
+  my $release_filter = shift || 0;
+  if ( ! (    $release_filter =~ /^\d+$/ 
+           && $release_filter >= 0 
+           && $release_filter <= 1 ) ) { 
+    $release_filter = 0;
+  }
+  return $release_filter;
+}
+
+##########################################################################
+
+sub print_bignotice { 
+  print "<div class=\"bignotice\">\n";
+  print $Opts->{'list2-bignotice'};
+  print "</div>\n";
+}
+
