@@ -169,6 +169,9 @@ sub get_ratings {
 
   while ( $r = $sth->fetchrow_hashref() ) { 
     $key = substr($r->{l_timestamp}, 0, 8);
+
+   print "--\n". (Dumper($r)) . "\n";
+
     if ( ! exists $dates->{$key} ) { 
       $dates->{$key} = [];
     }
@@ -753,7 +756,7 @@ Usage:
 
 * Copy logs for a single project
 
-  $0 --project [PROJECT] [TIMESTAMP]
+  $0 [PROJECT] [TIMESTAMP]
 
 If TIMESTAMP is specified, only logs newer than that are uploaded
 

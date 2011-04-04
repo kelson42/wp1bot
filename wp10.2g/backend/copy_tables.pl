@@ -77,7 +77,11 @@ sub copy_project_tables {
   my $i = 0;
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
   print "'$project' '$filter'\n";
-    next unless ( (! defined $filter ) || ($project =~ /^\Q$filter\E.*$/));
+    if ( defined $filter ) { 
+      next unless ( ($filter eq $project) 
+                 || ($project =~ /^\Q$filter\E.*/) );
+    }
+
     $i++;
     print "\n$i / $count $project\n";
 
@@ -87,9 +91,14 @@ sub copy_project_tables {
     $wiki = munge($wiki, 'project');
 
     if ( ! defined $ENV{'DRY_RUN'}) {
-      api_edit(encode("utf8", $page), 
-               $wiki,
+      api_edit( $page,
+#               decode("utf8",$wiki),
+     $wiki,
                $summary);
+
+#      api_edit(encode("utf8", $page), 
+#               $wiki,
+#               $summary);
     }
   }
 }

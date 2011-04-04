@@ -295,7 +295,7 @@ sub custom_canada_roads_table_1 {
     'Saskatchewan' => 'Saskatchewan road transport',
     'TCH' => 'Trans-Canada Highway',
     'Yukon' => 'Yukon road transport',
-    'CRWP' => 'Canada Roads',
+    'CRWP' => 'Canada road transport',
   ];
 
   # List of projects that have a grey background for their table row
@@ -341,13 +341,13 @@ sub custom_canada_roads_table_1 {
 {|class="wikitable sortable"
 |-
 !Province
-!{{FA-Class|category=Category:FA-Class U.S. road transport articles}}
-!{{A-Class|category=Category:A-Class U.S. road transport articles}}
-!{{GA-Class|category=Category:GA-Class U.S. road transport articles}}
-!{{B-Class|category=Category:B-Class U.S. road transport articles}}
-!{{C-Class|category=Category:C-Class U.S. road transport articles}}
-!{{Start-Class|category=Category:Start-Class U.S. road transport articles}}
-!{{Stub-Class|category=Category:Stub-Class U.S. road transport articles}}
+!{{FA-Class|category=Category:FA-Class Canada road transport articles}}
+!{{A-Class|category=Category:A-Class Canada road transport articles}}
+!{{GA-Class|category=Category:GA-Class Canada road transport articles}}
+!{{B-Class|category=Category:B-Class Canada road transport articles}}
+!{{C-Class|category=Category:C-Class Canada road transport articles}}
+!{{Start-Class|category=Category:Start-Class Canada road transport articles}}
+!{{Stub-Class|category=Category:Stub-Class Canada road transport articles}}
 !&#969;
 !&#937;
 HERE
