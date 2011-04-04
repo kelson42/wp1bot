@@ -1,0 +1,3 @@
+A branch for development of code for an updated database schema.
+The new schema will use varbinary like the main enwiki database
+and will use underscore in article names. 

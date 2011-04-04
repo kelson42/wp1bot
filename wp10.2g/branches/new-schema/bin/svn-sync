@@ -1,0 +1,55 @@
+#!/usr/bin/perl
+
+use strict;
+
+chdir("/home/project/e/n/w/enwp10/subversion-new/p_enwp10");
+print "Project directory: ";
+system "pwd";
+system "/opt/ts/bin/svn up";
+
+my $l = `/opt/ts/bin/svn info`;
+#print $l;
+my @lines = split /\n/, $l;
+my ($revision, $author, $date);
+
+foreach $l ( @lines) { 
+  if ( $l =~ /Last Changed Author: (.*)/ ) {
+    $author = $1;
+  } elsif ( $l =~ /Last Changed Date: (.*)/ ) {
+    $date = $1;
+    $date =~ s/.*0000 \((.*)\)/$1/;
+  }
+  if ( $l =~ /Last Changed Rev: (.*)/ ) {
+    $revision = $1;
+  }
+}
+
+print "Revision: '$revision'\n";
+print "Author: '$author'\n";
+print "Date: '$date'\n";
+
+my $conf = "/home/project/e/n/w/enwp10/.wp10.conf";
+my $save = "/home/project/e/n/w/enwp10/.wp10.conf.save";
+
+system "cp", $conf, $save;
+
+open IN, "<", $save;
+open OUT, ">", $conf;
+
+while ( <IN> ) { 
+  if (/^\s*'version'/ ) { 
+    print OUT "'version' => 'revision $revision, updated $date by $author',\n";
+  } elsif (/^\s*'svn-author'/ ) { 
+    print OUT "'svn-author' => '$author',\n";
+  } elsif (/^\s*'svn-revision'/ ) { 
+    print OUT "'svn-revision' => '$revision',\n";
+  } elsif (/^\s*'svn-date'/ ) { 
+    print OUT "'svn-date' => '$date',\n";
+  } else { 
+    print OUT;
+  }
+}
+close OUT;
+close IN;
+
+system "diff", "-u", $save, $conf;
