@@ -201,7 +201,9 @@ a.info:hover span{ /*the span will display just on :hover state*/
     font-weight: normal;
     background-color:#cff; 
     color:#000;
-    text-align: center
+    text-align: center;
+    z-index: 2;
+    
 }
 
 td.spacer { 
@@ -371,6 +373,26 @@ div.navbox {
   line-height: 1.5em;
 }
 
+div.bignotice {
+  border: 1px solid black;
+/*  background-color: #8ABAEC; */
+/*   background-color: #CEA05E; */
+  background-color: #F9F2B0;
+  margin-top: 1em;
+  margin-bottom: 1em;
+  padding: 0px;
+  text-align:center;
+  font-size: 100%;
+  line-height: 1.5em;
+}
+
+img.bignoticeicon { 
+  float: left;
+  margin-left: 10px;
+  margin-top: 10px;
+  border: none;
+}
+
 #leftnav a { 
   text-decoration: none;
 }
@@ -521,4 +543,9 @@ p.updatewait {
 
 p.updatedone { 
  color: green;
+}
+
+
+table.manualselection td { 
+  padding-right: 0.5em;
 }
