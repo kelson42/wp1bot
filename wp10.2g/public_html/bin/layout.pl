@@ -321,7 +321,7 @@ Make the URL to link to the project table for PROJECT
 
 sub make_table_link {
   my $project = shift;
-  return $tableURL . "?project=" . uri_escape($project);
+  return $tableURL . "?project=" . uri_escape($project,  "^A-Za-z" );
 }
 
 #######################################################################
@@ -383,15 +383,15 @@ sub make_article_link {
 
   my $loguri = $logURL;
 
-  return "<a href=\"$serverURL?title=" . uri_escape($pagename)
+  return "<a href=\"$serverURL?title=" . uri_escape($pagename,  "^A-Za-z" )
        . "\">$pagename</a>"
-         . " (<a href=\"$serverURL?title=" . uri_escape($talkname)
+         . " (<a href=\"$serverURL?title=" . uri_escape($talkname, "^A-Za-z" )
          . "\">t</a>"
          . " &middot; "
-         . "<a href=\"$serverURL?title=" . uri_escape($pagename)
+         . "<a href=\"$serverURL?title=" . uri_escape($pagename,  "^A-Za-z" )
          . "&action=history\">h</a>"
          . " &middot; "
-         . "<a href=\"$logURL?pagename=" . uri_escape($a)
+         . "<a href=\"$logURL?pagename=" . uri_escape($a,  "^A-Za-z"  )
          . "&ns=" . uri_escape($ns)
          . "\">l</a>)";
 }
@@ -406,7 +406,8 @@ Make the URL to link to the revision of NS:PAGE at TIMESTAMP
 
 =item LONG
 
-If this is nonzero, the timestamp will be displayed with seconds. Otherwise, only the year, month, and day are displayed in the link text.
+If this is nonzero, the timestamp will be displayed with seconds. 
+Otherwise, only the year, month, and day are displayed in the link text.
 
 =item TALKLINK
 
@@ -436,13 +437,13 @@ sub make_history_link {
   }
 
   my $result = 
-       "<a href=\"" . $versionURL . "?article=" . uri_escape($art)
+       "<a href=\"" . $versionURL . "?article=" . uri_escape($art, "^A-Za-z" )
        . "&timestamp=" . uri_escape($ts) . "\">$d</a>&nbsp;";
 
   if ( $talktoo ) { 
     my $talk = make_talk_name($ns, $title);
     $result .=
-       "(<a href=\"" . $versionURL . "?article=" . uri_escape($talk)
+       "(<a href=\"" . $versionURL . "?article=" . uri_escape($talk, "^A-Za-z" )
        . "&timestamp=" . uri_escape($ts) . "\">t</a>)&nbsp;";
   }
 
@@ -511,6 +512,43 @@ sub init_namespaces {
 
 ###########################################################################
 
+=item B<get_cached_link_from_api>(CLASS)
+
+Returns the formatted HTML for a CLASS-Class table cell
+
+=cut
+
+sub get_cached_link_from_api { 
+  my $text = shift;
+
+  if ( defined $cacheMem->{$text} ) { 
+    print "<!-- hit $text in memory cache -->\n";
+    return $cacheMem->{$text};
+  }
+
+  my $key = "LINK:" . substr($text, 0, 200);
+  my ($data, $expiry);
+
+  if ( $expiry = cache_exists($key) ) { 
+     print "<!-- hit $key in database cache, expires " 
+           . strftime("%Y-%m-%dT%H:%M:%SZ", gmtime($expiry))
+           . " -->\n";
+    $data = cache_get($key);
+    $cacheMem->{$text} = $data;
+    return $data;
+  }
+
+  $data = get_link_from_api($text);
+
+  cache_set($key, $data, 12*60*60); # expires in 12 hours
+  $cacheMem->{$text} = $data;
+  return $data;
+}
+
+
+
+###########################################################################
+
 =item B<get_link_from_api>(TEXT)
 
 Parses TEXT using the API and returns the parsed HTML.
@@ -519,6 +557,22 @@ Parses TEXT using the API and returns the parsed HTML.
 
 sub get_link_from_api {
   my $text = shift;
+  my ($target, $desc);
+
+  $text =~ s/^\[\[//;
+  $text =~ s/]]$//;
+
+  if ( $text =~ /\|/ ) { 
+    ($target, $desc) = split /\|/, $text, 2;
+  } else { 
+    $target = $text;
+    $desc = $text; 
+  }
+
+  return "<a href=\"" . $serverURL . "?title=" 
+         . uri_escape($target,  "^A-Za-z" ) . "\">" . $desc . "</a>";
+
+  # Previously, this was taken from the API. I'm not sure why anymore.
 
   my $r =  $api->parse($text);
   my $t = $r->{'text'}->{'content'};
@@ -600,6 +654,8 @@ sub get_cached_td_background {
 
 sub get_td_background { 
   my $class = shift;
+#  return "<td>$class</td>";  # to disable api parsing
+
   my $r =  $api->parse('{{' . $class . '}}');
   my $t = $r->{'text'}->{'content'};
 
@@ -668,6 +724,8 @@ sub get_cached_wiki_page {
 
 sub get_wiki_page { 
   my $page = shift;
+#  return $page;  # To disable API parsing
+
   my $r =  $api->parse('{{' . $page . '}}');
   my $t = $r->{'text'}->{'content'};
   return $t;
@@ -716,6 +774,8 @@ sub get_cached_review_icon {
 
 sub get_review_icon { 
   my $class = shift;
+#  return "<td> $class</td>";  # To disable API parsing
+
   my $r =  $api->parse('{{' . $class . '-Class}}');
   my $t = $r->{'text'}->{'content'};
   my $f =  $api->parse('{{' . $class . '-classicon}}');
@@ -775,6 +835,33 @@ Returns formatted HTML for a table cell for REVIEWCLASS
 sub make_review_link { 
   my $type = shift;
   return get_cached_td_background($type . "-Class") ;
+}
+
+###########################################################################
+
+=item B<make_workingselection_html>(SELECTED) 
+
+Returns HTML to tag whether an article is part of a pending selection.
+SELECTED is either 0 (not selected) or 1 (selected).
+
+=cut
+
+sub make_workingselection_html { 
+
+  my $sel = shift;
+  my $title = shift || "Default";
+  if ( defined($sel) ) { 
+    if ( $sel == 0 ) { 
+      return "&nbsp;&diams;";
+    }  else { 
+    return '&nbsp;<a href="' . $serverURL 
+                              . '?title=' . $title 
+                              . '&oldid=' . $sel 
+                              . '">&diams;</a>';
+    }
+  } else { 
+    return "";
+  }
 }
 
 ###########################################################################
