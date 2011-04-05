@@ -15,6 +15,8 @@ Routines for the CGI programs to connect to the database
 use Data::Dumper;
 use Encode;
 
+my $TablePrefix;
+
 #####################################################################
 
 =item B<db_connect>(OPTS)
@@ -26,6 +28,9 @@ Connect to the database using the readonly credentials
 sub db_connect {
 
   my $opts = shift;
+
+  $TablePrefix = $opts->{'database_table_prefix'};
+
 
   die "No database given in database conf file\n"
     unless ( defined $opts->{'database'} );
@@ -94,6 +99,10 @@ sub db_connect_rw {
   die "No database given in database conf file\n"
     unless ( defined $opts->{'database'} );
 
+
+  $TablePrefix = $opts->{'database_table_prefix'};
+
+
   my $connect = "DBI:mysql"
            . ":database=" . $opts->{'database'};
 
@@ -129,7 +138,8 @@ Return data from the I<projects> table for PROJECT
 sub get_project_data {
   my $project = shift;
   
-  my $sth = $dbh->prepare ("SELECT * FROM projects WHERE p_project = ?"); 
+  my $sth = $dbh->prepare ("SELECT * FROM " . db_table_prefix()
+                           . "projects WHERE p_project = ?"); 
   $sth->execute($project);
   
   my @row;
@@ -157,7 +167,7 @@ Returns hash ref indexed by project name.
 =cut
 
 sub db_get_project_details { 
-  my $sth = $dbh->prepare("SELECT * FROM projects;");
+  my $sth = $dbh->prepare("SELECT * FROM " . db_table_prefix() . "projects;");
   $sth->execute();
   return $sth->fetchall_hashref('p_project');
 }
@@ -179,9 +189,10 @@ sub db_get_move_target{
   my $timestamp = shift;
 
   my $sth = $dbh->prepare("SELECT m_new_namespace, m_new_article " .
-                          "FROM moves WHERE m_timestamp = ? " . 
-                          "and m_old_namespace = ? " .
-                          "and m_old_article = ? ");
+                          "FROM " . db_table_prefix()
+                          . "moves WHERE m_timestamp = ? " 
+                          . "and m_old_namespace = ? " 
+                          . "and m_old_article = ? ");
 
   my $r = $sth->execute($timestamp, $old_ns, $old_art);
 
@@ -202,7 +213,8 @@ Return a hash reference that maps NAMESPACE_NUMBER => NAMESPACE_TITLE
 
 sub db_get_namespaces {
   my $sth = $dbh->prepare("SELECT ns_id, ns_name " 
-                        . "FROM toolserver.namespace where dbname = ?");
+                        . "FROM toolserver.namespacename " 
+                        . " where ns_type = 'primary' and dbname = ?");
   $sth->execute('enwiki_p');
 
   my $input = $sth->fetchall_hashref('ns_id');
@@ -215,6 +227,12 @@ sub db_get_namespaces {
 }
 
 ###########################################################
+
+sub db_table_prefix { 
+
+  return $TablePrefix;
+
+}
 
 # Load successfully
 1;

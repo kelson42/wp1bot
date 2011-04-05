@@ -74,10 +74,15 @@ sub main_loop {
   my $logFile = "log." . time() . "." . $$;
   my $logEntry = $logFile;
 
-  foreach $p ( keys %param ) { 
-    $param{$p} =~ s/^\s*//;
-    $param{$p} =~ s/\s*$//;
-    $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+  my $val;
+  if ( %param ) { 
+    foreach $p ( keys %param ) { 
+      next unless ( defined $param{$p} );
+
+      $param{$p} =~ s/^\s*//;
+      $param{$p} =~ s/\s*$//;
+      $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+    }
   }
 
   if ( defined $Opts->{'log-dir'} 
@@ -150,13 +155,12 @@ sub log_table {
    my @qparam;
    my @qparamc;
   
-   my $queryc = 'SELECT count(l_article) FROM logging ';
+   my $queryc = "SELECT count(l_article) FROM " . db_table_prefix() 
+               . "logging ";
 
-   my $query = << "HERE";
- SELECT l_project, l_article, l_action, l_timestamp, 
+   my $query = "SELECT l_project, l_article, l_action, l_timestamp, 
         l_old, l_new, l_revision_timestamp, l_namespace
- FROM logging
-HERE
+        FROM " . db_table_prefix() . "logging";
     
    $query .= " WHERE ";
    $queryc .= " WHERE ";
@@ -338,6 +342,9 @@ HERE
   while ( @row = $sth->fetchrow_array ) {
     $i++;  
     print "<!-- $i -->\n";
+
+    $row[1] =~ s/_/ /g;
+  
 
     if ( $row[2] eq 'moved' ) { 
 
@@ -527,9 +534,10 @@ sub get_previous_name {
 
   return unless ( defined $ns && defined $title);
 
-  my $sth = $dbh->prepare('select m_timestamp, m_old_namespace, m_old_article
-                           from moves where m_new_namespace = ? 
-                                        and m_new_article = ?');
+  my $sth = $dbh->prepare("select m_timestamp, m_old_namespace, m_old_article
+                           from " . db_table_prefix() 
+                           . "moves where m_new_namespace = ? 
+                                        and m_new_article = ?");
 
   my $r = $sth->execute($ns, $title);
 
@@ -544,6 +552,7 @@ HERE
 
     my @row;
     while ( @row = $sth->fetchrow_array ) { 
+      $row[2] =~ s/_/ /g;
       print "<tr>\n";
       print "  <td>" . make_article_link($row[1], $row[2]) . "</td>\n";
       print "  <td>$row[0]</td>\n";

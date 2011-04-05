@@ -171,9 +171,10 @@ HERE
     return;
   }
 
-  my $sthart = $dbh->prepare("INSERT INTO manualselection VALUES (?,?,?,?) ");
-  my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
-                                VALUES (?,?,?,?,?,?)");
+  my $sthart = $dbh->prepare("INSERT INTO " .
+                db_table_prefix() . "manualselection VALUES (?,?,?,?) ");
+  my $sthlog = $dbh->prepare("INSERT INTO " . 
+                db_table_prefix() . "manualselectionlog VALUES (?,?,?,?,?,?)");
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
 
   my ($art, $type, $reason, $result, $revid, $r1, $r2);
@@ -197,6 +198,7 @@ HERE
     $art = $params->{"addart$i"};
     $art =~ s/^\s*//;
     $art =~ s/\s*$//;
+    $art =~ s/ /_/g;
     next if ( $art eq '');
 
     $type = $params->{"addtype$i"};
@@ -259,9 +261,11 @@ HERE
     return;
   } 
 
-  my $sthart = $dbh->prepare("DELETE FROM manualselection 
+  my $sthart = $dbh->prepare("DELETE FROM " 
+                           . db_table_prefix() . "manualselection 
                               WHERE ms_article = ?");
-  my $sthlog = $dbh->prepare("INSERT INTO manualselectionlog
+  my $sthlog = $dbh->prepare("INSERT INTO " 
+                           . db_table_prefix () . "manualselectionlog
                                 VALUES (?,?,?,?,?,?)");
 
   my $timestamp = strftime("%Y%m%d%H%M%S", gmtime(time()));
@@ -282,6 +286,7 @@ HERE
 
     next unless ( $p =~ /^key:(.*)$/);
     $art = uri_unescape($1);
+    $art =~ s/ /_/g;
     $reason = $params->{"reason:$1"};
     $type = $params->{"type:$1"};
 
@@ -406,10 +411,13 @@ sub do_list {
   my $farticle = $params->{'farticle'} || "";  
   $farticle =~ s/^\s*//;
   $farticle =~ s/\s*$//;
+  
 
-  my $artenc = uri_escape($farticle);
+  my $artenc = $farticle;
+  $artenc =~ s/ /_/g;
+  $artenc = uri_escape($artenc);
 
-  my $ftype = $params->{'ftype'};
+  my $ftype = $params->{'ftype'} || "";
 
   my $select = '<select name="ftype">' . "\n";
   $select .= "<option value=\"\">Any</option>\n";
@@ -438,7 +446,8 @@ HERE
 
   my @qparams;
   
-  my $query = "select * from manualselection where ";
+  my $query = "select * from " . db_table_prefix() 
+                  . "manualselection where ";
 
   if ( 0 < length $farticle ) { 
     $query .= " ms_article regexp ?";
@@ -458,9 +467,9 @@ HERE
   push @qparams, $pagesize;
   push @qparams, $offset;
 
-#  print "Q: '$query'\n";
-
   my $sth = $dbh->prepare($query);
+
+#  print "<pre> $query </pre><br/>\n";
 
   my $count = $sth->execute(@qparams);
 
@@ -519,6 +528,7 @@ HERE
   my @row;
 
   while ( @row = $sth->fetchrow_array() ) { 
+    $row[0] =~ s/_/ /g;
     my $link = make_article_link(0, $row[0]);
     my $type = $row[1];
     my $ts = fix_timestamp($row[2]);
@@ -562,7 +572,9 @@ sub do_log {
   $farticle =~ s/^\s*//;
   $farticle =~ s/\s*$//;
 
-  my $artenc = uri_escape($farticle);
+  my $artenc = $farticle;
+  $artenc =~ s/ /_/g;
+  $artenc = uri_escape($artenc);
   my $userenc = uri_escape($fuser);
 
 print << "HERE";
@@ -581,7 +593,7 @@ print << "HERE";
 HERE
 
   my @qparams;  
-  my $query = "select * from manualselectionlog";
+  my $query = "select * from " . db_table_prefix() . "manualselectionlog";
 
   if ( 0 < length $fuser ) { 
     $query .= " where ms_user regexp ? ";
@@ -641,6 +653,7 @@ HERE
   my @row;
 
   while ( @row = $sth->fetchrow_array() ) { 
+    $row[0] =~ s/_/ /g;
     my $link = make_article_link(0, $row[0]);
     my $type = $row[1];
     my $ts = fix_timestamp($row[2]);
@@ -773,21 +786,27 @@ HERE
 sub sync_workingselection {
   print "<p>Sync database<br/>\n";
   
-
-  my $q = $dbh->prepare("insert into workingselection select as_article,as_revid from automatedselection
-                            on duplicate key update ws_revid = as_revid");
+  my $q = $dbh->prepare("insert into " . db_table_prefix() 
+               . "workingselection select as_article,as_revid from "
+               . db_table_prefix() 
+               . "automatedselection on duplicate key update ws_revid = as_revid");
   $_ = $q->execute();
   print "Stage 1: $_<br/>\n";  
 
-  my $q = $dbh->prepare("insert into workingselection select ms_article, ms_revid 
-                            from manualselection where ms_type = 'release'
+  my $q = $dbh->prepare("insert into " 
+          . db_table_prefix() . "workingselection select ms_article, 
+                                   ms_revid from "
+           . db_table_prefix() . "manualselection where ms_type = 'release'
                           on duplicate key update ws_revid = if(isnull(ms_revid), ws_revid, ms_revid)");
   $_ = $q->execute();
   print "Stage 2: $_<br/>\n";
 
 
-  $q = $dbh->prepare("delete from workingselection 
-                       where exists (select 1 from manualselection where ms_article = ws_article and ms_type = 'norelease')");
+  $q = $dbh->prepare("delete from " . db_table_prefix() 
+                   . "workingselection 
+                       where exists (select 1 from " 
+                   . db_table_prefix() . "manualselection 
+            where ms_article = ws_article and ms_type = 'norelease')");
   $_ = $q->execute();
 
   $_ = $q->execute();

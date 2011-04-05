@@ -54,6 +54,8 @@ sub main_loop {
 
   my %param = %{$cgi->Vars()};
 
+  if ( ! defined $param{'limit'} ) { $param{'limit'} = 250; } 
+
   if ( $param{'limit'} > 1000 ) { 
     $param{'limit'} = 1000;
   }
@@ -108,6 +110,8 @@ sub ratings_table {
   my $params = shift;
   my $projects = shift;
 
+
+
   my $p;
   foreach $p ( ( 'importance', 'importanceb', 'quality', 'qualityb' ) ) { 
     if ( (defined $params->{$p}) 
@@ -134,18 +138,23 @@ sub ratings_table {
   my @qparam;
   my @qparamc;
 
-  $queryc = "SELECT count(r_article) FROM ratings as ra";
-  $queryc .= " \n   LEFT JOIN reviews ON r_namespace = 0 
+  $queryc = "SELECT count(r_article) FROM " . db_table_prefix() 
+           . "ratings as ra";
+  $queryc .= " \n   LEFT JOIN " . db_table_prefix() 
+                  . "reviews ON r_namespace = 0 
                          AND r_article = rev_article ";
   $queryc .= "  RELEASE-MARKER  ";
 
   $query = << "HERE";
-SELECT /* LIMIT:15 */ r_project, r_namespace, r_article, r_importance, 
+SELECT /* LIMIT:15 */ r_project, r_namespace, 
+       r_article, r_importance, 
        r_importance_timestamp, r_quality, 
        r_quality_timestamp, rel_0p5_category, 
        rev_value, ISNULL(rel_0p5_category) as null_rel,
        ISNULL(rev_value) as null_rev, r_score, ws_revid as wsel
 HERE
+
+
 
 my $show_external = ($params->{'showExternal'} eq "on");
 
@@ -153,26 +162,24 @@ if ( $show_external ) {
   $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount, sd_external \n";
 }
 
-  $query .= << "HERE";
-   FROM ratings as ra
-HERE
+  $query .= "FROM " . db_table_prefix() . "ratings as ra ";
 
   if ( $show_external ) { 
-    $query .= << "HERE";
-   LEFT JOIN selection_data ON r_namespace = 0 AND r_article = sd_article
-HERE
+    $query .="LEFT JOIN " . db_table_prefix() 
+            . "selection_data ON r_namespace = 0 AND r_article = sd_article ";
+
   }
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
   $query .= sort_sql($sort, "a", "") . " " . sort_sql($sortb, "b", "") ." ";
 
-  $query .= " LEFT JOIN releases ON r_namespace = 0 
+  $query .= " LEFT JOIN " . db_table_prefix() . "releases ON r_namespace = 0 
                      AND r_article = rel_article ";
-  $query .= " \n   LEFT JOIN reviews ON r_namespace = 0 
+  $query .= " \n   LEFT JOIN " . db_table_prefix() . "reviews ON r_namespace = 0 
                       AND r_article = rev_article ";
 
-  $query .= " \n LEFT JOIN workingselection ON  r_namespace = 0
+  $query .= " \n LEFT JOIN " . db_table_prefix() . "workingselection ON  r_namespace = 0
                        AND ws_article = r_article ";
 
   my $acategory;
@@ -183,12 +190,13 @@ HERE
   if ( $filter_cats eq 'on' ) { 
     $filter_cats = 1;
 
-    if ( ! ( defined $params->{'projecta'} && $params->{'projecta'} =~ /\w|\d/ ) ) { 
-      $filter_cats = -3;
-    }
-    if ( ! ( defined $params->{'namespace'} && $params->{'namespace'} =~ /^\d+$/ ) ) { 
-      $filter_cats = -4;
-    }
+#    if ( ! ( defined $params->{'projecta'} && $params->{'projecta'} =~ /\w|\d/ ) ) { 
+#      $filter_cats = -3;
+#    }
+#    if ( ! ( defined $params->{'namespace'} && $params->{'namespace'} =~ /^\d+$/ ) ) { 
+#      $filter_cats = -4;
+#    }
+
   }
 
   if ( $filter_cats > 0) { 
@@ -199,14 +207,14 @@ HERE
   if ( ! $acategory =~ /\w|\d/ ) { $acategory = undef; }
   if ( ! $tcategory =~ /\w|\d/ ) { $tcategory = undef; }
 
+
   my $aquery;
 
   if ( defined $acategory) { 
      $acategory =~ s/ /_/g;
 
      $aquery = "\n join enwiki_p.page as apage on r_namespace = apage.page_namespace 
-                   and cast(replace(r_article, ' ', '_') as char character set latin1) 
-                             = apage.page_title
+                   and r_article  = apage.page_title
                    join enwiki_p.categorylinks as acat on apage.page_id = acat.cl_from ";
 
      $queryc .= $aquery;
@@ -216,8 +224,7 @@ HERE
   if ( defined $tcategory ) { 
      $tcategory =~ s/ /_/g;
      $aquery  = "\n join enwiki_p.page as tpage on (1+r_namespace) = tpage.page_namespace 
-                   and cast(replace(r_article, ' ', '_') as char character set latin1) 
-                             = tpage.page_title
+                   and r_article = tpage.page_title
                    join enwiki_p.categorylinks as tcat on tpage.page_id = tcat.cl_from ";
 
      $queryc .= $aquery;
@@ -243,6 +250,8 @@ HERE
       return;
     }
   }
+
+
 
   my $quality = $params->{'quality'};
 
@@ -484,6 +493,8 @@ HERE
   while ( @row = $sth->fetchrow_array ) {
     $i++;
 
+    $row[2] =~ s/_/ /g;
+
     if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
     else { $evenodd = "list-odd"; }    
 
@@ -600,10 +611,12 @@ sub ratings_table_intersect {
 
   my $query;
   my $queryc = "SELECT count(ra.r_article) 
-                FROM ratings as ra 
-                JOIN ratings as rb on rb.r_article = ra.r_article
+                FROM " . db_table_prefix() . "ratings as ra 
+                JOIN " . db_table_prefix() . "ratings as rb 
+                    on rb.r_article = ra.r_article
                               AND ra.r_namespace = rb.r_namespace
-                LEFT JOIN workingselection ON  ra.r_namespace = 0
+                LEFT JOIN " . db_table_prefix() . "workingselection 
+                            ON  ra.r_namespace = 0
                               AND ws_article = ra.r_article 
                 WHERE ra.r_project = ? AND rb.r_project = ?";
 
@@ -622,32 +635,30 @@ HERE
     $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount, sd_external \n";
   }
 
-  $query .= << "HERE";
-  FROM ratings as ra
-HERE
+  $query .  "FROM " . db_table_prefix() . "ratings as ra ";
+
 
   if ( $show_external ) {
     $query .= << "HERE";
-   LEFT JOIN selection_data ON ra.r_namespace = 0 AND ra.r_article = sd_article
+   LEFT JOIN " . db_table_prefix() . "selection_data 
+          ON ra.r_namespace = 0 AND ra.r_article = sd_article
 HERE
   }
   
-$query .= << "HERE";
-  JOIN ratings as rb ON rb.r_article = ra.r_article 
-                    AND ra.r_namespace = rb.r_namespace  
-HERE
+  $query . " JOIN " . db_table_prefix() . "ratings as rb ON rb.r_article = ra.r_article 
+                      AND ra.r_namespace = rb.r_namespace ";
 
   my $sort = $params->{'sorta'};
   my $sortb = $params->{'sortb'};
   $query .= sort_sql($sort, "a", "ra") . " " 
       . sort_sql($sortb, "b", "ra") ." ";
 
-  $query .= " LEFT JOIN releases ON ra.r_namespace = 0 
+  $query .= " LEFT JOIN " . db_table_prefix() . "releases ON ra.r_namespace = 0 
                   AND ra.r_article = rel_article ";
-  $query .= " \n   LEFT JOIN reviews ON ra.r_namespace = 0 
+  $query .= " \n   LEFT JOIN " . db_table_prefix() . "reviews ON ra.r_namespace = 0 
                      AND ra.r_article = rev_article ";
 
-  $query .= " \n LEFT JOIN workingselection ON  ra.r_namespace = 0
+  $query .= " \n LEFT JOIN " . db_table_prefix() . "workingselection ON  ra.r_namespace = 0
                        AND ws_article = ra.r_article ";
 
   $query .= " \nWHERE ra.r_project = ? AND rb.r_project = ?";
@@ -661,6 +672,7 @@ HERE
     push @qparam, $quality;
     push @qparamc, $quality;
   }
+
 
   if ( defined $qualityb && $qualityb =~ /\w|\d/) {
     $query .= " AND rb.r_quality = ?";
@@ -1093,13 +1105,7 @@ Release status $release_html<br/>
   <b>Filter by category</b>
   <div rel="category">
   Article category: <input type="text" value="$category" name="category"/><br/>
-  Talk page category: <input type="text" value="$tcategory" name="categoryt"/><br/>
-  <div class="note">Note: Filtering by category is slow and may cause the query to abort before it completes. If possible, specify a particular 
-   project and namespace in the <b>First project</b> area. Enabling the following option may also help a slow query to complete. 
-</div>
-    <input type="checkbox" name="disableCount" $disable_count_checked>
-Don't try to compute an overall count</input><br/>
-
+  Talk category: <input type="text" value="$tcategory" name="categoryt"/><br/>
   </div>
 </fieldset>
 
@@ -1153,6 +1159,7 @@ sub sort_orders {
             'Importance' => 'r_importance',
             'Review status' => 'rev_value',
             'Score' => 'r_score',
+            'Article title' => 'r_namespace asc, r_article asc'
           };
 }
 
@@ -1178,18 +1185,20 @@ sub sort_key {
     $query .= " null_rev ASC, rev_value";
   } elsif ( $sort eq 'Score' )  { 
     $query .= ' ra.r_score';
+  } elsif ( $sort eq 'Article title' ) { 
+    $query .= ' ra.r_namespace asc, ra.r_article ';
   } else {
     $query .= " " . $prefix . "r_project";
   }
 
   if ( $sort =~ /reverse/ ) { 
-    if ( $sort =~ /Project/ ) { 
+    if ( ($sort =~ /Project/) || ($sort eq 'Article title') || ($sort =~ /Review/) ) { 
       $query .= ' DESC';
     } else {
       # no
     }
   } else {
-    if ( ($sort =~ /Project/) || ($sort =~ /Review/)) { 
+    if ( ($sort =~ /Project/) || ($sort =~ /Review/) || ($sort eq 'Article title') ) { 
       #no
     } else {
       $query .= ' DESC';
@@ -1213,15 +1222,15 @@ sub sort_sql {
   my $query = "";
   if ( $sort eq 'Project' || $sort eq 'Project (reverse)' 
        || $sort eq 'Release status' || $sort eq 'Review status'
-       || $sort eq 'Score'  ) { 
+       || $sort eq 'Score'  || $sort eq 'Article title') { 
     # No additional SQL needed
   } elsif ( $sort eq 'Importance' || $sort eq 'Importance (reverse)' ) { 
-    $query .=   "   JOIN categories AS c$which
+    $query .=   "   JOIN " . db_table_prefix() . "categories AS c$which
                      ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'importance'
                      AND c$which.c_rating = " . $ratings ."r_importance\n ";
   } elsif ( $sort eq 'Quality' || $sort eq 'Quality (reverse)' ) { 
-    $query .=   " JOIN categories AS c$which
+    $query .=   " JOIN " . db_table_prefix() . "categories AS c$which
                      ON " . $ratings . "r_project = c$which.c_project
                      AND c$which.c_type = 'quality'
                      AND c$which.c_rating = " . $ratings . "r_quality\n ";
@@ -1287,7 +1296,7 @@ sub release_sql {
   if ($release_filter == 1 ) { 
     $msg = "<i>Showing only articles in the 0.8 provisional selection</i><br/>\n";
     $sql = " and not isnull(ws_article)";
-    $join= " \n LEFT JOIN workingselection ON  r_namespace = 0
+    $join= " \n LEFT JOIN " . db_table_prefix(). "workingselection ON  r_namespace = 0
                        AND ws_article = r_article ";
 
   } else {
