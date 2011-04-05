@@ -30,6 +30,15 @@ my $namespaces;
 
 my $use_toolserver = get_conf('use_toolserver');
 
+if ( ! $use_toolserver ) { 
+  die "I don't like it\n";
+  # I don't know whether the non-toolserver code (i.e. the API-only code)
+  # will work at all. I am intentionally disabling it. If you want to try
+  # to use it, expect to do some debugging. 
+  # CBM 2011-4-4
+}
+
+
 #####################################################################
 
 =item B<init_api>()
@@ -130,7 +139,7 @@ The output format is
 
 CATEGORY _must_ be UTF-8 encoded. 
 
-The NS parmater, optional, is a numeric namespace for 
+The NS parameter, optional, is a numeric namespace for 
 filtering the results.
 
 The page titles in the resulting array _do_not_ have the namespace

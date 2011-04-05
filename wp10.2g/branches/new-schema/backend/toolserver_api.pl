@@ -29,6 +29,8 @@ my  $PrefixRev;
 
 my $dbh = toolserver_connect($Opts);
 
+my $RemoveUnderscores = 0;
+
 #####################################################################
 
 =item B<toolserver_connect>( )
@@ -116,7 +118,7 @@ sub get_prefixes {
   'AutoCommit' => 0} )
   or die "Couldn't connect to database: " . DBI->errstr;
   
-  my $query = "SELECT ns_id, ns_name FROM namespace WHERE dbname = ?";
+  my $query = "SELECT ns_id, ns_name FROM namespacename WHERE ns_type = 'primary' and dbname = ?";
   
   my $sth = $dbt->prepare($query);
   my $c = $sth->execute($db);
@@ -144,7 +146,7 @@ sub get_prefixes {
   The NS parmater, optional, is a numeric namespace for 
   filtering the results.
   
-  The pages in the rsulting array _do_ have the namespace
+  The pages in the resulting array _do_ have the namespace
   prefix attached (for example C<Talk:Foo> and C<Wikipedia:Bar>)
   
   The titles returned are UTF-8 encoded
@@ -178,7 +180,9 @@ sub toolserver_pages_in_category {
   while (@row = $sth->fetchrow_array) { 
     $title = $Prefix->{$row[0]} . $row[1];
     #    $title = decode("utf8", $title);
-    $title =~ s/_/ /g;
+    if ( $RemoveUnderscores ) { 
+      $title =~ s/_/ /g;
+    }
     push @results, $title;
   }                             
   
@@ -251,7 +255,9 @@ sub toolserver_pages_in_category_detailed {
     #      $title = decode("utf8", $title);
     
     $title = $row[1];
-    $title =~ s/_/ /g;
+    if ( $RemoveUnderscores ) { 
+      $title =~ s/_/ /g;
+    }
     $data->{'title'} = $title;
     
     $data->{'pageid'} = $row[2];
@@ -282,7 +288,9 @@ sub toolserver_resolve_redirect {
   my $ns = shift;
   my $title = shift;
 
-  $title =~ s/ /_/g;
+  if ( $RemoveUnderscores ) { 
+    $title =~ s/ /_/g;
+  }
 
   my $query = "select rd_namespace, rd_title, page_touched from page 
                join redirect on page_id = rd_from 
@@ -293,7 +301,9 @@ sub toolserver_resolve_redirect {
 
   if ( $r == 1) { 
     my @row = $sth->fetchrow_array();
-    $row[1] =~ s/_/ /g;
+    if ( $RemoveUnderscores ) { 
+      $row[1] =~ s/_/ /g;
+    }
     return $row[0], $row[1], fix_timestamp($row[2]);
   }
   
@@ -313,8 +323,9 @@ sub toolserver_get_move_log {
   my $ns = shift;
   my $title = shift;
 
-  $title =~ s/ /_/g;
-
+  if ( $RemoveUnderscores ) { 
+    $title =~ s/ /_/g;
+  }
 
   my $query = "select log_id, log_type, log_action, log_timestamp, 
                   user_name, log_namespace, log_title, log_comment, log_params 
@@ -334,9 +345,12 @@ print "back from query\n";
   my @row;
 
   while ( @row = $sth->fetchrow_array() ) { 
-    $row[4] =~ s/_/ /g;
-    $row[6] =~ s/_/ /g;
-    $row[7] =~ s/_/ /g;
+
+    if ( $RemoveUnderscores ) { 
+      $row[4] =~ s/_/ /g;
+      $row[6] =~ s/_/ /g;
+      $row[7] =~ s/_/ /g;
+    }
 
     $data = {};
     $data->{'logid'} = $row[0];

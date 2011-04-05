@@ -69,7 +69,8 @@ sub insert_from_stdin {
 
     chomp $line;
     @parts = split / /, $line, 4;
-    $parts[0] =~ s/_/ /g;
+
+#    $parts[0] =~ s/_/ /g;
 
 
     $ll = $parts[1];

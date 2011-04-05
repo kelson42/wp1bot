@@ -77,7 +77,7 @@ sub insert_from_file {
     $project = shift @parts;
    
     while ( $article = shift @parts ) { 
-      $article =~ s/_/ /g;
+#      $article =~ s/_/ /g;
       $sthdata->execute($article);
       $n = @data = $sthdata->fetchrow_array();
       print "ART $article " . (join " ", @data) . "\n";
