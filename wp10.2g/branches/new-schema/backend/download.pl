@@ -141,6 +141,7 @@ sub parse_argv {
 
   my $ts;
 
+print "Mode: '$mode'\n";
   if ( $mode eq 'all' ) {
     foreach $project ( @$project_list ) {
       if ( exists $opts->{'includes'} ) {

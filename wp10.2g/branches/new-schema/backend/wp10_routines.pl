@@ -45,6 +45,11 @@ my $By_quality = get_conf('by_quality');
 my $By_importance = get_conf('by_importance');
 my $By_importance_alt = get_conf(by_importance_alt);
 
+# XXX remove these after new schema is in place
+$By_quality =~ s/ /_/g;
+$By_importance =~ s/ /_/g;
+$By_importance_alt =~ s/ /_/g;
+
 my $Lang = get_conf('language');
 my $Root_category = get_conf('root_cat');
 
@@ -86,7 +91,7 @@ sub download_project_list {
               && $cat =~ /\Q$Category\E:Articles \Q$By_quality\E/); 
 
     $cat =~ s/^\Q$Category\E://;
-    $cat =~ s/ \Q$Articles\E \Q$By_quality\E//;
+    $cat =~ s/_\Q$Articles\E_\Q$By_quality\E//;
 
     push @$projects, $cat;
   }
@@ -227,13 +232,15 @@ sub get_project_quality_categories {
 
   # This line may need to be modified, depending on the naming convention
   # adopted by a particular wiki
-  my $cat = "$Category:$project $Articles $By_quality";
+  my $cat = $Category . ":" . $project . "_" . $Articles. "_" . $By_quality;
 
   my $cats = pages_in_category($cat, $categoryNS);
   my $value;
   my $replaces;
 
   print "$project $Articles\n";
+
+print Dumper(%Quality);
 
   foreach $cat ( @$cats ) { 
     print "SCAN '$cat'\n";
@@ -244,15 +251,17 @@ sub get_project_quality_categories {
       $value = $extra->{$cat}->{'ranking'}; 
       $replaces = $extra->{$cat}->{'replaces'};
       print "\tCat (1) $qual $value $cat (extra)\n";
-    } elsif ( $cat =~ /\Q$Category\E:(\w+)[\- ]/ ) {
+    } elsif ( $cat =~ /([A-Za-z]+)[\- _]/ ) {
       $qual=$1 . '-' . $Class; # e.g., FA-Class
+print " quall '$qual'\n";
+
       next unless (defined $Quality{$qual});
       $qcats->{$qual} = $cat;
       $value = $Quality{$qual};
       $replaces = $qual;
       print "\tCat (2) $qual $value $cat \n";
     } else {
-      print "\tSkip '$cat'\n";
+      print "\tSkip qual '$cat'\n";
       next;
     }
 
@@ -284,7 +293,8 @@ sub get_project_importance_categories {
 
   print "--- Get project categories for $project by importance\n";
 
-  my $cat = "$Category:$project $Articles $By_importance";
+  my $cat = $Category . ":" . $project. "_" . $Articles. "_" . $By_importance;
+
   my $cats = pages_in_category($cat, $categoryNS);
   my $value;
 
@@ -292,7 +302,7 @@ sub get_project_importance_categories {
   # 'by priority', so we need to check there
   if ( 0 == scalar @$cats ) { 
     print "Fall back to 'priority' naming\n";
-    $cat = "$Category:$project $Articles $By_importance_alt";
+    $cat = $Category .":" . $project. "_" . $Articles. "_" . $By_importance_alt;
     $cats = pages_in_category($cat, $categoryNS);
   }
 
@@ -302,14 +312,14 @@ sub get_project_importance_categories {
       $icats->{$imp} = $cat;
       $value = $extra->{$cat}->{'ranking'};
       print "\tCat $imp $value $cat (extra)\n";
-    } elsif ($cat =~ /\Q$Category\E:(\w+)[\- ]/) { 
+    } elsif ($cat =~ /([A-Za-z]+)[\- _]/) { 
       $imp=$1 . '-' . $Class; # e.g., Top-Class
       next unless (defined $Importance{$imp});
       $icats->{$imp} = $cat;
       $value = $Importance{$imp};
       print "\tCat $imp $value $cat \n";
     } else {
-      print "Skip '$cat'\n";
+      print "Skip imp '$cat'\n";
       next;
     }
     update_category_data($project, $imp, 'importance', $cat, $value);
@@ -372,6 +382,10 @@ sub download_project_assessments {
        $d->{'ns'}--;  # Talk pages are tagged, 
                       # we want the NS of the article itself
        next unless (acceptable_namespace($d->{'ns'}));
+
+if ( $d->{'title'} =~ /incompleteness/ ) { 
+  print "SEE: " . $d->{'title'} . "\n";
+}
 
        $art = $d->{'ns'} . ":" . $d->{'title'};
        $seen->{$art} = 1;
@@ -467,7 +481,7 @@ category page for PROJECT
 sub get_extra_assessments { 
   my $project = shift;
 
-  my $cat = "$Category:$project $Articles $By_quality";
+  my $cat = $Category. ":" . $project . "_" . $Articles . "_" . $By_quality;
   my $txt = content_section($cat, 0);
 
   print "See '$txt'\n";
@@ -558,10 +572,14 @@ sub get_extra_assessments {
     next unless ( $extras->{$num}->{'type'} eq 'quality'
                  || $extras->{$num}->{'type'} eq 'importance' );
 
-    if ( ! ( $extras->{$num}->{'category'} =~ /^Category:/ ) ) { 
-      $extras->{$num}->{'category'} = "Category:" .  
-                                       $extras->{$num}->{'category'};
-    }
+#    if ( ! ( $extras->{$num}->{'category'} =~ /^Category:/ ) ) { 
+#      $extras->{$num}->{'category'} = "Category:" .  
+#                                       $extras->{$num}->{'category'};
+#    }
+
+   $extras->{$num}->{'category'} =~ s/^Category://;
+
+   $extras->{$num}->{'category'} =~ s/ /_/g;
 
     $data->{$extras->{$num}->{'category'}} = $extras->{$num};
     print Dumper($extras->{$num}); 

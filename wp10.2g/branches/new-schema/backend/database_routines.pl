@@ -63,6 +63,9 @@ my $NotAClass = $Opts->{'not-a-class'};
 use DBI;
 my $dbh = db_connect($Opts);
 
+my $TablePrefix;
+
+
 #######################################################################
 
 =item B<update_article_data>(TIMESTAMP, PROJECT, NAMESPACE,
@@ -155,7 +158,7 @@ sub update_article_moved {
 
   if ( '0' eq $r ) { 
     print "MOVES says '$r'\n";
-    $sth = $dbh->prepare("INSERT INTO moves " . 
+    $sth = $dbh->prepare("INSERT INTO " . db_table_prefix() . "moves " . 
          "values (?,?,?,?,?)");
 
     $r = $sth->execute($rev_timestamp, $old_ns, $old_art, $new_ns, $new_art);
@@ -308,7 +311,7 @@ a project, to keep database coherent.
 sub update_articles_table { 
   my $project = shift;
 
-  my $query = <<"HERE";
+  my $query = "
 REPLACE INTO " . db_table_prefix() . "global_articles
 SELECT art, max(qrating), max(irating), max(score)
 FROM
@@ -334,8 +337,7 @@ FROM
                                  AND imp.gr_rating = ci.c_replacement
     WHERE r_namespace = 0 and r_project = ? )
 ) as tabletwo
-GROUP BY art /* SLOW_OK */;
-HERE
+GROUP BY art /* SLOW_OK */;";
 
 # SLOW_OK indeed
 
@@ -594,6 +596,8 @@ The options hash returned by read_conf()
 
 sub db_connect {
   my $opts = shift;
+
+  $TablePrefix = $opts->{'database_table_prefix'};
 
   die "No database given in database conf file\n"
     unless ( defined $opts->{'database'} );
@@ -978,8 +982,7 @@ sub update_project_scores {
   if ( $r[0] > 0 ) { 
     print "  Detected that project uses importance ratings\n";
 
-    $query = <<"HERE";
-    update " . db_table_prefix() . "ratings 
+    $query = "update " . db_table_prefix() . "ratings 
       join " . db_table_prefix() . "projects on r_project = p_project 
       left join  " . db_table_prefix() . "selection_data on r_namespace = 0 
          and r_article = sd_article 
@@ -1000,13 +1003,11 @@ sub update_project_scores {
             + if(isnull(gi.gr_ranking), 0, gi.gr_ranking)
             + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
 	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
-      where r_project = ? and r_namespace = 0 /* SLOW_OK */;
-HERE
+      where r_project = ? and r_namespace = 0 /* SLOW_OK */;";
    }  else { 
        print "  Detected that project does not use importance ratings\n";
 
-    $query = <<"HERE";
-     update " . db_table_prefix() . "ratings 
+    $query = "update " . db_table_prefix() . "ratings 
        join " . db_table_prefix() . "projects 
                  on r_project = p_project 
        left join  " . db_table_prefix() . "selection_data on r_namespace = 0 
@@ -1020,8 +1021,7 @@ HERE
                    )
              + if(isnull(gq.gr_ranking), 0, gq.gr_ranking)
 	+ if ( 0 = p_scope, 500, 0.5*p_scope)  ) - 500
-      where r_project = ? and r_namespace = 0 /* SLOW_OK */;
-HERE
+      where r_project = ? and r_namespace = 0 /* SLOW_OK */;";
   }
 
 #   print "QUERY: $query\n\n";
@@ -1046,6 +1046,14 @@ sub database_handle {
 }
 
 ############################################################
+
+sub db_table_prefix { 
+
+  return $TablePrefix;
+
+}
+
+
 
 # Load successfully
 1;
