@@ -79,6 +79,16 @@ sub main_loop {
 
   my %param = %{$cgi->Vars()};
 
+
+  if ( defined $Opts->{'disable_web_update'} ) { 
+    layout_header('Updates temporarily disabled');
+    print "<b>This tool has been temporarily disabled.</b><br/> Additional information: ";
+    print $Opts->{'disable_web_update'};
+    print "</body></html>";
+    exit;
+  }
+  
+
 ### Log file
   my $p;
   my $logFile = "update." . time() . "." . $$;
