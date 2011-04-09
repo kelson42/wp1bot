@@ -570,7 +570,7 @@ sub get_link_from_api {
   }
 
   return "<a href=\"" . $serverURL . "?title=" 
-         . uri_escape($target,  "^A-Za-z" ) . "\">" . $desc . "</a>";
+         . uri_escape_utf8($target,  "^A-Za-z" ) . "\">" . $desc . "</a>";
 
   # Previously, this was taken from the API. I'm not sure why anymore.
 
