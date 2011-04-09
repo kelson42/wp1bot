@@ -10,6 +10,9 @@ CGI program to display table of assessment info for one project
 
 =cut
 
+use utf8;
+use encoding 'utf8';
+
 use strict;
 use Encode;
 
@@ -76,6 +79,9 @@ exit;
 sub main_loop { 
   my %param = %{$cgi->Vars()};
 
+  my $handle = select();
+  binmode $handle, ":utf8";
+
   print CGI::header(-type=>'text/html', -charset=>'utf-8');      
 
   my $proj = $param{'project'} || $ARGV[0] || '';
@@ -83,14 +89,43 @@ sub main_loop {
   layout_header('Project summary tables');
   my $projects = query_form($proj);
 
+#  print "Project: '" . encode("utf8", $proj), " \n";
+
   if ( defined $proj && defined $projects->{$proj} ) {
-    my ($html, $wiki, $timestamp) = cached_project_table($proj, $cgi->{'purge'});
+
+    my ($html, $wiki, $timestamp, $cache_debug) 
+      = cached_project_table( $proj, $cgi->{'purge'}, 1);
 
     print "<div class=\"navbox\">\n";
     print_header_text($proj);
     print "</div>\n<center>\n";
+#    print encode("utf8", $html);
     print $html;
     print "</center>\n";
+
+## Debug logging
+  if ( 0 ) { 
+    my $logFile = "table." . time() . "." . $$;
+    my $logEntry = $logFile;
+    my $p;
+
+    foreach $p ( keys %param ) { 
+      $param{$p} =~ s/^\s*//;
+      $param{$p} =~ s/\s*$//;
+      $logEntry .= "&" . uri_escape($p) . "=" . uri_escape($param{$p});
+    }
+    $logEntry .= "\n--\n" . $cache_debug . "\n--\n";
+
+    $logEntry .= "\n--\n" . $html . "\n--\n";
+
+    if ( defined $Opts->{'log-dir'} && -d $Opts->{'log-dir'} ) { 
+      open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
+      print LOG $logEntry . "\n";
+      close LOG;
+    }
+  }
+## End logging
+
   }  
 
   $loop_counter++;
@@ -104,6 +139,7 @@ sub main_loop {
 sub query_form {
 
   my $projSelected = shift;
+  $projSelected =  encode("utf8",$projSelected);
 
   my $projects = {};
   my @row;
@@ -123,6 +159,7 @@ sub query_form {
 
   my $p;
   foreach $p ( sort { $a cmp $b} keys %$projects) { 
+    $p = encode("utf8", $p);
     if ( $p eq $projSelected ) { 
       print "<option value=\"" . $p . "\" selected>" . $p ."</option>\n";
     } else {
@@ -144,22 +181,30 @@ sub print_header_text {
   my $project = shift;
   my ($timestamp, $wikipage, $parent, $shortname);
  
+  ($project, $timestamp, $wikipage, $parent, $shortname) = 
+        get_project_data($project);
+
+  $project = encode("utf8", $project);
+  $wikipage = encode("utf8", $wikipage);
+
   my $listURL = $list_url;
   $listURL = $listURL . "?projecta=" . $project . "&limit=50";
   
   my $logURL = $log_url;
   $logURL = $logURL . "?project=" . $project;
 
-  ($project, $timestamp, $wikipage, $parent, $shortname) = 
-        get_project_data($project);
-
   if ( ! defined $wikipage)   {
-    print "Data for <b>$project</b> ";   
+    print  "Data for <b>$project</b>";
   }  elsif ( ! defined $shortname)   {
-    print "Data for <b>" . get_cached_link_from_api("[[$wikipage]]") . "</b> "; 
+#    print `/usr/bin/hostname` . "<br>\n";
+    print  "Data for <b>" . 
+                        get_cached_link_from_api("[[$wikipage]]")
+                    . "</b> ";	
   }  else  {
-    print "Data for <b>" . get_cached_link_from_api("[[$wikipage|$shortname]]") . "</b> ";     
+    print "Data for <b>" . 
+                 get_cached_link_from_api("[[$wikipage|$shortname]]") . "</b> " ;    
   }
+
 
   print "(<a href=\"" . $listURL . "\">lists</a> | "
            .  "<a href=\"" . $logURL . "\">log</a> | "
