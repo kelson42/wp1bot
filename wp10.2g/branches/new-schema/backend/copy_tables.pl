@@ -76,7 +76,7 @@ sub copy_project_tables {
 
   my $i = 0;
   foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-  print "'$project' '$filter'\n";
+#  print "'$project' '$filter'\n";
     if ( defined $filter ) { 
       next unless ( ($filter eq $project) 
                  || ($project =~ /^\Q$filter\E.*/) );

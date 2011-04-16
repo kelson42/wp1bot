@@ -64,7 +64,7 @@ sub cached_project_table {
   my $proj = shift;
   my $purge = shift || 0;
 
-  my $sth = $dbh->prepare("select p_timestamp from projects "
+  my $sth = $dbh->prepare("select p_timestamp from " . db_table_prefix() . "projects "
                         . "where p_project = ?");
   
   $sth->execute($proj);
@@ -202,14 +202,14 @@ sub fetch_project_table_data {
     if ( ! defined $catNS ) { 
       $query =  "
         select count(r_article), r_quality, r_importance, r_project 
-        from ratings
+        from " . db_table_prefix() . "ratings
         where r_project = ? group by r_quality, r_importance, r_project";
 
       push @qparam, $proj;
     } else { 
       $query =  "
         select count(r_article), r_quality, r_importance, r_project 
-        from ratings
+        from " . db_table_prefix() . "ratings
         where r_project = ? and r_namespace = ? 
          group by r_quality, r_importance, r_project";
 
@@ -220,10 +220,11 @@ sub fetch_project_table_data {
 
     $query =  "
       select count(r_article), r_quality, r_importance, r_project 
-      from ratings
+      from " . db_table_prefix() . "ratings
       join enwiki_p.page on page_namespace = ? 
-        and replace(page_title, '_', ' ') 
-                 =  cast(r_article as char character set latin1) 
+       and page_title = r_article 
+/*        and replace(page_title, '_', ' ') 
+                 =  cast(r_article as char character set latin1)  */
 /*                        and page_title = replace(r_article, ' ', '_') */
       join enwiki_p.categorylinks on page_id = cl_from and cl_to = ?  
       where r_project = ? and r_namespace = ? 
@@ -505,7 +506,7 @@ sub get_project_categories {
   my $categories = {};
 
   my $sth = $dbh->prepare(
-      "SELECT c_type, c_rating, c_ranking, c_category FROM categories " . 
+      "SELECT c_type, c_rating, c_ranking, c_category FROM " . db_table_prefix() . "categories " . 
       "WHERE c_project = ?" );
 
   $sth->execute($project);
@@ -519,7 +520,7 @@ sub get_project_categories {
         $qualityLabels->{$row[1]} = 
                " style=\"text-align: center;\" | '''Other'''";
       } else { 
-        $qualityLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+        $qualityLabels->{$row[1]} = "{{$row[1]|category=Category:$row[3]}}";
       }
     } elsif ( $row[0] eq 'importance' ) { 
       $sortImp->{$row[1]} = $row[2];
@@ -527,7 +528,7 @@ sub get_project_categories {
       if ( $row[1] eq $NotAClass ) { 
         $importanceLabels->{$row[1]} = "Other";
       } else { 
-        $importanceLabels->{$row[1]} = "{{$row[1]|category=$row[3]}}";
+        $importanceLabels->{$row[1]} = "{{$row[1]|category=Category:$row[3]}}";
       }
     }
   }
@@ -563,15 +564,14 @@ sub fetch_global_table_data {
 
   # Step 1: fetch totals from DB and load them into the $data hash
 
-  my $query = <<"  HERE";
-select count(distinct a_article), grq.gr_rating, gri.gr_rating /* SLOW_OK */
-from global_articles
-join global_rankings as grq 
+  my $query = 
+"select count(distinct a_article), grq.gr_rating, gri.gr_rating /* SLOW_OK */
+from " . db_table_prefix() . "global_articles
+join " . db_table_prefix() . "global_rankings as grq 
   on grq.gr_type = 'quality' and grq.gr_ranking= a_quality
-join global_rankings as gri 
+join " . db_table_prefix() . "global_rankings as gri 
   on gri.gr_type = 'importance' and gri.gr_ranking= a_importance
-group by grq.gr_rating, gri.gr_rating /* SLOW_OK */
-  HERE
+group by grq.gr_rating, gri.gr_rating ";
 
   my $sth = $dbh->prepare($query);
   
