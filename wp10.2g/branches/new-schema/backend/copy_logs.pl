@@ -81,7 +81,7 @@ my @i_revids;
 my @i_key;
 
 if ( $project eq '--all' ) { 
-  my $sth = $dbh->prepare("select p_project from projects");
+  my $sth = $dbh->prepare("select p_project from " . db_table_prefix() . "projects");
   my @r;
   my $i;
   my $count = $sth->execute();
@@ -140,7 +140,7 @@ sub get_ratings {
   my $project_db = $project;
 #  $project_db =~ s/ /_/g;
 
-  my $sth = $dbh->prepare("select p_timestamp from projects 
+  my $sth = $dbh->prepare("select p_timestamp from " . db_table_prefix() . "projects 
                              where p_project = ?");
   $_ = $sth->execute($project_db);
 
@@ -149,7 +149,7 @@ sub get_ratings {
   }
 
   my $query = "
-    SELECT * FROM logging 
+    SELECT * FROM " . db_table_prefix() . "logging 
     WHERE l_project = ?
       AND l_timestamp > ?";
 
@@ -485,7 +485,7 @@ sub move_target {
   my $stime = time();
 
   my $sth = $dbh->prepare("select m_new_namespace, m_new_article
-                           from moves
+                           from " . db_table_prefix() . "moves
                            where m_old_namespace = ? 
                              and m_old_article = ? 
                              and m_timestamp = ?");
@@ -508,6 +508,8 @@ sub key_to_name {
   push @i_key, 0;
 
   $ns =~ s/^0*(\d)/$1/;
+
+  $title =~ s/_/ /g;
 
   if ( $ns == 0 ) { 
     return $title; 
