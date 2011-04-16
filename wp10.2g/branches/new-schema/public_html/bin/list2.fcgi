@@ -110,8 +110,6 @@ sub ratings_table {
   my $params = shift;
   my $projects = shift;
 
-
-
   my $p;
   foreach $p ( ( 'importance', 'importanceb', 'quality', 'qualityb' ) ) { 
     if ( (defined $params->{$p}) 
@@ -128,6 +126,7 @@ sub ratings_table {
   } 
   
   my $project = $params->{'projecta'};
+  $project =~ s/ /_/g;
   
   my $limit = $params->{'limit'} || 100;
   my $offset = $params->{'offset'} || 0;
@@ -585,12 +584,12 @@ sub ratings_table_intersect {
   my $projects = shift;
 
   my $projecta = $params->{'projecta'};
-
   return if ( ! defined $projecta);
+  $projecta =~ s/ /_/g;
 
   my $projectb = $params->{'projectb'};
-
   return if ( ! defined $projectb);
+  $projectb =~ s/ /_/g;
 
   if ( ! defined $projects->{$projecta}) { 
     print "Project '$projecta' not available\n";
@@ -623,29 +622,25 @@ sub ratings_table_intersect {
   my @qparam = ($projecta, $projectb);
   my @qparamc = ($projecta, $projectb);
 
-  $query = << "HERE";
-SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
+  $query = "SELECT ra.r_namespace, ra.r_article, ra.r_importance, ra.r_quality,
        rb.r_importance, rb.r_quality, rel_0p5_category,
        rev_value, ISNULL(rel_0p5_category) as null_rel,
-       ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score, ws_revid as wsel
-HERE
+       ISNULL(rev_value) as null_rev, ra.r_score, rb.r_score, ws_revid as wsel ";
 
   my $show_external = ($params->{'showExternal'} eq "on");
   if ( $show_external ) {
     $query .= "      , sd_pagelinks, sd_langlinks, sd_hitcount, sd_external \n";
   }
 
-  $query .  "FROM " . db_table_prefix() . "ratings as ra ";
+  $query .= "FROM " . db_table_prefix() . "ratings as ra ";
 
 
   if ( $show_external ) {
-    $query .= << "HERE";
-   LEFT JOIN " . db_table_prefix() . "selection_data 
-          ON ra.r_namespace = 0 AND ra.r_article = sd_article
-HERE
+    $query .= "   LEFT JOIN " . db_table_prefix() . "selection_data 
+             ON ra.r_namespace = 0 AND ra.r_article = sd_article ";
   }
   
-  $query . " JOIN " . db_table_prefix() . "ratings as rb ON rb.r_article = ra.r_article 
+  $query .= " JOIN " . db_table_prefix() . "ratings as rb ON rb.r_article = ra.r_article 
                       AND ra.r_namespace = rb.r_namespace ";
 
   my $sort = $params->{'sorta'};
