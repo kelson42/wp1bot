@@ -181,14 +181,16 @@ if ( $show_external ) {
   $query .= " \n LEFT JOIN " . db_table_prefix() . "workingselection ON  r_namespace = 0
                        AND ws_article = r_article ";
 
-  my $acategory;
+## Category filter
 
+  my $acategory;
   my $tcategory;
 
   my $filter_cats = $params->{'filterCategory'} || 0;
   if ( $filter_cats eq 'on' ) { 
     $filter_cats = 1;
 
+# These were used previously to avoid performance problems
 #    if ( ! ( defined $params->{'projecta'} && $params->{'projecta'} =~ /\w|\d/ ) ) { 
 #      $filter_cats = -3;
 #    }
@@ -205,7 +207,6 @@ if ( $show_external ) {
 
   if ( ! $acategory =~ /\w|\d/ ) { $acategory = undef; }
   if ( ! $tcategory =~ /\w|\d/ ) { $tcategory = undef; }
-
 
   my $aquery;
 
@@ -230,6 +231,7 @@ if ( $show_external ) {
      $query .= $aquery;
   }
 
+## Done with category filter
 
   $query .= " \nWHERE";
   $queryc .= " \nWHERE";
@@ -656,6 +658,62 @@ sub ratings_table_intersect {
   $query .= " \n LEFT JOIN " . db_table_prefix() . "workingselection ON  ra.r_namespace = 0
                        AND ws_article = ra.r_article ";
 
+
+
+## Category filter
+
+  my $acategory;
+  my $tcategory;
+
+  my $filter_cats = $params->{'filterCategory'} || 0;
+  if ( $filter_cats eq 'on' ) { 
+    $filter_cats = 1;
+
+# These were used previously to avoid performance problems
+#    if ( ! ( defined $params->{'projecta'} && $params->{'projecta'} =~ /\w|\d/ ) ) { 
+#      $filter_cats = -3;
+#    }
+#    if ( ! ( defined $params->{'namespace'} && $params->{'namespace'} =~ /^\d+$/ ) ) { 
+#      $filter_cats = -4;
+#    }
+
+  }
+
+  if ( $filter_cats > 0) { 
+    $acategory = $params->{'category'};
+    $tcategory = $params->{'categoryt'};
+  }
+
+  if ( ! $acategory =~ /\w|\d/ ) { $acategory = undef; }
+  if ( ! $tcategory =~ /\w|\d/ ) { $tcategory = undef; }
+
+  my $aquery;
+
+  if ( defined $acategory) { 
+     $acategory =~ s/ /_/g;
+
+     $aquery = "\n join enwiki_p.page as apage on ra.r_namespace = apage.page_namespace 
+                   and ra.r_article  = apage.page_title
+                   join enwiki_p.categorylinks as acat on apage.page_id = acat.cl_from ";
+
+     $queryc .= $aquery;
+     $query .= $aquery;
+  }
+
+  if ( defined $tcategory ) { 
+     $tcategory =~ s/ /_/g;
+     $aquery  = "\n join enwiki_p.page as tpage on (1+ra.r_namespace) = tpage.page_namespace 
+                   and ra.r_article = tpage.page_title
+                   join enwiki_p.categorylinks as tcat on tpage.page_id = tcat.cl_from ";
+
+     $queryc .= $aquery;
+     $query .= $aquery;
+  }
+
+## Done with category filter
+
+
+
   $query .= " \nWHERE ra.r_project = ? AND rb.r_project = ?";
 
   my $quality = $params->{'quality'};
@@ -735,6 +793,21 @@ sub ratings_table_intersect {
     $queryc .= " AND NOT ra.r_quality = rb.r_quality ";
   }
 
+  if ( defined $acategory ) { 
+    $query .= " AND acat.cl_to = ? ";
+    $queryc .= " AND acat.cl_to = ? ";
+    push @qparam, $acategory;
+    push @qparamc, $acategory;
+  }
+
+  if ( defined $tcategory ) { 
+    $query .= " AND tcat.cl_to = ? ";
+    $queryc .= " AND tcat.cl_to = ? ";
+    push @qparam, $tcategory;
+    push @qparamc, $tcategory;
+  }
+
+
   $query .= " \nORDER BY ";
   $query .= sort_key($sort, "a", "");
   $query .= ", ";
@@ -760,12 +833,46 @@ sub ratings_table_intersect {
   $_ = $sthcount->execute(@qparamc);
   my @row = $sthcount->fetchrow_array()  ;
 
+
+
+  my $catmsg = ""; # FC: '$filter_cats'<br/>";
+
+  if ( $filter_cats < 0 ) { 
+    $catmsg = " <b>Warning:</b> ignoring category filters in this query. Due to performance problems, 
+                       category filtering is only enabled when both a project and page namespace are specified. $filter_cats <br/>\n";
+  }
+
+  if ( defined $acategory || defined $tcategory ) { 
+    $catmsg = "<br/>Data limited to";
+    my $link;
+
+    if ( defined $acategory ) { 
+      $link = $acategory;
+      $link =~ s/_/ /g;
+      $link = "<a href=\"" . $Opts->{'server-url'} . "?title=Category:" . uri_escape($link) . "\">Category:$link</a>";
+      $catmsg .= " articles in $link";
+      if ( defined $tcategory ) { 
+        $catmsg .= " and ";
+      }
+    }
+    if ( defined $tcategory ) { 
+      $link = $tcategory;
+      $link =~ s/_/ /g;
+
+      $link = "<a href=\"" . $Opts->{'server-url'} . "?title=Category:" . uri_escape($link) . "\">Category:$link</a>";
+      $catmsg .= " articles with talk pages in $link";
+    }
+    $catmsg .= ".<br/>";
+  }
+
+
+
   print "<div class=\"navbox\">\n";
   print_header_text($projecta);
   print_header_text($projectb);
 
   my $total = $row[0];
-  print  $review_msg . $release_msg ;
+  print  $catmsg . $review_msg . $release_msg ;
   print  "<b>Total results: " . $total . "</b>&nbsp;&nbsp;&nbsp;\n";
   print " Displaying up to $limit results beginning with #"  
         . ($offset +1);
@@ -825,6 +932,8 @@ HERE
      
   while ( @row = $sth->fetchrow_array ) {
     $i++;
+
+    $row[1] =~ s/_/ /g;
 
     if ( 0 == $i % 2 ) { $evenodd = "list-even"; } 
     else { $evenodd = "list-odd"; }    
