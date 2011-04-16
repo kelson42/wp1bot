@@ -251,12 +251,12 @@ sub layout_footer {
 <div id="footerbar">&nbsp;</div>
 
 <div id="footer">
-This is a <b>beta</b> version of the second generation WP 1.0 
-bot 
+This is the web interface of the WP 1.0 bot 
 &middot <a href="$discussionPage">Discussion page</a> 
 &middot; <a href="$bugPage">Bug reports</a><br/>
 <div class="version">
 Current version: $Version<br/>
+New schema branch<br/>
 $debug
 </div>
 HERE
@@ -603,7 +603,7 @@ sub list_projects {
   my @row;
   my $projects = {};
 
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  my $sth = $dbh->prepare("SELECT p_project FROM " . db_table_prefix() . "projects");
   $sth->execute();
 
   while ( @row = $sth->fetchrow_array ) { 
