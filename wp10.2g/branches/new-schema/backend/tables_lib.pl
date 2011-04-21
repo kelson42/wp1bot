@@ -143,7 +143,9 @@ sub make_project_table {
   my $tdata = fetch_project_table_data($proj, $cat, $catNS, $title);
 
   if ( ! defined $title ) { 
-    $title = "$proj articles by quality and importance";
+    $title = $proj;
+    $title =~ s/_/ /g;
+    $title = $title . " articles by quality and importance";
   }
 
   my $format = \&format_cell_pqi;
@@ -381,7 +383,9 @@ sub make_project_table_wikicode {
       $table->columns(\@P);
   } else { 
       $table->columns(["Total"]);
-      $table->title("$proj pages by quality");
+      my $projt = $proj;
+      $projt =~ s/_/ /g;
+      $table->title("$projt pages by quality");
       $table->unset_columntitle();
       $TotalWikicode = "style=\"text-align: center;\" | '''Total pages'''";
       $ImportanceLabels->{'Total'} = $TotalWikicode;
