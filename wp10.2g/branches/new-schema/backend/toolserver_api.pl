@@ -157,7 +157,7 @@ sub toolserver_pages_in_category {
   my $ns = shift;
   
   my $query = "
-  SELECT page_namespace, page_title 
+  SELECT page_namespace, page_title  /* SLOW_OK */
   FROM page 
   JOIN categorylinks ON page_id = cl_from
   WHERE cl_to = ?";
@@ -168,7 +168,7 @@ sub toolserver_pages_in_category {
     $query .= " AND page_namespace = ?";
     push @qparam, $ns;
   };
-  
+
   my $sth = $dbh->prepare($query);
   my $t = time();
   my $r = $sth->execute(@qparam);
@@ -225,7 +225,7 @@ sub toolserver_pages_in_category_detailed {
   
   my $query = "
   SELECT page_namespace, page_title, page_id, cl_sortkey, cl_timestamp 
-  FROM page 
+  FROM page  /* SLOW_OK */
   JOIN categorylinks ON page_id = cl_from
   WHERE cl_to = ?";
   
