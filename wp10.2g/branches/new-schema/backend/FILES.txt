@@ -45,21 +45,21 @@ download.pl
 
 drop.sql
 
-  SQL to drop all tables of the WP 1.0 system. 
+  SQL to drop all tables of the WP 1.0 system. Be careful...
 
 example.wp10.conf
 
   Example configuration for the system. The real config is in 
   ~/.wp10.conf
 
-FILES
+FILES.txt
 
   This file.
 
 insert_logs.pl
 
   Maintenance script - was used at the begining to put old log entries
-  into the databse 
+  into the database 
 
 mktable.pl
 
@@ -106,7 +106,7 @@ tables_lib.pl
 tables.sql
 
   SQL to recreate the WP 1.0 database tables. Is almost certainly out 
-  of date,  check the live 'enwp10' database to see the real schema
+  of date, check the live 'p_enwp10' user database to see the real schema
 
 testapi.pl
 
@@ -130,5 +130,3 @@ wp10_routines.pl
 
   Library - routines to handle assessment data. The main logic of the
   update process is here. 
-
-
