@@ -21,13 +21,13 @@ use encoding 'utf8';
 my $Opts = read_conf();
 
 use DBI;
-our $dbh = db_connect($Opts);
+our $dbh = db_connect_ro($Opts);
 
 
 ###################################################
 
 
-my $sth = $dbh->prepare("select count(p_project) from projects ");
+my $sth = $dbh->prepare("select count(p_project) from tmpprojects ");
 $_ = $sth->execute();
 
 my @r = $sth->fetchrow_array();

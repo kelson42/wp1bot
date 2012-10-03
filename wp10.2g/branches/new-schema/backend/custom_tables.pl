@@ -46,7 +46,7 @@ sub custom_ships_table_1 {
 # their articles are NA quality
 
 sub custom_essays_table_1 { 
-  my $proj = 'Wikipedia essays';
+  my $proj = 'Wikipedia_essays';
   my $title = 'Wikipedia essays by impact';
   my $tdata = fetch_project_table_data($proj, undef, undef, $title);
 
@@ -188,11 +188,11 @@ sub custom_roads_table_1 {
 
   # This query is indexed and very fast, so I'm not bothering to 
   # to combine all the road projects into a single query
-  my $sth = $dbh->prepare('select r_quality, count(r_article) as num 
-                             from ratings 
+  my $sth = $dbh->prepare("select r_quality, count(r_article) as num 
+                             from " . db_table_prefix() . "ratings 
                               where r_project  = ? 
                               and r_namespace = 0 
-                              group by r_quality');
+                              group by r_quality");
 
   my ( $proj, $cat, $data, $class, $weight, $omega, $total, $num);
 
@@ -207,13 +207,14 @@ sub custom_roads_table_1 {
 !{{C-Class|category=Category:C-Class U.S. road transport articles}}
 !{{Start-Class|category=Category:Start-Class U.S. road transport articles}}
 !{{Stub-Class|category=Category:Stub-Class U.S. road transport articles}}
+!Total
 !&#969;
 !&#937;
 HERE
 
   foreach $proj ( @$RoadProjects ) { 
     $omega = 0;
-    $total = 0;
+    $total = 0;  
 
     $text .= "|-\n";
 
@@ -228,6 +229,8 @@ HERE
               . " articles by quality statistics|" . $proj . "]]\n";
 
     $cat = $RoadProjectCats->{$proj};
+    $cat =~ s/ /_/g;
+
 
     $sth->execute($cat);
     $data = $sth->fetchall_hashref('r_quality');
@@ -254,6 +257,11 @@ HERE
     if ( defined $RoadProjectsGrey->{$proj} ) { 
       $text .= "|bgcolor=silver";
     }  
+    $text .= "|$total\n";
+
+    if ( defined $RoadProjectsGrey->{$proj} ) { 
+      $text .= "|bgcolor=silver";
+    }  
     $text .= "|$omega\n";
 
     if ( defined $RoadProjectsGrey->{$proj} ) { 
@@ -270,6 +278,12 @@ HERE
   }
 
   $text .= "|}";
+
+  my $d = `/bin/date`;
+  chomp $d;
+  $text .= "<!-- $d --> ";
+
+
   return $text;
 }
 
@@ -329,11 +343,11 @@ sub custom_canada_roads_table_1 {
 
   # This query is indexed and very fast, so I'm not bothering to 
   # to combine all the road projects into a single query
-  my $sth = $dbh->prepare('select r_quality, count(r_article) as num 
-                             from ratings 
+  my $sth = $dbh->prepare("select r_quality, count(r_article) as num 
+                             from " . db_table_prefix() . "ratings 
                               where r_project  = ? 
                               and r_namespace = 0 
-                              group by r_quality');
+                              group by r_quality");
 
   my ( $proj, $cat, $data, $class, $weight, $omega, $total, $num);
 
@@ -348,6 +362,7 @@ sub custom_canada_roads_table_1 {
 !{{C-Class|category=Category:C-Class Canada road transport articles}}
 !{{Start-Class|category=Category:Start-Class Canada road transport articles}}
 !{{Stub-Class|category=Category:Stub-Class Canada road transport articles}}
+!Total
 !&#969;
 !&#937;
 HERE
@@ -369,6 +384,7 @@ HERE
               . " articles by quality statistics|" . $proj . "]]\n";
 
     $cat = $RoadProjectCats->{$proj};
+    $cat =~ s/ /_/g;
 
     $sth->execute($cat);
     $data = $sth->fetchall_hashref('r_quality');
@@ -395,6 +411,12 @@ HERE
     if ( defined $RoadProjectsGrey->{$proj} ) { 
       $text .= "|bgcolor=silver";
     }  
+    $text .= "|$total\n";
+
+
+    if ( defined $RoadProjectsGrey->{$proj} ) { 
+      $text .= "|bgcolor=silver";
+    }  
     $text .= "|$omega\n";
 
     if ( defined $RoadProjectsGrey->{$proj} ) { 
@@ -411,6 +433,11 @@ HERE
   }
 
   $text .= "|}";
+
+  my $d = `/bin/date`;
+  chomp $d;
+  $text .= "<!-- $d --> ";
+
   return $text;
 }
 
@@ -464,10 +491,9 @@ sub custom_mathematics_table_field_quality {
 
   my $sth = $dbh->prepare("
        select r_quality, count(r_article) as num 
-         from ratings 
+         from " . db_table_prefix() . "ratings 
          join enwiki_p.page 
-           on  cast(replace(page_title, '_', ' ') as char character set utf8) 
-                   = r_article  and page_namespace = 1
+           on  page_title = r_article and page_namespace = 1
          join enwiki_p.categorylinks on cl_from = page_id
              where r_project  = 'Mathematics'
                 and r_namespace = 0 
@@ -588,10 +614,9 @@ sub custom_mathematics_table_field_priority {
 
   my $sth = $dbh->prepare("
        select r_importance, count(r_article) as num 
-         from ratings 
+         from " . db_table_prefix() . "ratings 
          join enwiki_p.page 
-           on  cast(replace(page_title, '_', ' ') as char character set utf8) 
-                   = r_article  and page_namespace = 1
+           on  page_title = r_article  and page_namespace = 1
          join enwiki_p.categorylinks on cl_from = page_id
              where r_project  = 'Mathematics'
                 and r_namespace = 0 
@@ -621,6 +646,7 @@ sub custom_mathematics_table_field_priority {
 
     $text .= "[$flink $field]\n";
 
+    print "Field: $field Cat: '$cat'\n";
 
       $sth->execute($cat);
       $data = $sth->fetchall_hashref('r_importance');

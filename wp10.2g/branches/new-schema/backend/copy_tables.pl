@@ -37,6 +37,7 @@ require 'read_custom.pl';
 ############################################################
 
 if ( $ARGV[0] =~ /^--project/ ) {  # accept --project and --projects
+  $ARGV[1] =~ s/ /_/g;
   copy_project_tables($ARGV[1]);
 } elsif ( $ARGV[0] eq '--global' ) { 
   copy_global_table();
@@ -79,16 +80,31 @@ sub copy_project_tables {
 #  print "'$project' '$filter'\n";
     if ( defined $filter ) { 
       next unless ( ($filter eq $project) 
-                 || ($project =~ /^\Q$filter\E.*/) );
+                 || ($project =~ /^\Q$filter\E$/) );
     }
 
     $i++;
     print "\n$i / $count $project\n";
 
+    print "Trying to reconnect\n";
+    db_reconnect();  # This is a hack to work around the database server
+                     # randomly killing queries from this script
+
     my $page = "User:WP 1.0 bot/Tables/Project/$project";
     my $summary = "Copying assessment table to wiki";
-    my ( $html, $wiki) = cached_project_table($project);
+    my ( $html, $wiki, $timestamp, $acount) = cached_project_table($project);
     $wiki = munge($wiki, 'project');
+
+    print "acount: '$acount'\n";
+
+    if ( $acount == 0 ) { 
+       print "Count is zero, skipping\n";
+       next;
+    } else { 
+       print "Count: $acount\n";
+    }
+
+#    $wiki .= "<noinclude>{{DEFAULTSORT|$project}}</noinclude>";
 
     if ( ! defined $ENV{'DRY_RUN'}) {
       api_edit( $page,
@@ -96,9 +112,6 @@ sub copy_project_tables {
      $wiki,
                $summary);
 
-#      api_edit(encode("utf8", $page), 
-#               $wiki,
-#               $summary);
     }
   }
 }

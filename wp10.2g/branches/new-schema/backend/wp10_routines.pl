@@ -109,6 +109,11 @@ Update assessment data for PROJECT
 sub download_project {
   my $project = shift;
 
+#  next unless ( $project =~ /road_transport/);
+  next if ( ( ! defined $ENV{'DO_BIO'}) && ($project =~ /biography/i));
+
+  db_reconnect();
+
   if ( ! db_lock("PROJECT:$project") ) { 
     print "Cannot get lock for $project, exiting.\n";
     return;
@@ -240,7 +245,7 @@ sub get_project_quality_categories {
 
   print "$project $Articles\n";
 
-print Dumper(%Quality);
+#print Dumper(%Quality);
 
   foreach $cat ( @$cats ) { 
     print "SCAN '$cat'\n";
@@ -253,8 +258,6 @@ print Dumper(%Quality);
       print "\tCat (1) $qual $value $cat (extra)\n";
     } elsif ( $cat =~ /([A-Za-z]+)[\- _]/ ) {
       $qual=$1 . '-' . $Class; # e.g., FA-Class
-print " quall '$qual'\n";
-
       next unless (defined $Quality{$qual});
       $qcats->{$qual} = $cat;
       $value = $Quality{$qual};

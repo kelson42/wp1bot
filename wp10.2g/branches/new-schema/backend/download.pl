@@ -44,6 +44,8 @@ foreach $project ( @$projects ) {
   }
   update_status($project, $mode, $i, $count);
   download_project($project);
+#  print "Sleeping...\n";
+#  sleep 600;
 }
 
 print "Done.\n";
@@ -79,12 +81,14 @@ sub parse_argv {
                     'over=i','all','releases','reviews',
                     'exclude=s@' )) {
     usage();
+    exit;
   }
 
   my $project;
 
   my $includes = {};
   while ( $project = shift @ARGV ) {
+    $project =~ s/ /_/g;
     $includes->{$project} = 1;
     $opts->{'includes'} = 1;
   }
@@ -144,6 +148,9 @@ sub parse_argv {
 print "Mode: '$mode'\n";
   if ( $mode eq 'all' ) {
     foreach $project ( @$project_list ) {
+
+#print "P: '$project'\n";
+
       if ( exists $opts->{'includes'} ) {
         next unless ( exists $includes->{$project} );
       }

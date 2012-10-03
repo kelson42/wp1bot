@@ -87,8 +87,11 @@ sub cached_project_table {
         . "-->\n";
 
     $data = cache_get($key);
-    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode) = 
-    split /\Q$cache_sep\E/, $data, 5;
+    my ($c_key, $c_timestamp, $c_proj_timestamp, $c_html, $c_wikicode, $c_count) = 
+    split /\Q$cache_sep\E/, $data, 6;
+
+  print "Key: '$c_key'\n";
+  print "Count: '$c_count'\n";
 
     if ( $c_proj_timestamp eq $proj_timestamp ) {
       print "<!-- Cached output valid -->\n";
@@ -96,7 +99,7 @@ sub cached_project_table {
         print "<!-- regenerate anyway -->\n";
       }
       print "<!-- end cache debugging -->\n ";
-      return ($c_html, $c_wikicode)
+      return ($c_html, $c_wikicode, $c_proj_timestamp, $c_count)
         if ( ! defined $ENV{'TABLE_PURGE'} );
     } else {
       print "<!-- Cached output must be regenerated -->\n";
@@ -108,17 +111,21 @@ sub cached_project_table {
   print "<!-- Regenerating output --> \n";
   print "<!-- end cache debugging --> \n ";
 
-  my ($html, $wikicode) = make_project_table($proj);
-  
+  my ($html, $wikicode, $acount) = make_project_table($proj);
+
+print "Foo\n";
+
   $data = "TABLE:$proj" . $cache_sep 
         . $timestamp . $cache_sep
         . $proj_timestamp . $cache_sep 
         . $html . $cache_sep 
-        . $wikicode;
+        . $wikicode . $cache_sep
+        . $acount;
 
   cache_set($key, $data, 12*60*60); # expires in 12 hours
 
-  return ($html, $wikicode, $timestamp);
+print "Bar\n";
+  return ($html, $wikicode, $timestamp, $acount);
 }
 
 
@@ -154,9 +161,10 @@ sub make_project_table {
     $format = get_format_cell_pqi_cat($cat, $catNS);
   }
 
-  my $code = make_project_table_wikicode($tdata, $title, $format, $config );
+  my ($code, $acount) = make_project_table_wikicode($tdata, $title, $format, $config );
+
   my $r =  $api->parse($code);
-  return ($r->{'text'}->{'content'}, $code);
+  return ($r->{'text'}->{'content'}, $code, $acount);
 
 #  my $r = "";
 #  return ($r, $code);
@@ -173,11 +181,13 @@ Create a new global table. Does not use the cache in any way.
 
 sub make_global_table { 
   my $tdata = fetch_global_table_data();
-  my $code = make_project_table_wikicode($tdata, 
+  my ($code, $total) = make_project_table_wikicode($tdata, 
                             "All rated articles by quality and importance",
                             \&format_cell_pqi_nolink  );
   my $r =  $api->parse($code);
   my $created = time();
+#print "C: '$code'\n";
+
   return ($r->{'text'}->{'content'}, $code, $created);
 }
 
@@ -484,8 +494,9 @@ sub make_project_table_wikicode {
   }
 
   my $code = $table->wikicode();
-
-  return $code;
+  $total = $totalAssessed->{'Total'} || 0;
+  print "<!-- Total: $total -->\n";
+  return ($code, $total);
 }
 
 ################################################################
@@ -703,6 +714,8 @@ sub cached_global_ratings_table {
 
     $data = cache_get($key);
 
+#print "D: '$data'\n";
+
     my ($c_key, $c_html, $c_wikicode, $c_created) = 
           split /\Q$cache_sep\E/, $data, 4;
 
@@ -719,6 +732,7 @@ sub cached_global_ratings_table {
   my $ts = time();
   
   my ($html, $wikicode, $createdtime) = make_global_table();
+
 
   $ts = time() - $ts;
   $ts = int(0.5 + $ts / 60);

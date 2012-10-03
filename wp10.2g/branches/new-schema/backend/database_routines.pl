@@ -597,6 +597,8 @@ The options hash returned by read_conf()
 sub db_connect {
   my $opts = shift;
 
+  print "Called db_connect\n";
+
   $TablePrefix = $opts->{'database_table_prefix'};
 
   die "No database given in database conf file\n"
@@ -622,17 +624,37 @@ sub db_connect {
               . $opts->{'credentials-readwrite'};
   }
 
-#  print "COnnect: '$connect'\n";
+#  print "Connect: '$connect'\n";
 
-  my $db = DBI->connect($connect, 
+  my $connect_max = 100;
+  my $connect_count = 0;
+  my $db;
+
+  while ( 1 ) {
+    $connect_count++;
+    print ".. Connect to database, try $connect_count of $connect_max\n";
+  
+    $db = DBI->connect($connect, 
                         $opts->{'username'}, 
                         $opts->{'password'},
-                       {'RaiseError' => 1, 'PrintError'=>0, 
+                       { # 'RaiseError' => 1, 'PrintError'=>0, 
                         'AutoCommit' => 0} )
-     or die "Couldn't connect to database: " . DBI->errstr;
+       or die "Couldn't connect to database: " . DBI->errstr;
 
-  $db->{'RaiseError'} = 'on'; # die on DB error
-   
+     if ( db_test_query($db) ) { 
+       print ".. Successful\n";
+#       sleep 5;
+       last;
+     } else { 
+       print ".. Not successful\n";
+       sleep 60;
+     }
+  }
+
+#  $db->{'RaiseError'} = 'on'; # die on DB error
+
+#  $db->{HandleError} = sub { confess(shift) };
+
   return $db;
 }
 
@@ -989,7 +1011,7 @@ sub update_project_scores {
       left join  " . db_table_prefix() . "categories as cq on cq.c_project = p_project
          and cq.c_rating = r_quality and cq.c_type = 'quality'
       left join  " . db_table_prefix() . "categories as ci on ci.c_project = p_project
-         and ci.c_rating = r_quality and ci.c_type = 'importance'
+         and ci.c_rating = r_importance and ci.c_type = 'importance'
                   left join  " . db_table_prefix() . "global_rankings as gq on gq.gr_type = 'quality' 
                                      and gq.gr_rating = cq.c_replacement
                   left join  " . db_table_prefix() . "global_rankings as gi on gi.gr_type = 'importance' 
@@ -1054,6 +1076,28 @@ sub db_table_prefix {
 }
 
 
+sub db_reconnect { 
+  print "Reconnecting to database\n";  
+  $dbh->disconnect();
+  $dbh = db_connect($Opts);
+}
+
+
+# This is a hack to test whether the database is connected and functional
+
+sub db_test_query { 
+  my $dbhtmp = shift;
+
+  my $testq = "select p_count from tmpprojects where p_project ='Mathematics'";
+  my $sth = $dbhtmp->prepare($testq);
+  $sth->execute();
+  my @r = $sth->fetchrow_array();
+  if ( $r[0] > 0) { 
+    return 1;
+  } else { 
+    return 0;
+  }
+}
 
 # Load successfully
 1;

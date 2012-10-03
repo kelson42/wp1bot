@@ -62,7 +62,7 @@ my %MonthsRev = (
 
 ###################################################3
 use DBI;
-our $dbh = db_connect($Opts);
+our $dbh = db_connect_ro($Opts);
 my $Namespaces = db_get_namespaces();
 
 use POSIX 'strftime';
@@ -91,7 +91,7 @@ if ( $project eq '--all' ) {
     if ( defined $ENV{'CLEAR'} ) { 
       system("clear");
     }
-    print "\n--- $i/$count : $r[0] \n";
+    print "\n--- $i / $count : $r[0] \n";
     instrument();
     do_project($r[0]);
   }
@@ -110,6 +110,12 @@ exit;
 
 sub do_project { 
   my $project = shift;
+
+  $dbh->disconnect(); # So if one project is killed by the query cleaner
+                      # We can pick up with the next one. It's inefficient to 
+                      # reconnect every time but I don't have a workaround yet
+  $dbh = db_connect_ro($Opts);
+
 
   my $stime = time();
   my ($hist,$max)  = get_log_history($project);
@@ -244,7 +250,7 @@ sub process_log {
   my $rawcount = scalar @$rawdata;
 
   foreach $r ( @$rawdata ) {
-    print "R";
+#    print "R";
  
     $key = sprintf "%04d:%s", $r->{'l_namespace'}, $r->{'l_article'};
 
@@ -435,7 +441,7 @@ sub process_log {
     }
   }
 
-  print "\n";
+#  print "\n";
     
   my $output;
   
@@ -655,6 +661,7 @@ sub do_edit {
     $cn = $count - 1;
     while ( $cn >= 0 ) { 
       $m = " [chunk " . ($cn+1) . " of $count]";
+      print " .. $m\n";
       api_edit($page, $chunks[$cn], $edit_summary . $m );
       $cn--;
    }
