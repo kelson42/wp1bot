@@ -343,7 +343,7 @@ GROUP BY art /* SLOW_OK */;";
 
   my $sth = $dbh->prepare($query);
 
-  print "Updating articles table for $project\n";
+  print "Updating global articles table using data from $project\n";
   my $start = time();
   my $r = $sth->execute($project, $project);
   print "  Result: $r rows in "  .(time() - $start) . " seconds\n";
