@@ -107,7 +107,7 @@ sub pages_in_category {
 
   print "Get: $cat\n";
 
-  if ( $use_toolserver ) { 
+  if ( ( ! defined $ENV{'NO_TOOLSERVER_CATS'}) && $use_toolserver ) { 
 #    print "\tusing toolserver\n";
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
@@ -115,10 +115,24 @@ sub pages_in_category {
     return $r;
   }
 
+    $cat =~ s/^Category://;
+
+  print "Bypassing toolserver, getting category list from API\n";
   init_api();
 
-  my $r = $api->pages_in_category($cat, $ns);
-  my @encoded = map { encode("utf8", $_) } @$r;
+  my $t = time();
+  my $r = $api->pages_in_category($cat, $ns);  
+  my @encoded;
+  foreach $_ ( @$r ) { 
+    $_ = encode("utf8", $_);
+    $_ =~ s/^Category://;
+    $_ =~ s/ /_/g;
+    push @encoded, $_;
+  }
+  my $count = scalar @encoded;
+
+  print "\tListed $count pages in " . (time() - $t) . " seconds\n";
+
   return \@encoded;
 }
 
@@ -159,7 +173,7 @@ sub pages_in_category_detailed {
 
   print "Get: $cat $ns\n";
 
-  if ( $use_toolserver ) { 
+  if ( (! defined $ENV{'NO_TOOLSERVER_CATS'}) && $use_toolserver ) { 
 #    print "\tusing toolserver\n";
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;
@@ -167,8 +181,11 @@ sub pages_in_category_detailed {
     return $r;
   }
 
+  print "Bypassing toolserver, getting category list from API\n";
+
   init_api();
 
+  my $t  = time();
   my $results = $api->pages_in_category_detailed($cat, $ns);
 
   my $r;
@@ -177,10 +194,13 @@ sub pages_in_category_detailed {
     $r->{'title'} =~ s/^\Q$namespaces->{$r->{'ns'}}\E//;
     $r->{'title'} = encode("utf8", $r->{'title'});
     $r->{'sortkey'} = encode("utf8", $r->{'sortkey'});
+    $r->{'title'} =~ s/ /_/g;
   }
 
-  return $results;
+  my $count = scalar @$results;
+  print "\tListed $count pages in " . (time() - $t) . " seconds\n";
 
+  return $results;
 }
 
 #####################################################################
