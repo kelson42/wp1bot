@@ -138,7 +138,7 @@ sub pages_in_category {
 
 #####################################################################
 
-=item B<pages_in_category_detailed>(CATEGORY, [NS])
+=item B<pages_in_category_detailed>(CATEGORY, [NS], [LARGE])
 
 Returns a reference to an array of hashes, 
 one for each page in CATEGORY.
@@ -154,7 +154,18 @@ The output format is
 CATEGORY _must_ be UTF-8 encoded. 
 
 The NS parameter, optional, is a numeric namespace for 
-filtering the results.
+filtering the results. If NS is set to '*' or omitted then
+all namespaces are searched. 
+
+The LARGE parameter, optional, is a flag (0 or 1) that gives
+a prediction about whether the category may be "large", that is,
+may contain many articles.  The toolserver query killer tends
+to kill the category listing query for large categories. Setting
+the LARGE flag to 1 causes the system to always use the API instead of
+the toolserver to list the category contents. This is much slower but is
+not subject to the query killer.  Setting the parameter to 0 
+(which is the default) causes the system to use either the toolserver 
+or the API at its choice depending on configuration parameters. 
 
 The page titles in the resulting array _do_not_ have the namespace
 prefix attached (for example, the page C<Talk:Foo> will show
@@ -170,10 +181,14 @@ The data returned is all UTF-8 encoded.
 sub pages_in_category_detailed {
   my $cat = shift;
   my $ns = shift;
+  my $large = shift || 0;
 
-  print "Get: $cat $ns\n";
+  if ( $ns eq '*') { $ns = undef; }
 
-  if ( (! defined $ENV{'NO_TOOLSERVER_CATS'}) && $use_toolserver ) { 
+  print "Get: $cat $ns (large: $large)\n";
+
+  if ( (! defined $ENV{'NO_TOOLSERVER_CATS'}) 
+       && ( ! $large ) && $use_toolserver ) { 
 #    print "\tusing toolserver\n";
     $cat =~ s/^Category://;
     $cat =~ s/ /_/g;

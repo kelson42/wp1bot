@@ -109,7 +109,6 @@ Update assessment data for PROJECT
 sub download_project {
   my $project = shift;
 
-#  next unless ( $project =~ /road_transport/);
   next if ( ( ! defined $ENV{'DO_BIO'}) && ($project =~ /biography/i));
 
   db_reconnect();
@@ -355,6 +354,13 @@ sub download_project_assessments {
   my $oldrating = get_project_ratings($project, $type);
   my $newrating = [];
 
+  my $old_count  = scalar keys %$oldrating;
+  my $large_project = ($old_count > 40000 ? 1 : 0);
+
+  if ( $large_project == 1 ) { 
+    print "Large project - using API to fetch article lists\n"; 
+  }
+
   my $seen = {};
   my $moved = {};
   my $qcats;
@@ -375,7 +381,7 @@ sub download_project_assessments {
   foreach $qual ( keys %$qcats ) { 
     print "\nFetching list for $type $qual\n";
 
-    $tmp_arts = pages_in_category_detailed($qcats->{$qual});
+    $tmp_arts = pages_in_category_detailed($qcats->{$qual}, '*', $large_project);
 
     my $count = scalar @$tmp_arts;
     my $i = 0;
@@ -457,7 +463,7 @@ if ( $d->{'title'} =~ /incompleteness/ ) {
   $curArt = 0;
   foreach $d ( @$newrating ) {
    $curArt++;
-    if ( 0 == $curArt % 1000) { print "\t$curArt\n"; }
+    if ( 0 == $curArt % 500) { print "\t$curArt\n"; }
 
 #    if ( ! defined $moved->{$d->{$art}} ) {
 #         print "New: ". Dumper($d);
