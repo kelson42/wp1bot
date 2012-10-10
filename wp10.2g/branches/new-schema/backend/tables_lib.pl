@@ -98,7 +98,7 @@ sub cached_project_table {
       if ( defined $ENV{'TABLE_PURGE'} ) { 
         print "<!-- regenerate anyway -->\n";
       }
-      print "<!-- end cache debugging -->\n ";
+      print "<!-- end cache debugging -->\n";
       return ($c_html, $c_wikicode, $c_proj_timestamp, $c_count)
         if ( ! defined $ENV{'TABLE_PURGE'} );
     } else {
@@ -109,11 +109,9 @@ sub cached_project_table {
   }
 
   print "<!-- Regenerating output --> \n";
-  print "<!-- end cache debugging --> \n ";
+  print "<!-- end cache debugging --> \n";
 
   my ($html, $wikicode, $acount) = make_project_table($proj);
-
-print "Foo\n";
 
   $data = "TABLE:$proj" . $cache_sep 
         . $timestamp . $cache_sep
@@ -124,7 +122,6 @@ print "Foo\n";
 
   cache_set($key, $data, 12*60*60); # expires in 12 hours
 
-print "Bar\n";
   return ($html, $wikicode, $timestamp, $acount);
 }
 

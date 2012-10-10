@@ -250,7 +250,6 @@ sub process_log {
   my $rawcount = scalar @$rawdata;
 
   foreach $r ( @$rawdata ) {
-#    print "R";
  
     $key = sprintf "%04d:%s", $r->{'l_namespace'}, $r->{'l_article'};
 
@@ -306,8 +305,13 @@ sub process_log {
   my ($okey, $imp_ok, $qual_ok, $name, $talk);
   my ($rev_page, $rev_talk, $reassessed);    
 
+  my $z = 0;
   foreach $key ( sort {$a cmp $b} keys %$reassess ) { 
-#    print "D";
+    $z++;
+    if ( 0 == ($z % 50) ) { 
+      print "   $z\n";
+    }
+
     my $data = $reassess->{$key};
 
     # If both of these become 1, it means the article was just

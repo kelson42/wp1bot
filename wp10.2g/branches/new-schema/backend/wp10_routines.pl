@@ -109,7 +109,13 @@ Update assessment data for PROJECT
 sub download_project {
   my $project = shift;
 
-  next if ( ( ! defined $ENV{'DO_BIO'}) && ($project =~ /biography/i));
+# Re-enabled bio projects on Oct 3, 2012 now that the system will use the API 
+# to fetch their article lists (and also for any other "large" project)
+#
+# Keep an eye on email to see if the query killer is killing any of the 
+# queries that cannot be done on the API
+#
+#  next if ( ( ! defined $ENV{'DO_BIO'}) && ($project =~ /biography/i));
 
   db_reconnect();
 

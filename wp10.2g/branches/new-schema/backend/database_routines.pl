@@ -427,7 +427,7 @@ sub update_project {
           $icount, $project);
 
   if ( $count eq '0E0' ) { 
-    $sth = $dbh->prepare ("INSERT INTO  " . db_table_prefix() . "projects VALUES (?,?,?,?,?,?,?,?,0)");
+    $sth = $dbh->prepare ("INSERT INTO  " . db_table_prefix() . "projects VALUES (?,?,?,?,?,?,?,?,0,'00000000000000')");
     $count = $sth->execute($project, $timestamp, $wikipage, 
                            $parent, $shortname, $proj_count, $qcount, $icount);
   }
@@ -438,6 +438,25 @@ sub update_project {
                         '', 21, 'Unknown-Class');
 
 }
+
+###########################################################
+=item B<db_set_upload_timestamp>(PROJECT, TIMESTAMP)
+
+Sets the upload timestamp of PROJECT to TIMESTAMP.
+
+=cut
+
+sub db_set_upload_timestamp { 
+  my $project = shift;
+  my $timestamp = shift;
+
+  my $sth = $dbh->prepare ("UPDATE  " . db_table_prefix() . "projects SET p_upload_timestamp  = ?  "
+                         . " WHERE p_project = ?" );
+
+  my $r = $sth->execute($timestamp, $project);
+  print "DB set upload timestamp for '$project' to '$timestamp': result $r\n";
+}
+
 
 ############################################################
 ## Query project table for a particular project
@@ -696,11 +715,13 @@ Returns a hash reference:
 
 sub db_get_project_details { 
 
-  my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count 
+  my $sth = $dbh->prepare("SELECT p_project, p_timestamp, p_count, p_upload_timestamp
                            FROM " . db_table_prefix() . "projects;");
   $sth->execute();
 
-  my ($proj, $count, $timestamp);
+  print "GET PROJECT DETAILS\n";
+
+  my ($proj, $count, $timestamp, $timestamp_u);
 
   my $data ={};
 
@@ -709,10 +730,12 @@ sub db_get_project_details {
     $proj = $row[0];
     $timestamp = $row[1];
     $count = $row[2];
+    $timestamp_u = $row[3];
 
     $data->{$proj} = {};
     $data->{$proj}->{'count'} = $count;
     $data->{$proj}->{'timestamp'} = $timestamp;
+    $data->{$proj}->{'upload_timestamp'} = $timestamp_u;
   }
 
   return $data;
@@ -1078,6 +1101,7 @@ sub db_table_prefix {
 
 sub db_reconnect { 
   print "Reconnecting to database\n";  
+  $dbh->commit();
   $dbh->disconnect();
   $dbh = db_connect($Opts);
 }

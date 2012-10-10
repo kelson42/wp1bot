@@ -69,15 +69,17 @@ exit;
 sub copy_project_tables { 
   my $filter = shift;
 
-  my $project_details = db_get_project_details();
+  my $project_details = db_get_project_details(); # BUG - this is calling the one from database_www - fix!
   my $project;
 
   my $count = scalar keys %$project_details;
   print "Count: $count\n";
 
+  my $timestamp_u = strftime("%Y%m%d%H%M%S", gmtime(time()));
+
   my $i = 0;
-  foreach $project ( sort {$a cmp $b} keys %$project_details ) {
-#  print "'$project' '$filter'\n";
+  foreach $project ( sort {$project_details->{$a}->{'p_upload_timestamp'}
+                           cmp $project_details->{$b}->{'p_upload_timestamp'} } keys %$project_details ) {
     if ( defined $filter ) { 
       next unless ( ($filter eq $project) 
                  || ($project =~ /^\Q$filter\E$/) );
@@ -95,8 +97,6 @@ sub copy_project_tables {
     my ( $html, $wiki, $timestamp, $acount) = cached_project_table($project);
     $wiki = munge($wiki, 'project');
 
-    print "acount: '$acount'\n";
-
     if ( $acount == 0 ) { 
        print "Count is zero, skipping\n";
        next;
@@ -107,14 +107,17 @@ sub copy_project_tables {
 #    $wiki .= "<noinclude>{{DEFAULTSORT|$project}}</noinclude>";
 
     if ( ! defined $ENV{'DRY_RUN'}) {
-      api_edit( $page,
-#               decode("utf8",$wiki),
-     $wiki,
-               $summary);
+      api_edit( $page, $wiki, $summary);
+      print "Timestamp: $timestamp_u\n";
+      db_set_upload_timestamp($project, $timestamp_u);
 
     }
   }
+
+  db_commit();
+
 }
+
 
 ############################################################
 
