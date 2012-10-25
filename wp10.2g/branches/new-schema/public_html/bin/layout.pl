@@ -157,8 +157,8 @@ sub layout_leftnav {
      "Overall summary table" =>  $table2URL,
      "Project summary tables" => $tableURL,
      "Article lists" =>          $listURL,
-     "Assessment logs" =>        $logURL,
-     "Update project data" =>        $updateURL
+     "Assessment logs" =>        $logURL
+ #    "Update project data" =>        $updateURL
     );
 
 
@@ -850,6 +850,11 @@ sub make_workingselection_html {
 
   my $sel = shift;
   my $title = shift || "Default";
+
+  if ( $Opts->{'show_working_selection'} == 0) { 
+    return '';
+  }
+
   if ( defined($sel) ) { 
     if ( $sel == 0 ) { 
       return "&nbsp;&diams;";

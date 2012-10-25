@@ -165,6 +165,8 @@ sub log_table {
    $query .= " WHERE ";
    $queryc .= " WHERE ";
   
+   $project =~ s/ /_/g;
+
    if ( $project =~ /\w|\d/ ) { 
      if ( defined $projects->{$project} ) { 
        $query .= " l_project = ?";
