@@ -29,7 +29,7 @@ require DBI;
 require POSIX;
 POSIX->import('strftime');
 
-our $dbh = db_connect_rw($Opts);  # needs read-write access for cache
+our $dbh;
 
 my $cgi;
 my $loop_counter = 0;
@@ -53,6 +53,13 @@ sub main_loop {
   my $Namespaces;
 
   my %param = %{$cgi->Vars()};
+
+  if ( CGI::user_agent() =~ /Tweetmeme/i ) { 
+    exit();
+    return;    
+  }
+
+  $dbh = db_connect_rw($Opts);  # needs read-write access for cache
 
   if ( ! defined $param{'limit'} ) { $param{'limit'} = 250; } 
 
@@ -82,6 +89,8 @@ sub main_loop {
        && -d $Opts->{'log-dir'} ) { 
     open LOG, ">", $Opts->{'log-dir'} . "/" . $logFile;
     print LOG $logEntry . "\n";
+    print LOG CGI::user_agent() . "\n";
+    print LOG CGI::remote_host() . "\n";
     close LOG;
   }
 
@@ -100,6 +109,8 @@ sub main_loop {
 
   $loop_counter++;
   layout_footer("Debug: PID $$ has served $loop_counter requests");
+
+  $dbh->disconnect();
 
   exit if ( $loop_counter >= $Opts->{'max-requests'});
 }
@@ -370,6 +381,10 @@ HERE
      print "<pre>QQ:\n$query</pre>\n";
      print join "<br/>", @qparam;
   }
+
+if ( ! ( $query =~ /WHERE/ ) ) { 
+  return;
+}
 
 # print "QC: $queryc<br/>\n";
 # print join "<br/>", @qparamc;
