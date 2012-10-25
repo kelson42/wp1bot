@@ -381,7 +381,10 @@ sub transpose {
   $self->{'columnlabels'} = $self->{'rowlabels'};
   $self->{'rowlabels'} = $tmp;
 
+
   my $olddata = $self->{'data'};
+  $self->{'data'} = {};
+
   $self->{'clear'};
   my ($r, $c);
   foreach $r ( keys %$olddata ) { 
@@ -392,7 +395,6 @@ sub transpose {
       $self->{'data'}->{$c}->{$r} = $olddata->{$r}->{$c};
     }
   }
-
 
 }
 
