@@ -19,18 +19,17 @@ my $TablePrefix;
 
 #####################################################################
 
-=item B<db_connect>(OPTS)
+=item B<db_connect_ro>(OPTS)
 
 Connect to the database using the readonly credentials
 
 =cut
 
-sub db_connect {
+sub db_connect_ro {
 
   my $opts = shift;
 
   $TablePrefix = $opts->{'database_table_prefix'};
-
 
   die "No database given in database conf file\n"
     unless ( defined $opts->{'database'} );
@@ -55,6 +54,8 @@ sub db_connect {
   if ( ! $db ) { 
     db_connect_error(DBI->errstr);
   }
+
+#  $db->{'RaiseError'} = 'on'; # die on DB error
 
   return $db;
 }
@@ -138,7 +139,7 @@ Return data from the I<projects> table for PROJECT
 sub get_project_data {
   my $project = shift;
   
-  my $sth = $dbh->prepare ("SELECT * FROM " . db_table_prefix()
+  my $sth = $dbh->prepare ("SELECT * /* LIMIT:15 WEB */ FROM " . db_table_prefix()
                            . "projects WHERE p_project = ?"); 
   $sth->execute($project);
   
@@ -167,7 +168,7 @@ Returns hash ref indexed by project name.
 =cut
 
 sub db_get_project_details { 
-  my $sth = $dbh->prepare("SELECT * FROM " . db_table_prefix() . "projects;");
+  my $sth = $dbh->prepare("SELECT * /* LIMIT:15 WEB */ FROM " . db_table_prefix() . "projects;");
   $sth->execute();
   return $sth->fetchall_hashref('p_project');
 }
@@ -189,7 +190,7 @@ sub db_get_move_target{
   my $timestamp = shift;
 
   my $sth = $dbh->prepare("SELECT m_new_namespace, m_new_article " .
-                          "FROM " . db_table_prefix()
+                          "/* LIMIT:15 WEB */ FROM " . db_table_prefix()
                           . "moves WHERE m_timestamp = ? " 
                           . "and m_old_namespace = ? " 
                           . "and m_old_article = ? ");
@@ -213,8 +214,8 @@ Return a hash reference that maps NAMESPACE_NUMBER => NAMESPACE_TITLE
 
 sub db_get_namespaces {
   my $sth = $dbh->prepare("SELECT ns_id, ns_name " 
-                        . "FROM toolserver.namespacename " 
-                        . " where ns_type = 'primary' and dbname = ?");
+                        . "/* LIMIT:15 WEB */ FROM toolserver.namespacename " 
+                        . " where (ns_type = 'canonical' or ns_type = 'primary') and dbname = ?");
   $sth->execute('enwiki_p');
 
   my $input = $sth->fetchall_hashref('ns_id');
