@@ -194,6 +194,8 @@ sub project_index_link {
     $name = $data->{'p_shortname'};
   }
 
+  $name =~ s/_/ /g;
+
   if ( defined $data->{'p_wikipage'} ) { 
     $name =  "<a href=\"http://en.wikipedia.org/w/index.php?title=" 
             . uri_escape($data->{'p_wikipage'}) . "\">$name</a>";

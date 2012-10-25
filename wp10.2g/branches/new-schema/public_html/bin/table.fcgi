@@ -144,7 +144,7 @@ sub query_form {
   my $projects = {};
   my @row;
 
-  my $sth = $dbh->prepare("SELECT p_project FROM projects");
+  my $sth = $dbh->prepare("SELECT p_project FROM " . db_table_prefix() . "projects");
   $sth->execute();
 
   while ( @row = $sth->fetchrow_array ) { 
