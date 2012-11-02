@@ -217,7 +217,7 @@ sub query_form {
 
   my @Quality =  ('(all)','FA-Class','FL-Class','A-Class','GA-Class',
                   'B-Class','C-Class','Start-Class','Stub-Class',
-                  'Unassessed');
+                  'Unassessed-Class');
 
   print "<label for=\"quality\">Quality rating:</label>\n";
   print "<select name=\"quality\" id=\"quality\">\n";
@@ -233,7 +233,7 @@ sub query_form {
   print "</select><br/>\n";
 
   my @Importance =  ('(all)', 'Top-Class', 'High-Class', 'Mid-Class', 
-                     'Low-Class', 'Unassessed');
+                     'Low-Class', 'Unassessed-Class');
 
   print "<label for=\"importance\">Importance rating:</label>\n";
   print "<select name=\"importance\" id=\"importance\">\n";
