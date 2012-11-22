@@ -1,20 +1,22 @@
-Goals to finish before promoting to beta version:
+The 2g system has been running live for some time.
 
-* Write FAQ and GUIDE pages on wiki
+The main lingering issues are:
 
-* Expand the information produced by table.pl to make it into a 
-  "project homepage"
+1.  Write a harness for the update system so that it can queue up 
+    requests for updating individual projects. This will give 
+    finer-grained control to the update system, so that
+ 
+  ** A web system can track the queue of which projects have been 
+     updated, and when.  A web tool could track the queue of which
+     projects will be updated soon. 
 
-* JIRA project for shared account
+  ** Projects can request an update which will move to the top of the 
+     queue subject to scheduling. This would be done with a new web 
+     tool.
 
------
-Goals to finish before promoting the beta version to production:
-
-* Rewrite release tracking system to permit additional releases.
-** Database schema change
-** Update download.pl
-** Update list2.pl: displaying data, filtering by release and release category
-
-* Implement queued request system for project updates
-
-* Add pagination to the project index (the HTML is too big)
+  ** Logs for the updates can be kept per-project, so that it is 
+     possible for someone without shell access to view the logs
+  
+2.  In the longer term, the project may move to Wikimedia Labs. This is
+    still very murky, because Labs is just being started and is not
+    very well defined as of November 2012. 

@@ -13,10 +13,8 @@ configuration is provided in example.wp10.conf.
 
 == Back end ==
 
-The primary interface to the backend is download.pl. 
-
-The assessment data is stored in a mysql database whose schema is in 
-tables.sql.
+The back end is controlled by scripts in the backend/ directory.
+See DIRECTORY.MAP.txt there for a full description of these.
 
 == Front end (CGI) ==
 
