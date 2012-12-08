@@ -48,13 +48,53 @@ exit;
 
 ############################################################
 
+sub throttled_message() { 
+  print CGI::header(-type=>'text/plain', -charset=>'utf-8');      
+ 
+  print << "HERE";
+Your query cannot be processed. Please contact the
+WP 1.0 bot maintainer listed at [[en:User:WP 1.0 bot]].
+
+HERE
+
+  return;
+} 
+
+
+sub forbidden_message() { 
+
+  print CGI::header(-type=>'text/plain', -charset=>'utf-8', -status=>'403 Forbidden');      
+ 
+  print << "HERE";
+Your query is forbidden. Please contact the
+WP 1.0 bot maintainer listed at [[en:User:WP 1.0 bot]].
+
+HERE
+
+  return;
+
+}
+
 sub main_loop { 
   my $cgi = shift;
   my $Namespaces;
 
   my %param = %{$cgi->Vars()};
 
-  if ( CGI::user_agent() =~ /Tweetmeme/i ) { 
+  if ( (CGI::user_agent() =~ /Tweetmeme/i) || ( defined $param{'forbidden'}) ) { 
+     forbidden_message();
+      return;    
+  }
+
+
+  if (    (defined $param{'category'} ) 
+       && ($param{'category'} =~ /needing.cleanup/i)){
+    throttled_message();
+    return;    
+  }
+
+
+  if ( CGI::user_agent() =~ /Java\/1\.7\.0_09/i ) { 
     exit();
     return;    
   }
