@@ -71,6 +71,11 @@ WP 1.0 bot maintainer listed at [[en:User:WP 1.0 bot]].
 
 HERE
 
+  # It is important to exit to keep FCGI from holding the database
+  # connection open, in the instances where many requests per
+  # second are being made
+  exit();
+
   return;
 
 }
