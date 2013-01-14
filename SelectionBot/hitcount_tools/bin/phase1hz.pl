@@ -2,12 +2,14 @@
 
 use lib '/home/veblen/perl/lib';
 
-use PerlIO::gzip;
+#use PerlIO::gzip;
 use Encode;
 use URI::Escape;
 
 foreach $file ( @ARGV ) { 
-  open IN, "<:gzip", $file or die;
+#  open IN, "<:gzip", $file or die;
+  open IN, "/usr/bin/gzcat '$file'|" or die;
+#  open IN, "/bin/zcat '$file'|" or die;
 
   $file =~ m/(\d+)/;
   $date = $1;  

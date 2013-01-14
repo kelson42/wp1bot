@@ -1,10 +1,17 @@
 #!/bin/sh
 
+cd /home/cbm/hitcount-tools/hitcount_tools
+
 LANG=C
 export LANG
 
 TMP=`pwd`/target
+export TMP
 
-perl bin/phase1h.pl source/pagecounts-$1-* \
+
+PERLLIB=/home/cbm/perl/lib/perl/5.10.0
+export PERLIB
+
+perl bin/phase1hz.pl source/pagecounts-$1-* \
   | sort -T$TMP  -k 3 -t " " \
-  | perl bin/tally.pl > target/$1.out
+  | perl bin/tally.pl | gzip -9 > target/$1.out.gz

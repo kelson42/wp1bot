@@ -6,7 +6,8 @@ chomp;
 
 while ( <STDIN> ) {
 $i++;
-if ( 0 == $i % 100000) { print STDERR "."; }
+if (              0 == $i %  1000000)  { print STDERR "."; }
+if ( ($i > 0) && (0 == $i % 80000000)) { print STDERR "\n"; }
  chomp;
  ($date, $count, $page) = split / /, $_, 3;
  if ( $page eq $oldpage ) { 
